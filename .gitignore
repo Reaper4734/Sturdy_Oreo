@@ -1,0 +1,38 @@
+# OS generated files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# IDE & Editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+*.iml
+
+# Node / Scratch
+scratch/
+
+# Java / Spring Boot / Maven / Gradle
+target/
+build/
+.gradle/
+*.class
+*.jar
+*.war
+
+# Flutter / Dart
+.dart_tool/
+.packages
+.pub-cache/
+.pub/
+build/
+flutter_*.png
+
+# Environment & Secrets
+.env
+*.env
+.env.*
+application-local.yml
+application-local.properties
+secret.json
