@@ -17,9 +17,13 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer, WebSocketConfigurer {
 
     private final GeminiLiveProxyWebSocketHandler geminiLiveProxyWebSocketHandler;
+    private final String allowedOrigins;
 
-    public WebSocketConfig(GeminiLiveProxyWebSocketHandler geminiLiveProxyWebSocketHandler) {
+    public WebSocketConfig(
+            GeminiLiveProxyWebSocketHandler geminiLiveProxyWebSocketHandler,
+            @org.springframework.beans.factory.annotation.Value("${oreo.cors.allowed-origins:*}") String allowedOrigins) {
         this.geminiLiveProxyWebSocketHandler = geminiLiveProxyWebSocketHandler;
+        this.allowedOrigins = allowedOrigins;
     }
 
     @Override
@@ -31,7 +35,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer, WebSoc
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         registry.addEndpoint("/ws/orchestration")
-                .setAllowedOriginPatterns("*")
+                .setAllowedOriginPatterns(allowedOrigins.split(","))
                 .withSockJS(); // Fallback
     }
 
@@ -39,7 +43,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer, WebSoc
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
         // Raw websocket proxy for Gemini Multimodal Live API (binary audio stream)
         registry.addHandler(geminiLiveProxyWebSocketHandler, "/ws/live")
-                .setAllowedOriginPatterns("*");
+                .setAllowedOriginPatterns(allowedOrigins.split(","));
     }
 
     @Override
