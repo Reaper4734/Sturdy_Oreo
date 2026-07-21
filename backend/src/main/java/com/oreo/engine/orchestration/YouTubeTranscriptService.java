@@ -1,5 +1,6 @@
 package com.oreo.engine.orchestration;
 
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
@@ -12,6 +13,7 @@ public class YouTubeTranscriptService {
      * In a production environment, this would call the YouTube Data API or scrape subtitles.
      * For now, it returns a simulated contextual transcript line based on the timestamp.
      */
+    @Cacheable(value = "transcripts", key = "#videoId + '-' + #timeInSeconds")
     public Optional<String> getTranscriptAtTimestamp(String videoId, int timeInSeconds) {
         if (videoId == null || videoId.isEmpty()) {
             return Optional.empty();

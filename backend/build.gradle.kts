@@ -64,6 +64,11 @@ dependencies {
     // .env file loader
     implementation("me.paulschwarz:spring-dotenv:4.0.0")
 
+    // Phase 1 Performance & Resilience
+    implementation("org.springframework.boot:spring-boot-starter-data-redis")
+    implementation("org.springframework.boot:spring-boot-starter-cache")
+    implementation("io.github.resilience4j:resilience4j-spring-boot3:2.2.0")
+
     // Testing
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.springframework.security:spring-security-test")
