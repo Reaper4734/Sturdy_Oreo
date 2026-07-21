@@ -24,7 +24,7 @@ public class LlmConfig {
     public ChatLanguageModel geminiModel() {
         return GoogleAiGeminiChatModel.builder()
                 .apiKey(apiKey)
-                .modelName("gemini-2.0-flash-lite")
+                .modelName("gemini-3.1-flash-lite")
                 .temperature(0.7)
                 .maxOutputTokens(2048)
                 .build();
@@ -34,7 +34,7 @@ public class LlmConfig {
     public StreamingChatLanguageModel geminiStreamingModel() {
         return GoogleAiGeminiStreamingChatModel.builder()
                 .apiKey(apiKey)
-                .modelName("gemini-2.0-flash-lite")
+                .modelName("gemini-3.1-flash-lite")
                 .temperature(0.7)
                 .build();
     }

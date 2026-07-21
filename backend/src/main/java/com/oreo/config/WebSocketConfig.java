@@ -2,6 +2,7 @@ package com.oreo.config;
 
 import com.oreo.engine.orchestration.controller.GeminiLiveProxyWebSocketHandler;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.messaging.simp.config.ChannelRegistration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
 import org.springframework.web.socket.config.annotation.EnableWebSocket;
 import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
@@ -39,5 +40,23 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer, WebSoc
         // Raw websocket proxy for Gemini Multimodal Live API (binary audio stream)
         registry.addHandler(geminiLiveProxyWebSocketHandler, "/ws/live")
                 .setAllowedOriginPatterns("*");
+    }
+
+    @Override
+    public void configureClientInboundChannel(ChannelRegistration registration) {
+        // Optimize for high-throughput live audio bytes from frontend -> backend
+        registration.taskExecutor()
+                .corePoolSize(10)
+                .maxPoolSize(100)
+                .keepAliveSeconds(60);
+    }
+
+    @Override
+    public void configureClientOutboundChannel(ChannelRegistration registration) {
+        // Optimize for high-throughput STOMP & audio bytes from backend -> frontend
+        registration.taskExecutor()
+                .corePoolSize(10)
+                .maxPoolSize(100)
+                .keepAliveSeconds(60);
     }
 }
