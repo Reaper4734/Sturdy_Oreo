@@ -16,14 +16,15 @@ import dev.langchain4j.model.googleai.GoogleAiGeminiChatModel;
 @Configuration
 public class LlmConfig {
 
-    @Value("${oreo.llm.gemini-api-key:AQ.Ab8RN6J7qoU7rqdkBofZ2GPqE1lGfzWbqUzrIf7KVcAU77ENwQ}")
+    @Value("${oreo.llm.gemini-api-key:dummy-gemini-key}")
     private String apiKey;
 
     @Bean
+    @Primary
     public ChatLanguageModel geminiModel() {
         return GoogleAiGeminiChatModel.builder()
                 .apiKey(apiKey)
-                .modelName("gemini-3.1-flash-lite")
+                .modelName("gemini-2.0-flash-lite")
                 .temperature(0.7)
                 .maxOutputTokens(2048)
                 .build();
@@ -33,7 +34,7 @@ public class LlmConfig {
     public StreamingChatLanguageModel geminiStreamingModel() {
         return GoogleAiGeminiStreamingChatModel.builder()
                 .apiKey(apiKey)
-                .modelName("gemini-3.1-flash-lite")
+                .modelName("gemini-2.0-flash-lite")
                 .temperature(0.7)
                 .build();
     }
@@ -72,9 +73,4 @@ public class LlmConfig {
         };
     }
 
-    @Bean
-    @Primary
-    public ChatLanguageModel primaryChatModel(ChatLanguageModel geminiModel) {
-        return geminiModel;
-    }
 }

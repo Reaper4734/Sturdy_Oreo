@@ -9,10 +9,12 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import java.net.URI;
+
 @Configuration
 public class RagConfig {
 
-    @Value("${oreo.llm.gemini-api-key:dummy}")
+    @Value("${oreo.llm.gemini-api-key:dummy-gemini-key}")
     private String geminiApiKey;
 
     @Value("${spring.datasource.url}")
@@ -34,17 +36,24 @@ public class RagConfig {
 
     @Bean
     public EmbeddingStore<TextSegment> embeddingStore() {
-        // Strip jdbc: prefix for PGVector
-        String cleanUrl = dbUrl.replace("jdbc:", "");
+        // Parse host, port, database from the JDBC URL dynamically
+        // e.g. jdbc:postgresql://localhost:5432/oreo_db
+        String cleanUrl = dbUrl.replace("jdbc:postgresql://", "");
+        String[] hostPortDb = cleanUrl.split("/");
+        String[] hostPort = hostPortDb[0].split(":");
         
+        String host = hostPort[0];
+        int port = hostPort.length > 1 ? Integer.parseInt(hostPort[1]) : 5432;
+        String database = hostPortDb.length > 1 ? hostPortDb[1] : "oreo_db";
+
         return PgVectorEmbeddingStore.builder()
-                .host("localhost") // Since we are developing locally
-                .port(5432)
-                .database("oreo_db")
+                .host(host)
+                .port(port)
+                .database(database)
                 .user(dbUser)
                 .password(dbPassword)
                 .table("document_embeddings")
-                .dimension(768) // Match the V14 migration
+                .dimension(768)
                 .build();
     }
 }

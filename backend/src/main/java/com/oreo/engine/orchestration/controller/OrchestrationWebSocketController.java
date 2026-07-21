@@ -16,13 +16,16 @@ public class OrchestrationWebSocketController {
     private final StreamingChatLanguageModel streamingChatModel;
     private final SimpMessagingTemplate messagingTemplate;
     private final WatchdogSessionManager watchdogSessionManager;
+    private final YouTubeTranscriptService youTubeTranscriptService;
 
     public OrchestrationWebSocketController(StreamingChatLanguageModel streamingChatModel, 
                                             SimpMessagingTemplate messagingTemplate,
-                                            WatchdogSessionManager watchdogSessionManager) {
+                                            WatchdogSessionManager watchdogSessionManager,
+                                            YouTubeTranscriptService youTubeTranscriptService) {
         this.streamingChatModel = streamingChatModel;
         this.messagingTemplate = messagingTemplate;
         this.watchdogSessionManager = watchdogSessionManager;
+        this.youTubeTranscriptService = youTubeTranscriptService;
     }
 
     @MessageMapping("/interview/stream")
@@ -63,9 +66,7 @@ public class OrchestrationWebSocketController {
         if (videoId != null && timestampStr != null) {
             try {
                 int timestamp = Integer.parseInt(timestampStr);
-                // In reality, this service would be injected via the constructor
-                YouTubeTranscriptService transcriptService = new YouTubeTranscriptService();
-                transcript = transcriptService.getTranscriptAtTimestamp(videoId, timestamp).orElse(transcript);
+                transcript = youTubeTranscriptService.getTranscriptAtTimestamp(videoId, timestamp).orElse(transcript);
             } catch (NumberFormatException e) {
                 // Ignore parse errors
             }

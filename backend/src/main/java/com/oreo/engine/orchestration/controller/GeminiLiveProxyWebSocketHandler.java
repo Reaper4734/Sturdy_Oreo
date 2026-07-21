@@ -13,7 +13,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @Component
 public class GeminiLiveProxyWebSocketHandler extends AbstractWebSocketHandler {
 
-    @Value("${oreo.llm.gemini-api-key:AQ.Ab8RN6J7qoU7rqdkBofZ2GPqE1lGfzWbqUzrIf7KVcAU77ENwQ}")
+    @Value("${oreo.llm.gemini-api-key:dummy-gemini-key}")
     private String apiKey;
 
     // Maps the frontend client session to the Google Gemini Live session

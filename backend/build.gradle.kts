@@ -2,6 +2,8 @@ plugins {
     java
     id("org.springframework.boot") version "3.4.2"
     id("io.spring.dependency-management") version "1.1.7"
+    kotlin("jvm") version "1.9.25"
+    jacoco
 }
 
 group = "com.oreo"
@@ -11,6 +13,10 @@ java {
     toolchain {
         languageVersion.set(JavaLanguageVersion.of(21))
     }
+}
+
+jacoco {
+    toolVersion = "0.8.11"
 }
 
 repositories {
@@ -55,6 +61,9 @@ dependencies {
     implementation("dev.langchain4j:langchain4j-pgvector:0.36.2")
     implementation("dev.langchain4j:langchain4j-open-ai:0.36.2")
 
+    // .env file loader
+    implementation("me.paulschwarz:spring-dotenv:4.0.0")
+
     // Testing
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.springframework.security:spring-security-test")
@@ -64,4 +73,17 @@ dependencies {
 
 tasks.withType<Test> {
     useJUnitPlatform()
+}
+
+tasks.test {
+    useJUnitPlatform()
+    finalizedBy(tasks.jacocoTestReport)
+}
+
+tasks.jacocoTestReport {
+    dependsOn(tasks.test)
+    reports {
+        xml.required.set(true)
+        html.required.set(true)
+    }
 }
