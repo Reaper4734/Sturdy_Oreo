@@ -18,6 +18,10 @@ repositories {
 }
 
 dependencies {
+    // Lombok
+    compileOnly("org.projectlombok:lombok")
+    annotationProcessor("org.projectlombok:lombok")
+
     // Spring Boot Core Starters
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
@@ -42,9 +46,13 @@ dependencies {
     // Google Auth ID Token Verifier
     implementation("com.google.api-client:google-api-client:2.7.0")
 
+    // Kotlin reflect for Springdoc OpenAPI (fixed 500 error)
+    implementation("org.jetbrains.kotlin:kotlin-reflect")
+
     // LangChain4j for AI Orchestration
-    implementation("dev.langchain4j:langchain4j-spring-boot-starter:0.36.2")
+    implementation("dev.langchain4j:langchain4j:0.36.2")
     implementation("dev.langchain4j:langchain4j-google-ai-gemini:0.36.2")
+    implementation("dev.langchain4j:langchain4j-pgvector:0.36.2")
     implementation("dev.langchain4j:langchain4j-open-ai:0.36.2")
 
     // Testing

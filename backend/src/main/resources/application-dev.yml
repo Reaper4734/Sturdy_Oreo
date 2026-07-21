@@ -7,15 +7,19 @@ spring:
     username: ${POSTGRES_USER:postgres}
     password: ${POSTGRES_PASSWORD:postgres}
     driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 15
+      minimum-idle: 5
+      connection-timeout: 20000
 
   jpa:
+    open-in-view: false
     hibernate:
       ddl-auto: validate
     show-sql: true
     properties:
       hibernate:
         format_sql: true
-        dialect: org.hibernate.dialect.PostgreSQLDialect
 
   flyway:
     enabled: true
@@ -28,6 +32,9 @@ oreo:
     expiration-ms: 86400000 # 24 hours
   auth:
     google-client-id: ${GOOGLE_CLIENT_ID:test-client-id.apps.googleusercontent.com}
+  llm:
+    gemini-api-key: ${GEMINI_API_KEY:dummy-gemini-key}
+    openai-api-key: ${OPENAI_API_KEY:dummy-openai-key}
 
 logging:
   level:

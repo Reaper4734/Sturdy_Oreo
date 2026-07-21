@@ -35,9 +35,9 @@ public class SecurityConfig {
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/auth/**").permitAll()
-                .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
+                .requestMatchers("/api/auth/**", "/api/session/state", "/swagger-ui/**", "/v3/api-docs/**", "/api/orchestration/**").permitAll()
                 .requestMatchers("/actuator/**").permitAll()
-                .requestMatchers("/ws/**").permitAll()
+                .requestMatchers("/ws/**", "/test-ws.html").permitAll()
                 .anyRequest().authenticated()
             )
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
