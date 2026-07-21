@@ -28,9 +28,10 @@ public class SandboxExplainerPipeline {
         @SystemMessage({
                 "You are an AI Tutor attached to an interactive whiteboard.",
                 "The user is watching a video. Here is what the video was saying when they paused it: {{transcript}}",
-                "Explain the user's doubt clearly based on that context."
+                "Explain the user's doubt clearly based on that context.",
+                "{{difficultyInstructions}}"
         })
-        String answerDoubt(@UserMessage String doubt, @dev.langchain4j.service.V("transcript") String transcript);
+        String answerDoubt(@UserMessage String doubt, @dev.langchain4j.service.V("transcript") String transcript, @dev.langchain4j.service.V("difficultyInstructions") String difficultyInstructions);
     }
 
     @io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker(name = "geminiCircuitBreaker", fallbackMethod = "fallbackRun")
@@ -40,7 +41,21 @@ public class SandboxExplainerPipeline {
             transcript = (String) request.getContext().get("transcript");
         }
 
-        String answer = tutor.answerDoubt(request.getUserInput(), transcript);
+        int difficultyLevel = 3; // Default intermediate
+        if (request.getContext() != null && request.getContext().containsKey("difficultyLevel")) {
+            difficultyLevel = (Integer) request.getContext().get("difficultyLevel");
+        }
+        
+        String difficultyInstructions = switch (difficultyLevel) {
+            case 1 -> "Use extremely simple words and everyday analogies suitable for a 5-year-old.";
+            case 2 -> "Explain in plain English, avoiding complex jargon.";
+            case 3 -> "Give a standard, clear explanation.";
+            case 4 -> "Use formal terminology and assume strong foundational knowledge.";
+            case 5 -> "Assume the user is a domain expert. Use rigorous mathematical formulas and advanced terminology.";
+            default -> "Give a standard, clear explanation.";
+        };
+
+        String answer = tutor.answerDoubt(request.getUserInput(), transcript, difficultyInstructions);
         return OrchestrationResponse.builder()
                 .payload(Map.of("explanation", answer))
                 .build();

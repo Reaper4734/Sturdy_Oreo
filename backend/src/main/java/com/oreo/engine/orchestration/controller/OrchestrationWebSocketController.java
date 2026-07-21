@@ -17,15 +17,21 @@ public class OrchestrationWebSocketController {
     private final SimpMessagingTemplate messagingTemplate;
     private final WatchdogSessionManager watchdogSessionManager;
     private final YouTubeTranscriptService youTubeTranscriptService;
+    private final com.oreo.engine.orchestration.pipelines.FlashcardGeneratorPipeline flashcardGeneratorPipeline;
+    private final com.oreo.engine.orchestration.repository.FlashcardRepository flashcardRepository;
 
     public OrchestrationWebSocketController(StreamingChatLanguageModel streamingChatModel, 
                                             SimpMessagingTemplate messagingTemplate,
                                             WatchdogSessionManager watchdogSessionManager,
-                                            YouTubeTranscriptService youTubeTranscriptService) {
+                                            YouTubeTranscriptService youTubeTranscriptService,
+                                            com.oreo.engine.orchestration.pipelines.FlashcardGeneratorPipeline flashcardGeneratorPipeline,
+                                            com.oreo.engine.orchestration.repository.FlashcardRepository flashcardRepository) {
         this.streamingChatModel = streamingChatModel;
         this.messagingTemplate = messagingTemplate;
         this.watchdogSessionManager = watchdogSessionManager;
         this.youTubeTranscriptService = youTubeTranscriptService;
+        this.flashcardGeneratorPipeline = flashcardGeneratorPipeline;
+        this.flashcardRepository = flashcardRepository;
     }
 
     @MessageMapping("/interview/stream")
@@ -88,6 +94,31 @@ public class OrchestrationWebSocketController {
                     @Override
                     public void onComplete(dev.langchain4j.model.output.Response<dev.langchain4j.data.message.AiMessage> response) {
                         messagingTemplate.convertAndSend("/topic/canvas/" + sessionId, Map.of("done", true));
+                        
+                        // Async flashcard extraction based on what was just explained
+                        java.util.concurrent.CompletableFuture.runAsync(() -> {
+                            try {
+                                String fullResponse = response.content().text();
+                                String combinedTranscript = "Q: " + userMessage + "\nA: " + fullResponse;
+                                
+                                java.util.List<com.oreo.engine.orchestration.pipelines.FlashcardGeneratorPipeline.ExtractedCard> cards = 
+                                        flashcardGeneratorPipeline.generateFlashcards(combinedTranscript);
+                                
+                                // Save to DB
+                                for (var extracted : cards) {
+                                    com.oreo.engine.orchestration.model.Flashcard card = new com.oreo.engine.orchestration.model.Flashcard();
+                                    // Mock UUID for user for now in this MVP
+                                    card.setUserId(java.util.UUID.fromString("00000000-0000-0000-0000-000000000000"));
+                                    card.setFront(extracted.frontQuestion);
+                                    card.setBack(extracted.backAnswer);
+                                    card.setNextReviewDate(java.time.LocalDate.now().plusDays(1));
+                                    card.setIntervalDays(1);
+                                    flashcardRepository.save(card);
+                                }
+                            } catch (Exception e) {
+                                // Ignore flashcard generation errors so it doesn't crash WS
+                            }
+                        });
                     }
 
                     @Override
