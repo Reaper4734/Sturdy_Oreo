@@ -3,7 +3,9 @@ package com.oreo.engine.orchestration.rag;
 import dev.langchain4j.data.segment.TextSegment;
 import dev.langchain4j.model.embedding.EmbeddingModel;
 import dev.langchain4j.data.embedding.Embedding;
-import dev.langchain4j.retriever.Retriever;
+import dev.langchain4j.rag.content.retriever.ContentRetriever;
+import dev.langchain4j.rag.content.Content;
+import dev.langchain4j.rag.query.Query;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
@@ -16,7 +18,7 @@ import java.util.stream.Collectors;
  * This runs parallel to the standard PgVectorEmbeddingStore but offers higher accuracy for specific keywords.
  */
 @Component
-public class HybridRetriever implements Retriever<TextSegment> {
+public class HybridRetriever implements ContentRetriever {
 
     private final JdbcTemplate jdbcTemplate;
     private final EmbeddingModel embeddingModel;
@@ -27,7 +29,9 @@ public class HybridRetriever implements Retriever<TextSegment> {
     }
 
     @Override
-    public List<TextSegment> find(String text) {
+    public List<Content> retrieve(Query query) {
+        String text = query.text();
+        
         // 1. Convert the user query into a vector
         Embedding queryEmbedding = embeddingModel.embed(text).content();
         
@@ -37,8 +41,6 @@ public class HybridRetriever implements Retriever<TextSegment> {
                 .replace("]", "") + "]";
 
         // 2. Perform Hybrid Search Query (Vector Distance + Keyword Match)
-        // We use plainto_tsquery for the keyword part and <=> for the vector distance.
-        // We combine the scores: (1 - vector_distance) + ts_rank
         String sql = """
             SELECT text, 
                    (1 - (embedding <=> ?::vector)) AS vector_score,
@@ -49,9 +51,11 @@ public class HybridRetriever implements Retriever<TextSegment> {
         """;
 
         // Execute query
-        return jdbcTemplate.query(sql,
+        List<TextSegment> segments = jdbcTemplate.query(sql,
                 (rs, rowNum) -> TextSegment.from(rs.getString("text")),
                 vectorLiteral, text, vectorLiteral, text
         );
+        
+        return segments.stream().map(Content::from).collect(Collectors.toList());
     }
 }
