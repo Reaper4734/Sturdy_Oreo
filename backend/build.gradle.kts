@@ -60,6 +60,11 @@ dependencies {
     implementation("dev.langchain4j:langchain4j-google-ai-gemini:0.36.2")
     implementation("dev.langchain4j:langchain4j-pgvector:0.36.2")
     implementation("dev.langchain4j:langchain4j-open-ai:0.36.2")
+    implementation("dev.langchain4j:langchain4j-embeddings-all-minilm-l6-v2:0.36.2")
+
+    // DJL Whisper & ONNX Runtime (Local processing)
+    implementation("ai.djl:api:0.30.0")
+    implementation("ai.djl.onnxruntime:onnxruntime-engine:0.30.0")
 
     // .env file loader
     implementation("me.paulschwarz:spring-dotenv:4.0.0")

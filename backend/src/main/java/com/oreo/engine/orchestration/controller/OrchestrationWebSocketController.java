@@ -5,7 +5,7 @@ import dev.langchain4j.model.chat.StreamingChatLanguageModel;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
-import com.oreo.engine.watchdog.WatchdogSessionManager;
+import com.oreo.engine.watchdog.WatchdogDaemon;
 import com.oreo.engine.orchestration.YouTubeTranscriptService;
 
 import java.util.Map;
@@ -15,20 +15,20 @@ public class OrchestrationWebSocketController {
 
     private final StreamingChatLanguageModel streamingChatModel;
     private final SimpMessagingTemplate messagingTemplate;
-    private final WatchdogSessionManager watchdogSessionManager;
+    private final WatchdogDaemon watchdogDaemon;
     private final YouTubeTranscriptService youTubeTranscriptService;
     private final com.oreo.engine.orchestration.pipelines.FlashcardGeneratorPipeline flashcardGeneratorPipeline;
     private final com.oreo.engine.orchestration.repository.FlashcardRepository flashcardRepository;
 
     public OrchestrationWebSocketController(StreamingChatLanguageModel streamingChatModel, 
                                             SimpMessagingTemplate messagingTemplate,
-                                            WatchdogSessionManager watchdogSessionManager,
+                                            WatchdogDaemon watchdogDaemon,
                                             YouTubeTranscriptService youTubeTranscriptService,
                                             com.oreo.engine.orchestration.pipelines.FlashcardGeneratorPipeline flashcardGeneratorPipeline,
                                             com.oreo.engine.orchestration.repository.FlashcardRepository flashcardRepository) {
         this.streamingChatModel = streamingChatModel;
         this.messagingTemplate = messagingTemplate;
-        this.watchdogSessionManager = watchdogSessionManager;
+        this.watchdogDaemon = watchdogDaemon;
         this.youTubeTranscriptService = youTubeTranscriptService;
         this.flashcardGeneratorPipeline = flashcardGeneratorPipeline;
         this.flashcardRepository = flashcardRepository;
@@ -132,6 +132,6 @@ public class OrchestrationWebSocketController {
     @MessageMapping("/session/heartbeat")
     public void receiveHeartbeat(Map<String, String> payload) {
         String sessionId = payload.getOrDefault("sessionId", "default");
-        watchdogSessionManager.registerHeartbeat(sessionId);
+        watchdogDaemon.registerHeartbeat(sessionId);
     }
 }

@@ -28,10 +28,7 @@ public class RagConfig {
 
     @Bean
     public EmbeddingModel embeddingModel() {
-        return GoogleAiEmbeddingModel.builder()
-                .apiKey(geminiApiKey)
-                .modelName("text-embedding-004")
-                .build();
+        return new dev.langchain4j.model.embedding.onnx.allminilml6v2.AllMiniLmL6V2EmbeddingModel();
     }
 
     @Bean
@@ -53,7 +50,7 @@ public class RagConfig {
                 .user(dbUser)
                 .password(dbPassword)
                 .table("document_embeddings")
-                .dimension(768)
+                .dimension(384)
                 .build();
     }
 }

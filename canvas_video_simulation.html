@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Oreo AI Tutor — Live Backend & Interactive Canvas</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Fira+Code:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <!-- YouTube IFrame API -->
+  <script src="https://www.youtube.com/iframe_api"></script>
+  <style>
+    :root {
+      --bg: #0a0c10;
+      --surface: #161b22;
+      --border: rgba(255,255,255,0.12);
+      --blue: #3776ab;
+      --yellow: #ffd43b;
+      --green: #39d353;
+      --text: #f0f6fc;
+      --muted: #8b949e;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Outfit', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+      background-image:
+        radial-gradient(circle at 10% 20%, rgba(55,118,171,0.15) 0%, transparent 40%),
+        radial-gradient(circle at 90% 80%, rgba(255,212,59,0.1) 0%, transparent 40%);
+    }
+
+    header {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 0.8rem 1.5rem;
+      background: rgba(13,17,23,0.9);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+    .brand { font-weight: 700; font-size: 1.3rem; display: flex; align-items: center; gap: 0.6rem; }
+    .brand i { color: var(--yellow); font-size: 1.5rem; }
+
+    .status-row { display: flex; align-items: center; gap: 1.5rem; }
+    .server-pill {
+      display: flex; align-items: center; gap: 0.5rem;
+      background: rgba(57,211,83,0.1); border: 1px solid rgba(57,211,83,0.3);
+      padding: 0.3rem 0.8rem; border-radius: 20px; font-size: 0.8rem; color: var(--green); font-weight: 600;
+    }
+    .server-pill .dot { width: 8px; height: 8px; background: var(--green); border-radius: 50%; animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.3)} }
+
+    .diff-ctrl { display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; color: var(--muted); }
+    .diff-ctrl input { accent-color: var(--yellow); width: 80px; cursor: pointer; }
+    .diff-badge { background: rgba(255,212,59,0.15); color: var(--yellow); padding: 2px 8px; border-radius: 10px; font-size: 0.75rem; font-weight: 700; border: 1px solid rgba(255,212,59,0.3); }
+
+    .workspace { flex: 1; display: flex; padding: 1rem; gap: 1rem; overflow: hidden; }
+
+    .main-col { flex: 1; display: flex; flex-direction: column; gap: 1rem; overflow-y: auto; }
+
+    .tool-bar {
+      display: flex; gap: 0.5rem; background: var(--surface); padding: 0.8rem; border-radius: 12px; border: 1px solid var(--border); align-items: center;
+    }
+    .tool-bar input[type="text"], .tool-bar input[type="file"] {
+      background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 8px;
+      padding: 0.4rem 0.6rem; color: #fff; font-size: 0.85rem; outline: none;
+    }
+    .tool-bar button {
+      background: rgba(255,255,255,0.05); border: 1px solid var(--border); color: var(--text);
+      padding: 0.4rem 0.8rem; border-radius: 8px; font-size: 0.8rem; cursor: pointer; transition: 0.2s;
+    }
+    .tool-bar button:hover { background: rgba(255,255,255,0.15); }
+    .tool-bar button.primary { background: linear-gradient(135deg, var(--blue), #00b4d8); border: none; font-weight: bold; }
+    
+    .hidden { display: none !important; }
+
+    .video-card { background: var(--surface); border-radius: 16px; border: 1px solid var(--border); overflow: hidden; position: relative; flex: 1; display: flex; flex-direction: column;}
+    .video-container { position: relative; width: 100%; height: 320px; background: #000; }
+    .video-container iframe { width: 100% !important; height: 100% !important; border: none; }
+    .video-info { padding: 0.8rem 1rem; display: flex; justify-content: space-between; align-items: center; background: rgba(13,17,23,0.95); border-top: 1px solid var(--border); }
+    .video-info h3 { font-size: 0.95rem; font-weight: 600; display: flex; align-items: center; gap: 0.5rem; }
+
+    .pause-ask-btn {
+      background: linear-gradient(135deg, var(--yellow), #ff9800);
+      border: none; color: #000; padding: 0.5rem 1rem; border-radius: 20px;
+      font-weight: 700; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; gap: 0.4rem;
+      transition: transform 0.2s; box-shadow: 0 4px 15px rgba(255,212,59,0.3);
+    }
+    .pause-ask-btn:hover { transform: scale(1.05); }
+
+    .canvas-card { flex: 1; background: var(--surface); border-radius: 16px; border: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; min-height: 280px; }
+    .canvas-header { padding: 0.6rem 1rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; }
+    .canvas-header .label { color: var(--yellow); font-weight: 600; display: flex; align-items: center; gap: 0.4rem; }
+    
+    .back-btn { background: rgba(55,118,171,0.2); border: 1px solid var(--blue); color: #fff; padding: 0.4rem 0.8rem; border-radius: 8px; font-size: 0.8rem; cursor: pointer; display: flex; align-items: center; gap: 0.4rem; transition: 0.2s;}
+    .back-btn:hover { background: rgba(55,118,171,0.4); }
+
+    .canvas-body { flex: 1; position: relative; background: #050811; background-image: radial-gradient(rgba(255,255,255,0.06) 1px, transparent 1px); background-size: 24px 24px; }
+    .canvas-body canvas { width: 100%; height: 100%; display: block; cursor: crosshair; }
+    
+    .canvas-status { position: absolute; bottom: 12px; left: 12px; background: rgba(13,17,23,0.85); backdrop-filter: blur(8px); padding: 0.4rem 0.8rem; border-radius: 8px; border: 1px solid var(--border); font-size: 0.78rem; color: var(--yellow); font-weight: 500; }
+
+    .chat-panel { width: 420px; background: var(--surface); border-radius: 16px; border: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
+    .chat-header { padding: 0.8rem 1rem; border-bottom: 1px solid var(--border); font-weight: 600; display: flex; justify-content: space-between; align-items: center; }
+    
+    .chat-messages { flex: 1; padding: 1rem; overflow-y: auto; display: flex; flex-direction: column; gap: 0.8rem; }
+    .msg { max-width: 92%; padding: 0.8rem 1.1rem; border-radius: 14px; font-size: 0.9rem; line-height: 1.55; }
+    .msg.ai { align-self: flex-start; background: rgba(55,118,171,0.15); border: 1px solid rgba(55,118,171,0.35); border-bottom-left-radius: 4px; }
+    .msg.ai h1, .msg.ai h2, .msg.ai h3 { color: var(--yellow); font-size: 1rem; margin-top: 0.5rem; margin-bottom: 0.3rem; font-family: 'Outfit', sans-serif; }
+    .msg.ai code { font-family: 'Fira Code', monospace; background: rgba(255,255,255,0.1); padding: 2px 5px; border-radius: 4px; color: var(--green); font-size: 0.82rem; }
+    .msg.ai pre { background: #0d1117; padding: 0.8rem; border-radius: 8px; border: 1px solid var(--border); overflow-x: auto; margin: 0.4rem 0; }
+    .msg.ai ul, .msg.ai ol { padding-left: 1.3rem; margin: 0.4rem 0; }
+    .msg.user { align-self: flex-end; background: rgba(255,212,59,0.12); border: 1px solid rgba(255,212,59,0.25); border-bottom-right-radius: 4px; }
+    .msg.system { align-self: center; background: rgba(57,211,83,0.1); border: 1px solid rgba(57,211,83,0.2); color: var(--green); font-size: 0.8rem; text-align: center; border-radius: 10px; }
+    .msg.error { align-self: center; background: rgba(255,85,85,0.1); border: 1px solid rgba(255,85,85,0.3); color: #ff5555; font-size: 0.8rem; text-align: center; }
+
+    .typing-indicator { align-self: flex-start; padding: 0.5rem 1rem; font-size: 0.8rem; color: var(--muted); display: none; }
+    .typing-indicator.visible { display: block; }
+
+    .chip-row { padding: 0.5rem 1rem; display: flex; flex-wrap: wrap; gap: 0.4rem; border-top: 1px solid var(--border); background: rgba(0,0,0,0.2); }
+    .chip { background: rgba(255,255,255,0.04); border: 1px solid var(--border); color: var(--yellow); padding: 0.3rem 0.7rem; border-radius: 12px; font-size: 0.75rem; cursor: pointer; transition: all 0.2s; }
+    .chip:hover { background: rgba(55,118,171,0.2); border-color: var(--blue); }
+
+    .chat-input { display: flex; gap: 0.5rem; padding: 0.8rem 1rem; border-top: 1px solid var(--border); background: rgba(13,17,23,0.8); }
+    .chat-input input { flex: 1; background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 10px; padding: 0.6rem 0.8rem; color: #fff; font-size: 0.85rem; outline: none; }
+    .chat-input input:focus { border-color: var(--blue); }
+    .send-btn { background: linear-gradient(135deg, var(--blue), #00b4d8); border: none; color: #fff; padding: 0 1rem; border-radius: 10px; font-weight: 600; cursor: pointer; }
+    .send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* Flashcard Flip CSS */
+    .flashcard-container { display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 0.8rem; }
+    .flashcard {
+      background-color: transparent; width: 100%; max-width: 250px; height: 150px;
+      perspective: 1000px; cursor: pointer;
+    }
+    .flashcard-inner {
+      position: relative; width: 100%; height: 100%; text-align: center;
+      transition: transform 0.6s; transform-style: preserve-3d;
+    }
+    .flashcard.flipped .flashcard-inner { transform: rotateY(180deg); }
+    .flashcard-front, .flashcard-back {
+      position: absolute; width: 100%; height: 100%; -webkit-backface-visibility: hidden; backface-visibility: hidden;
+      display: flex; align-items: center; justify-content: center; padding: 1rem; border-radius: 12px;
+      border: 1px solid var(--border); box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+    .flashcard-front { background: rgba(55,118,171,0.2); color: var(--yellow); font-weight: bold; }
+    .flashcard-back { background: rgba(57,211,83,0.2); color: var(--text); transform: rotateY(180deg); font-size: 0.9rem; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="brand"><i class="fa-brands fa-python"></i> Oreo AI Tutor</div>
+  <div class="status-row">
+    <div class="diff-ctrl">
+      Difficulty:
+      <input type="range" min="1" max="5" value="3" id="diffSlider" oninput="updateDiff(this.value)">
+      <span class="diff-badge" id="diffBadge">3 — Standard</span>
+    </div>
+    <div class="server-pill"><div class="dot"></div> <span id="serverLabel">Checking...</span></div>
+  </div>
+</header>
+
+<div class="workspace">
+  <div class="main-col">
+    <!-- Toolbar for YT link and RAG upload -->
+    <div class="tool-bar">
+      <i class="fa-brands fa-youtube" style="color:#ff0000; font-size:1.2rem;"></i>
+      <input type="text" id="ytLinkInput" placeholder="Paste YouTube link (e.g. https://youtu.be/...)" style="width:250px;">
+      <button class="primary" onclick="loadYouTubeVideo()">Load Video</button>
+      
+      <i class="fa-solid fa-language" style="color:#ffd43b; font-size:1.1rem; margin-left:0.5rem;"></i>
+      <select id="languageSelect" style="background:var(--card-bg); border:1px solid var(--border); color:#fff; padding:0.4rem 0.6rem; border-radius:8px; font-size:0.85rem;">
+        <option value="hi" selected>Hindi (हिन्दी)</option>
+        <option value="ta">Tamil (தமிழ்)</option>
+        <option value="te">Telugu (తెలుగు)</option>
+        <option value="mr">Marathi (मराठी)</option>
+        <option value="en">English</option>
+      </select>
+
+      <div style="flex:1;"></div>
+      
+      <i class="fa-solid fa-file-pdf" style="color:var(--blue); font-size:1.1rem;"></i>
+      <input type="file" id="ragFileInput" accept=".txt,.md">
+      <button class="primary" onclick="uploadDocument()" id="uploadBtn">Upload to RAG</button>
+      
+      <button class="primary" onclick="generateFlashcards()" style="background: linear-gradient(135deg, var(--green), #00c853);"><i class="fa-solid fa-layer-group"></i> Gen Flashcards</button>
+    </div>
+
+    <!-- Video player -->
+    <div class="video-card" id="videoCard">
+      <div class="video-container">
+        <div id="player"></div>
+      </div>
+      <div class="video-info">
+        <h3><i class="fa-solid fa-video" style="color:#ffd43b;"></i> Video Player</h3>
+        <button class="pause-ask-btn" onclick="pauseAndAsk()"><i class="fa-solid fa-wand-magic-sparkles"></i> Pause & Ask AI</button>
+      </div>
+    </div>
+
+    <!-- Canvas Area -->
+    <div class="canvas-card hidden" id="canvasCard">
+      <div class="canvas-header">
+        <span class="label"><i class="fa-solid fa-chalkboard"></i> AI Interactive Whiteboard</span>
+        <div style="display: flex; gap: 0.5rem;">
+          <button class="back-btn" onclick="backToVideo()"><i class="fa-solid fa-arrow-left"></i> Back to Video</button>
+          <button class="clear-btn" onclick="clearCanvas()" style="background: rgba(255,255,255,0.1); border:1px solid var(--border); color:#fff; border-radius:8px; padding:0.4rem 0.8rem; cursor:pointer;"><i class="fa-solid fa-eraser"></i> Clear</button>
+        </div>
+      </div>
+      <div class="canvas-body" id="canvasParent">
+        <canvas id="drawCanvas"></canvas>
+        <div class="canvas-status" id="canvasStatus">⚡ AI Whiteboard</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="chat-panel">
+    <div class="chat-header" style="display:flex; justify-content:space-between; align-items:center;">
+      <span><i class="fa-solid fa-robot"></i> Gemini AI Tutor Chat</span>
+      <button onclick="resetSessionMemory()" title="Reset Chat Memory & Start Fresh Session" style="background:rgba(255,255,255,0.1); border:1px solid var(--border); color:#ffd43b; font-size:0.75rem; padding:0.25rem 0.5rem; border-radius:6px; cursor:pointer; transition:0.2s;"><i class="fa-solid fa-rotate-right"></i> Reset Memory</button>
+    </div>
+    <div class="chat-messages" id="chatBox">
+      <div class="msg system">Connected to Spring Boot backend! Gemini AI ready.</div>
+    </div>
+    <div class="typing-indicator" id="typingInd"><i class="fa-solid fa-circle-notch fa-spin"></i> Gemini is thinking...</div>
+    <div class="chip-row">
+      <button class="chip" onclick="sendPreset('Can you explain what was just said?')">Explain Context</button>
+      <button class="chip" onclick="sendPreset('Draw a diagram of the current concept.')">Draw Concept</button>
+    </div>
+    <form class="chat-input" onsubmit="handleSubmit(event)">
+      <input type="text" id="userInput" placeholder="Type your doubt..." autocomplete="off">
+      <button type="submit" class="send-btn" id="sendBtn"><i class="fa-solid fa-paper-plane"></i></button>
+    </form>
+  </div>
+</div>
+
+<script>
+  const BACKEND = 'http://localhost:8080';
+  let difficulty = 3;
+  let player;
+  let currentVideoId = 'pnWINBJ3-yA'; // Default OOP video
+
+  marked.setOptions({ gfm: true, breaks: true });
+
+  // YouTube IFrame API Initialization
+  function onYouTubeIframeAPIReady() {
+    player = new YT.Player('player', {
+      height: '320',
+      width: '100%',
+      videoId: currentVideoId,
+      playerVars: { 
+        'playsinline': 1,
+        'origin': window.location.origin
+      },
+    });
+  }
+
+  function loadYouTubeVideo() {
+    const url = document.getElementById('ytLinkInput').value.trim();
+    if (!url) return;
+    let videoId = extractVideoID(url);
+    if (videoId && player) {
+      currentVideoId = videoId;
+      player.loadVideoById(videoId);
+    } else {
+      alert("Invalid YouTube URL!");
+    }
+  }
+
+  function extractVideoID(url) {
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+    const match = url.match(regExp);
+    return (match && match[2].length === 11) ? match[2] : null;
+  }
+
+  async function checkHealth() {
+    const label = document.getElementById('serverLabel');
+    try {
+      const r = await fetch(BACKEND + '/actuator/health');
+      label.textContent = r.ok ? 'Backend UP ✓' : 'Backend DOWN';
+    } catch (e) {
+      label.textContent = 'Backend OFFLINE';
+    }
+  }
+  checkHealth();
+
+  function updateDiff(v) {
+    difficulty = parseInt(v);
+    const labels = ['1 — ELI5','2 — Simple','3 — Standard','4 — Advanced','5 — Expert'];
+    document.getElementById('diffBadge').textContent = labels[v-1];
+  }
+
+  function pauseAndAsk() {
+    if (player && player.pauseVideo) {
+      player.pauseVideo();
+    }
+    
+    // Switch to Canvas
+    document.getElementById('videoCard').classList.add('hidden');
+    document.getElementById('canvasCard').classList.remove('hidden');
+    setTimeout(resizeCanvas, 50);
+
+    document.getElementById('userInput').focus();
+  }
+
+  function backToVideo() {
+    document.getElementById('canvasCard').classList.add('hidden');
+    document.getElementById('videoCard').classList.remove('hidden');
+    if (player && player.playVideo) {
+      player.playVideo();
+    }
+  }
+
+  // Sanitizer Helper
+  function sanitize(str) {
+    const temp = document.createElement('div');
+    temp.textContent = str;
+    return temp.innerHTML;
+  }
+
+  function addMsg(role, content) {
+    const box = document.getElementById('chatBox');
+    const d = document.createElement('div');
+    d.className = 'msg ' + role;
+    
+    if (role === 'ai') {
+      d.innerHTML = marked.parse(content); // Server returns markdown, DOMPurify would be ideal here in prod
+    } else {
+      d.textContent = content; // Implicit sanitization
+    }
+    
+    box.appendChild(d);
+    box.scrollTop = box.scrollHeight;
+  }
+
+  function sendPreset(text) {
+    document.getElementById('userInput').value = text;
+    handleSubmit(new Event('submit'));
+  }
+
+  let sessionId = localStorage.getItem('oreoSessionId');
+  if (!sessionId) {
+    sessionId = 'session-' + Math.random().toString(36).substring(2, 9);
+    localStorage.setItem('oreoSessionId', sessionId);
+  }
+
+  function resetSessionMemory() {
+    sessionId = 'session-' + Math.random().toString(36).substring(2, 9);
+    localStorage.setItem('oreoSessionId', sessionId);
+    const box = document.getElementById('chatBox');
+    box.innerHTML = '<div class="msg system">✨ Memory reset! Started new token-lean session (' + sessionId + ').</div>';
+  }
+
+  function getVideoTranscriptSnippet(videoId, timestamp) {
+    if (videoId === 'pnWINBJ3-yA') {
+      let t = `--- CUMULATIVE CODE & TRANSCRIPT BUILT UP TO ${timestamp.toFixed(1)}s ---\n`;
+      t += `[00:05] Intro: Object-Oriented Programming (OOP) concepts\n`;
+      if (timestamp >= 60) {
+        t += `[01:05] Instructor builds class syntax:\nclass Cookie:\n`;
+      }
+      if (timestamp >= 120) {
+        t += `[02:10] Instructor adds constructor:\n    def __init__(self, flavor):\n        self.flavor = flavor\n`;
+      }
+      if (timestamp >= 210) {
+        t += `[03:30] Instructor adds method & instantiates:\n    def eat(self):\n        return f"Eating {self.flavor} cookie"\nmy_cookie = Cookie("Choc Chip")\n`;
+      }
+      if (timestamp >= 320) {
+        t += `[05:20] Instructor adds class inheritance:\nclass SpecialCookie(Cookie):\n    def __init__(self, flavor, topping):\n        super().__init__(flavor)\n        self.topping = topping\n`;
+      }
+      return t;
+    }
+    return `Cumulative transcript snippet for video ${videoId} from 0s up to ${timestamp.toFixed(1)} seconds.`;
+  }
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    const input = document.getElementById('userInput');
+    let doubt = input.value.trim();
+    if (!doubt) return;
+
+    doubt = sanitize(doubt); // Sanitize on frontend as well
+    addMsg('user', doubt);
+    input.value = '';
+    document.getElementById('sendBtn').disabled = true;
+    document.getElementById('typingInd').classList.add('visible');
+
+    pauseAndAsk();
+    let videoTimestamp = 0;
+    if (player && player.getCurrentTime) {
+       videoTimestamp = player.getCurrentTime();
+    }
+    const dynamicTranscript = getVideoTranscriptSnippet(currentVideoId, videoTimestamp);
+
+    try {
+      const resp = await fetch(BACKEND + '/api/orchestration/canvas-explain', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          doubt: doubt,
+          transcript: dynamicTranscript,
+          difficultyLevel: difficulty,
+          videoTimestamp: videoTimestamp,
+          videoId: currentVideoId,
+          sessionId: sessionId,
+          language: document.getElementById('languageSelect')?.value || 'hi'
+        })
+      });
+
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+
+      const data = await resp.json();
+      let explanation = data.payload?.explanation || JSON.stringify(data);
+
+      // Robust Canvas JSON specification extraction
+      let diagramData = null;
+      const codeBlockMatch = explanation.match(/```(?:canvas-diagram|json)?\s*([\s\S]*?\{[\s\S]*?"nodes"[\s\S]*?\})\s*```/i);
+      
+      let rawJsonStr = null;
+      if (codeBlockMatch) {
+        rawJsonStr = codeBlockMatch[1].trim();
+        explanation = explanation.replace(codeBlockMatch[0], '').trim();
+      } else {
+        const inlineJsonMatch = explanation.match(/(\{[\s\S]*?"nodes"[\s\S]*?\})/i);
+        if (inlineJsonMatch) {
+          rawJsonStr = inlineJsonMatch[1].trim();
+          explanation = explanation.replace(inlineJsonMatch[0], '').trim();
+        }
+      }
+
+      if (rawJsonStr) {
+        try {
+          diagramData = JSON.parse(rawJsonStr);
+          if (diagramData.edges && !diagramData.connections) {
+            diagramData.connections = diagramData.edges;
+          }
+        } catch (err) {
+          console.warn("Failed to parse diagram JSON", err);
+        }
+      }
+
+      addMsg('ai', explanation);
+
+      if (diagramData) {
+        renderDynamicDiagram(diagramData);
+      } else {
+        drawDiagramOnCanvas(doubt);
+      }
+
+    } catch (err) {
+      addMsg('error', 'API Error: ' + err.message + '. Is the backend running?');
+    } finally {
+      document.getElementById('sendBtn').disabled = false;
+      document.getElementById('typingInd').classList.remove('visible');
+    }
+  }
+
+  async function uploadDocument() {
+    const fileInput = document.getElementById('ragFileInput');
+    if (fileInput.files.length === 0) return alert('Please select a file to upload!');
+    
+    const file = fileInput.files[0];
+    const formData = new FormData();
+    formData.append("file", file);
+    
+    const btn = document.getElementById('uploadBtn');
+    btn.disabled = true; btn.textContent = "Uploading...";
+
+    try {
+      const resp = await fetch(BACKEND + '/api/orchestration/upload-document', {
+        method: 'POST',
+        body: formData
+      });
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      const data = await resp.json();
+      addMsg('system', 'RAG Upload: ' + (data.message || data.error));
+    } catch (e) {
+      addMsg('error', 'Failed to upload document: ' + e.message);
+    } finally {
+      btn.disabled = false; btn.textContent = "Upload to RAG";
+      fileInput.value = "";
+    }
+  }
+
+  async function generateFlashcards() {
+    addMsg('system', 'Generating flashcards based on current session context...');
+    document.getElementById('typingInd').classList.add('visible');
+
+    // Dynamically build context from recent conversation and timestamp
+    let videoTimestamp = 0;
+    if (player && player.getCurrentTime) videoTimestamp = player.getCurrentTime();
+    
+    const recentMessages = Array.from(document.querySelectorAll('.msg.user, .msg.ai')).slice(-6).map(m => m.textContent).join('\n');
+    const dynamicTranscript = recentMessages || ("Video context at " + videoTimestamp + " seconds");
+
+    try {
+      const resp = await fetch(BACKEND + '/api/orchestration/flashcards/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ transcript: dynamicTranscript })
+      });
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      const data = await resp.json();
+      
+      if (data.flashcards) {
+        const box = document.getElementById('chatBox');
+        
+        // Add header
+        const header = document.createElement('div');
+        header.className = 'msg ai';
+        header.innerHTML = '<h3>🗂️ Generated Flashcards</h3><p>Click a card to flip it!</p>';
+        box.appendChild(header);
+
+        // Add flashcards
+        const fcContainer = document.createElement('div');
+        fcContainer.className = 'flashcard-container';
+        
+        data.flashcards.forEach(fc => {
+          const card = document.createElement('div');
+          card.className = 'flashcard';
+          card.onclick = () => card.classList.toggle('flipped');
+          card.innerHTML = `
+            <div class="flashcard-inner">
+              <div class="flashcard-front">${sanitize(fc.front)}</div>
+              <div class="flashcard-back">${sanitize(fc.back)}</div>
+            </div>
+          `;
+          fcContainer.appendChild(card);
+        });
+        box.appendChild(fcContainer);
+        box.scrollTop = box.scrollHeight;
+
+      } else {
+        addMsg('error', 'Flashcards generation failed.');
+      }
+    } catch (e) {
+      addMsg('error', 'Flashcard API Error: ' + e.message);
+    } finally {
+      document.getElementById('typingInd').classList.remove('visible');
+    }
+  }
+
+  // --- Canvas Logic ---
+  const canvas = document.getElementById('drawCanvas');
+  const ctx = canvas.getContext('2d');
+  let drawing = false;
+
+  function resizeCanvas() {
+    const p = document.getElementById('canvasParent');
+    canvas.width = p.clientWidth;
+    canvas.height = p.clientHeight;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  }
+  window.addEventListener('resize', resizeCanvas);
+  setTimeout(resizeCanvas, 100);
+
+  canvas.addEventListener('mousedown', e => { drawing = true; ctx.beginPath(); ctx.moveTo(e.offsetX, e.offsetY); });
+  canvas.addEventListener('mousemove', e => {
+    if (!drawing) return;
+    ctx.strokeStyle = '#ffd43b'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+    ctx.lineTo(e.offsetX, e.offsetY); ctx.stroke();
+  });
+  canvas.addEventListener('mouseup', () => drawing = false);
+
+  function clearCanvas() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    document.getElementById('canvasStatus').textContent = 'Canvas cleared. Draw with your mouse/stylus or ask a doubt!';
+  }
+
+  function drawDiagramOnCanvas(topic) {
+    resizeCanvas();
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const t = topic.toLowerCase();
+
+    // Dark grid background
+    ctx.fillStyle = '#161b22';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
+    ctx.lineWidth = 1;
+    for (let x = 0; x < canvas.width; x += 30) {
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
+    }
+    for (let y = 0; y < canvas.height; y += 30) {
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+    }
+
+    if (t.includes('class') || t.includes('object') || t.includes('oop') || t.includes('cookie') || t.includes('car') || t.includes('vizual') || t.includes('blueprint')) {
+      document.getElementById('canvasStatus').textContent = '🎨 AI Canvas: OOP Class Blueprint & Memory Allocation Diagram';
+
+      // 1. CLASS BLUEPRINT (Left)
+      ctx.strokeStyle = '#3776ab'; ctx.lineWidth = 2;
+      ctx.strokeRect(30, 35, 230, 220);
+      ctx.fillStyle = '#3776ab'; ctx.fillRect(30, 35, 230, 36);
+      ctx.fillStyle = '#ffffff'; ctx.font = 'bold 15px Outfit';
+      ctx.fillText('📋 CLASS (Blueprint)', 45, 58);
+
+      ctx.font = '13px Fira Code'; ctx.fillStyle = '#ffd43b';
+      ctx.fillText('class Cookie:', 45, 95);
+      ctx.fillStyle = '#f0f6fc';
+      ctx.fillText('  def __init__(self, f):', 45, 118);
+      ctx.fillText('    self.flavor = f', 45, 140);
+      ctx.fillText('  def eat(self):', 45, 165);
+      ctx.fillText('    return "Nom nom!"', 45, 188);
+
+      // Arrow 1 to Instance 1
+      ctx.strokeStyle = '#39d353'; ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.moveTo(260, 105); ctx.lineTo(340, 85); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(340, 85); ctx.lineTo(330, 78); ctx.lineTo(330, 92); ctx.fillStyle = '#39d353'; ctx.fill();
+
+      // Arrow 2 to Instance 2
+      ctx.strokeStyle = '#39d353'; ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.moveTo(260, 185); ctx.lineTo(340, 205); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(340, 205); ctx.lineTo(330, 198); ctx.lineTo(330, 212); ctx.fillStyle = '#39d353'; ctx.fill();
+
+      // 2. OBJECT INSTANCE 1 (Top Right)
+      ctx.strokeStyle = '#39d353'; ctx.lineWidth = 2;
+      ctx.strokeRect(340, 25, 230, 100);
+      ctx.fillStyle = '#39d353'; ctx.fillRect(340, 25, 230, 30);
+      ctx.fillStyle = '#0a0c10'; ctx.font = 'bold 14px Outfit';
+      ctx.fillText('🍪 Object: my_cookie (RAM: 0x7F1)', 348, 45);
+
+      ctx.font = '13px Fira Code'; ctx.fillStyle = '#f0f6fc';
+      ctx.fillText('flavor: "Chocolate Chip"', 352, 75);
+      ctx.fillText('eat() -> "Nom nom!"', 352, 100);
+
+      // 3. OBJECT INSTANCE 2 (Bottom Right)
+      ctx.strokeStyle = '#00b4d8'; ctx.lineWidth = 2;
+      ctx.strokeRect(340, 155, 230, 100);
+      ctx.fillStyle = '#00b4d8'; ctx.fillRect(340, 155, 230, 30);
+      ctx.fillStyle = '#0a0c10'; ctx.font = 'bold 14px Outfit';
+      ctx.fillText('🍪 Object: your_cookie (RAM: 0x7F2)', 348, 175);
+
+      ctx.font = '13px Fira Code'; ctx.fillStyle = '#f0f6fc';
+      ctx.fillText('flavor: "Oatmeal"', 352, 205);
+      ctx.fillText('eat() -> "Nom nom!"', 352, 230);
+
+    } else if (t.includes('inheritance')) {
+      document.getElementById('canvasStatus').textContent = '🎨 AI Canvas: Python Class Inheritance Tree';
+      
+      // Parent Class
+      ctx.strokeStyle = '#3776ab'; ctx.lineWidth = 2; ctx.strokeRect(180, 25, 240, 90);
+      ctx.fillStyle = '#3776ab'; ctx.fillRect(180, 25, 240, 30);
+      ctx.fillStyle = '#ffffff'; ctx.font = 'bold 15px Outfit'; ctx.fillText('Parent Class: Animal', 215, 45);
+      ctx.font = '12px Fira Code'; ctx.fillStyle = '#f0f6fc'; ctx.fillText('attributes: species, age', 195, 75);
+
+      // Connecting Arrow
+      ctx.strokeStyle = '#ffd43b'; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(300, 115); ctx.lineTo(300, 165); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(300, 165); ctx.lineTo(293, 155); ctx.lineTo(307, 155); ctx.fillStyle = '#ffd43b'; ctx.fill();
+
+      // Child Class
+      ctx.strokeStyle = '#39d353'; ctx.lineWidth = 2; ctx.strokeRect(180, 165, 240, 90);
+      ctx.fillStyle = '#39d353'; ctx.fillRect(180, 165, 240, 30);
+      ctx.fillStyle = '#0a0c10'; ctx.font = 'bold 15px Outfit'; ctx.fillText('Child Class: Dog(Animal)', 200, 185);
+      ctx.font = '12px Fira Code'; ctx.fillStyle = '#f0f6fc'; ctx.fillText('bark() -> "Woof!"', 195, 215);
+
+    } else if (t.includes('func') || t.includes('def') || t.includes('method')) {
+      document.getElementById('canvasStatus').textContent = '🎨 AI Canvas: Function Execution Stack Diagram';
+
+      ctx.strokeStyle = '#ff9800'; ctx.lineWidth = 2; ctx.strokeRect(40, 40, 220, 180);
+      ctx.fillStyle = '#ff9800'; ctx.fillRect(40, 40, 220, 32);
+      ctx.fillStyle = '#ffffff'; ctx.font = 'bold 15px Outfit'; ctx.fillText('⚙️ Function: greet(name)', 50, 62);
+
+      ctx.font = '13px Fira Code'; ctx.fillStyle = '#f0f6fc';
+      ctx.fillText('Input: name = "Alice"', 50, 95);
+      ctx.fillText('Process: "Hello " + name', 50, 130);
+      ctx.fillStyle = '#39d353';
+      ctx.fillText('Return: "Hello Alice"', 50, 175);
+
+      // Call Stack box
+      ctx.strokeStyle = '#00b4d8'; ctx.strokeRect(320, 40, 220, 180);
+      ctx.fillStyle = '#00b4d8'; ctx.fillRect(320, 40, 220, 32);
+      ctx.fillStyle = '#0a0c10'; ctx.font = 'bold 15px Outfit'; ctx.fillText('🥞 Call Stack', 370, 62);
+      ctx.font = '13px Fira Code'; ctx.fillStyle = '#f0f6fc';
+      ctx.fillText('Frame 2: greet("Alice")', 335, 100);
+      ctx.fillText('Frame 1: main()', 335, 140);
+
+    } else if (t.includes('list') || t.includes('dict') || t.includes('tuple') || t.includes('type') || t.includes('data')) {
+      document.getElementById('canvasStatus').textContent = '🎨 AI Canvas: Data Structure Memory Layout';
+
+      // Index Boxes
+      const items = ['10', '"Python"', 'True', '3.14'];
+      ctx.font = 'bold 14px Outfit';
+      items.forEach((item, idx) => {
+        let x = 40 + idx * 130;
+        ctx.strokeStyle = '#3776ab'; ctx.lineWidth = 2; ctx.strokeRect(x, 80, 110, 80);
+        ctx.fillStyle = '#3776ab'; ctx.fillRect(x, 80, 110, 28);
+        ctx.fillStyle = '#ffffff'; ctx.fillText(`Index [${idx}]`, x + 25, 100);
+        ctx.fillStyle = '#ffd43b'; ctx.font = '13px Fira Code';
+        ctx.fillText(item, x + 20, 135);
+      });
+
+    } else {
+      document.getElementById('canvasStatus').textContent = '🎨 AI Canvas: Interactive Concept Map';
+
+      // General Concept Nodes
+      ctx.strokeStyle = '#3776ab'; ctx.lineWidth = 2; ctx.strokeRect(40, 40, 220, 180);
+      ctx.fillStyle = '#3776ab'; ctx.fillRect(40, 40, 220, 36);
+      ctx.fillStyle = '#ffffff'; ctx.font = 'bold 15px Outfit'; ctx.fillText('💡 Core Concept', 85, 63);
+
+      ctx.font = '13px Fira Code'; ctx.fillStyle = '#f0f6fc';
+      ctx.fillText('Topic: ' + topic.substring(0, 20), 50, 100);
+      ctx.fillText('Status: Active', 50, 130);
+      ctx.fillText('Scope: Global Context', 50, 160);
+
+      // Connected Node
+      ctx.strokeStyle = '#39d353'; ctx.strokeRect(320, 40, 220, 180);
+      ctx.fillStyle = '#39d353'; ctx.fillRect(320, 40, 220, 36);
+      ctx.fillStyle = '#0a0c10'; ctx.font = 'bold 15px Outfit'; ctx.fillText('🎯 Key Outcome', 360, 63);
+      ctx.font = '13px Fira Code'; ctx.fillStyle = '#f0f6fc';
+      ctx.fillText('Behavior: Dynamic', 335, 100);
+      ctx.fillText('Output: Visual Canvas', 335, 130);
+
+      // Connecting line
+      ctx.strokeStyle = '#ffd43b'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(260, 130); ctx.lineTo(320, 130); ctx.stroke();
+    }
+  }
+
+  function renderDynamicDiagram(data) {
+    resizeCanvas();
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Dark grid background
+    ctx.fillStyle = '#161b22';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+    ctx.lineWidth = 1;
+    for (let x = 0; x < canvas.width; x += 30) {
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
+    }
+    for (let y = 0; y < canvas.height; y += 30) {
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+    }
+
+    const title = data.title || "Dynamic AI Concept Map";
+    document.getElementById('canvasStatus').textContent = '🎨 AI Canvas: ' + title;
+
+    const nodes = data.nodes || [];
+    const connections = data.connections || [];
+    if (nodes.length === 0) return;
+
+    const nodePositions = {};
+    const count = nodes.length;
+    const cardWidth = 200;
+    const cardHeight = 90;
+
+    const colors = ['#3776ab', '#39d353', '#00b4d8', '#ff9800', '#a371f7'];
+
+    // Dynamic layout coordinates
+    if (count <= 3) {
+      const gap = Math.max(25, (canvas.width - count * cardWidth) / (count + 1));
+      nodes.forEach((node, i) => {
+        const x = gap + i * (cardWidth + gap);
+        const y = canvas.height / 2 - cardHeight / 2;
+        nodePositions[node.id] = { x, y, cx: x + cardWidth / 2, cy: y + cardHeight / 2, color: colors[i % colors.length] };
+      });
+    } else {
+      const cols = 2;
+      const gapX = Math.max(25, (canvas.width - cols * cardWidth) / (cols + 1));
+      const gapY = Math.max(15, (canvas.height - 2 * cardHeight) / 3);
+      nodes.forEach((node, i) => {
+        const col = i % 2;
+        const row = Math.floor(i / 2);
+        const x = gapX + col * (cardWidth + gapX);
+        const y = gapY + row * (cardHeight + gapY);
+        nodePositions[node.id] = { x, y, cx: x + cardWidth / 2, cy: y + cardHeight / 2, color: colors[i % colors.length] };
+      });
+    }
+
+    // 1. Draw Connections / Arrows
+    connections.forEach(conn => {
+      const fromPos = nodePositions[conn.from];
+      const toPos = nodePositions[conn.to];
+      if (!fromPos || !toPos) return;
+
+      ctx.strokeStyle = '#ffd43b'; ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(fromPos.cx, fromPos.cy);
+      ctx.lineTo(toPos.cx, toPos.cy);
+      ctx.stroke();
+
+      // Arrowhead
+      const angle = Math.atan2(toPos.cy - fromPos.cy, toPos.cx - fromPos.cx);
+      const headLen = 10;
+      const arrowX = toPos.cx - (cardWidth / 2 + 4) * Math.cos(angle);
+      const arrowY = toPos.cy - (cardHeight / 2 + 4) * Math.sin(angle);
+
+      ctx.fillStyle = '#ffd43b';
+      ctx.beginPath();
+      ctx.moveTo(arrowX, arrowY);
+      ctx.lineTo(arrowX - headLen * Math.cos(angle - Math.PI / 6), arrowY - headLen * Math.sin(angle - Math.PI / 6));
+      ctx.lineTo(arrowX - headLen * Math.cos(angle + Math.PI / 6), arrowY - headLen * Math.sin(angle + Math.PI / 6));
+      ctx.fill();
+
+      // Label Badge
+      if (conn.label) {
+        const midX = (fromPos.cx + toPos.cx) / 2;
+        const midY = (fromPos.cy + toPos.cy) / 2 - 8;
+        ctx.fillStyle = 'rgba(10, 12, 16, 0.9)';
+        ctx.fillRect(midX - 35, midY - 9, 70, 18);
+        ctx.strokeStyle = 'rgba(255,255,255,0.2)'; ctx.lineWidth = 1;
+        ctx.strokeRect(midX - 35, midY - 9, 70, 18);
+        ctx.fillStyle = '#ffd43b'; ctx.font = '10px Outfit';
+        ctx.textAlign = 'center';
+        ctx.fillText(conn.label.substring(0, 12), midX, midY + 3);
+        ctx.textAlign = 'left';
+      }
+    });
+
+    // 2. Draw Nodes
+    nodes.forEach((node, i) => {
+      const pos = nodePositions[node.id];
+      if (!pos) return;
+
+      // Card Container
+      ctx.strokeStyle = pos.color; ctx.lineWidth = 2;
+      ctx.strokeRect(pos.x, pos.y, cardWidth, cardHeight);
+      ctx.fillStyle = pos.color; ctx.fillRect(pos.x, pos.y, cardWidth, 26);
+
+      // Card Header
+      ctx.fillStyle = '#ffffff'; ctx.font = 'bold 13px Outfit';
+      const labelText = node.label || ('Node ' + node.id);
+      ctx.fillText(labelText.substring(0, 22), pos.x + 8, pos.y + 18);
+
+      // Card Subtext
+      ctx.fillStyle = '#f0f6fc'; ctx.font = '11px Fira Code';
+      const subtext = node.subtext || '';
+      if (subtext.length > 22) {
+        ctx.fillText(subtext.substring(0, 22), pos.x + 8, pos.y + 48);
+        ctx.fillText(subtext.substring(22, 44), pos.x + 8, pos.y + 68);
+      } else {
+        ctx.fillText(subtext, pos.x + 8, pos.y + 55);
+      }
+    });
+  }
+</script>
+</body>
+</html>

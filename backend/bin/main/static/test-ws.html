@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebSocket Test</title>
+    <script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@7.0.0/bundles/stomp.umd.min.js"></script>
+</head>
+<body>
+    <h2>Oreo AI Tutor WebSocket Test</h2>
+    <button onclick="connect()">Connect & Test</button>
+    <div id="output" style="white-space: pre-wrap; font-family: monospace; margin-top: 20px; border: 1px solid #ccc; padding: 10px; min-height: 100px;"></div>
+
+    <script>
+        const output = document.getElementById('output');
+        let fullMessage = "";
+
+        function connect() {
+            output.innerText = "Connecting...\n";
+            
+            const stompClient = new StompJs.Client({
+                brokerURL: 'ws://localhost:8080/ws/orchestration/websocket',
+                reconnectDelay: 5000,
+                heartbeatIncoming: 4000,
+                heartbeatOutgoing: 4000,
+            });
+
+            stompClient.onConnect = (frame) => {
+                output.innerText += "Connected!\nSubscribing to /topic/canvas/test-session...\n";
+                
+                stompClient.subscribe('/topic/canvas/test-session', (message) => {
+                    const data = JSON.parse(message.body);
+                    if(data.token) {
+                        fullMessage += data.token;
+                        output.innerText = fullMessage;
+                    } else if (data.done) {
+                        output.innerText += "\n[STREAM COMPLETE]";
+                    } else if (data.error) {
+                        output.innerText += "\n[ERROR]: " + data.error;
+                    }
+                });
+
+                output.innerText += "Sending doubt...\n\n";
+                stompClient.publish({
+                    destination: '/app/canvas/stream',
+                    body: JSON.stringify({
+                        sessionId: 'test-session',
+                        message: 'What is a Directed Acyclic Graph?'
+                    })
+                });
+            };
+
+            stompClient.onStompError = (frame) => {
+                output.innerText += 'Broker reported error: ' + frame.headers['message'] + '\n';
+                output.innerText += 'Additional details: ' + frame.body + '\n';
+            };
+
+            stompClient.activate();
+        }
+    </script>
+</body>
+</html>

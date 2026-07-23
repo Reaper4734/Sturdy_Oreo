@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Component
 public class WatchdogDaemon {
@@ -21,16 +22,24 @@ public class WatchdogDaemon {
     // Inactivity threshold before nudging (e.g., 3 minutes)
     private static final long INACTIVITY_THRESHOLD_SECONDS = 180; 
 
-    private final WatchdogSessionManager sessionManager;
+    // Map of Session ID -> Last Heartbeat Timestamp
+    private final Map<String, Instant> activeSessions = new ConcurrentHashMap<>();
+
     private final SmartNudgePipeline smartNudgePipeline;
     private final SimpMessagingTemplate messagingTemplate;
 
-    public WatchdogDaemon(WatchdogSessionManager sessionManager, 
-                          SmartNudgePipeline smartNudgePipeline, 
+    public WatchdogDaemon(SmartNudgePipeline smartNudgePipeline, 
                           SimpMessagingTemplate messagingTemplate) {
-        this.sessionManager = sessionManager;
         this.smartNudgePipeline = smartNudgePipeline;
         this.messagingTemplate = messagingTemplate;
+    }
+
+    public void registerHeartbeat(String sessionId) {
+        activeSessions.put(sessionId, Instant.now());
+    }
+
+    public void removeSession(String sessionId) {
+        activeSessions.remove(sessionId);
     }
 
     // Run every 30 seconds
@@ -38,7 +47,7 @@ public class WatchdogDaemon {
     public void scanForIdleSessions() {
         Instant now = Instant.now();
         
-        for (Map.Entry<String, Instant> entry : sessionManager.getActiveSessions().entrySet()) {
+        for (Map.Entry<String, Instant> entry : activeSessions.entrySet()) {
             String sessionId = entry.getKey();
             Instant lastHeartbeat = entry.getValue();
             
@@ -55,7 +64,7 @@ public class WatchdogDaemon {
                 messagingTemplate.convertAndSend("/topic/session/" + sessionId + "/interventions", nudgeResponse.getPayload());
                 
                 // 3. Reset heartbeat to avoid spamming the student
-                sessionManager.registerHeartbeat(sessionId);
+                registerHeartbeat(sessionId);
             }
         }
     }

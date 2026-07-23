@@ -42,17 +42,17 @@ public class HybridRetriever implements ContentRetriever {
 
         // 2. Perform Hybrid Search Query (Vector Distance + Keyword Match)
         String sql = """
-            SELECT text, 
+            SELECT content, 
                    (1 - (embedding <=> ?::vector)) AS vector_score,
-                   ts_rank(to_tsvector('english', text), plainto_tsquery('english', ?)) AS keyword_score
+                   ts_rank(to_tsvector('english', content), plainto_tsquery('english', ?)) AS keyword_score
             FROM document_embeddings
-            ORDER BY ( (1 - (embedding <=> ?::vector)) * 0.7 + ts_rank(to_tsvector('english', text), plainto_tsquery('english', ?)) * 0.3 ) DESC
+            ORDER BY ( (1 - (embedding <=> ?::vector)) * 0.7 + ts_rank(to_tsvector('english', content), plainto_tsquery('english', ?)) * 0.3 ) DESC
             LIMIT 5
         """;
 
         // Execute query
         List<TextSegment> segments = jdbcTemplate.query(sql,
-                (rs, rowNum) -> TextSegment.from(rs.getString("text")),
+                (rs, rowNum) -> TextSegment.from(rs.getString("content")),
                 vectorLiteral, text, vectorLiteral, text
         );
         

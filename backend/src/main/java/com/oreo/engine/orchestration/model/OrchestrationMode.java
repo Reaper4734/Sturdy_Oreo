@@ -8,5 +8,6 @@ public enum OrchestrationMode {
     QUIZ_GRADE,
     NUDGE,
     DAG_GENERATE,
-    SCHEDULE_GENERATE
+    SCHEDULE_GENERATE,
+    CANVAS_EXPLAIN
 }

@@ -26,6 +26,7 @@ public class LlmConfig {
                 .apiKey(apiKey)
                 .modelName("gemini-3.1-flash-lite")
                 .temperature(0.7)
+                .maxRetries(1)
                 .maxOutputTokens(2048)
                 .build();
     }
