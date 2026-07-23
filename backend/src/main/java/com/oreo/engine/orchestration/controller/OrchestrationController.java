@@ -4,9 +4,13 @@ import com.oreo.auth.User;
 import com.oreo.auth.UserRepository;
 import com.oreo.engine.orchestration.models.LearningTrack;
 import com.oreo.engine.orchestration.models.LearningTrackRepository;
+import com.oreo.engine.orchestration.AutonomousIngestionService;
 import com.oreo.engine.orchestration.pipelines.DynamicProfilerPipeline;
 import com.oreo.engine.orchestration.pipelines.DagGeneratorPipeline;
 import com.oreo.engine.orchestration.pipelines.SandboxExplainerPipeline;
+import com.oreo.engine.orchestration.pipelines.CodingChallengePipeline;
+import com.oreo.engine.orchestration.pipelines.CodeGraderPipeline;
+import com.oreo.engine.orchestration.YouTubeTranscriptService;
 import com.oreo.engine.orchestration.schemas.DagOutputSchema;
 import com.oreo.engine.orchestration.model.OrchestrationMode;
 import com.oreo.engine.orchestration.model.OrchestrationRequest;
@@ -24,6 +28,10 @@ public class OrchestrationController {
     private final DynamicProfilerPipeline dynamicProfilerPipeline;
     private final DagGeneratorPipeline dagGeneratorPipeline;
     private final SandboxExplainerPipeline sandboxExplainerPipeline;
+    private final CodingChallengePipeline codingChallengePipeline;
+    private final CodeGraderPipeline codeGraderPipeline;
+    private final YouTubeTranscriptService youtubeTranscriptService;
+    private final AutonomousIngestionService autonomousIngestionService;
     private final LearningTrackRepository trackRepository;
     private final UserRepository userRepository;
 
@@ -31,11 +39,19 @@ public class OrchestrationController {
             DynamicProfilerPipeline dynamicProfilerPipeline,
             DagGeneratorPipeline dagGeneratorPipeline,
             SandboxExplainerPipeline sandboxExplainerPipeline,
+            CodingChallengePipeline codingChallengePipeline,
+            CodeGraderPipeline codeGraderPipeline,
+            YouTubeTranscriptService youtubeTranscriptService,
+            AutonomousIngestionService autonomousIngestionService,
             LearningTrackRepository trackRepository,
             UserRepository userRepository) {
         this.dynamicProfilerPipeline = dynamicProfilerPipeline;
         this.dagGeneratorPipeline = dagGeneratorPipeline;
         this.sandboxExplainerPipeline = sandboxExplainerPipeline;
+        this.codingChallengePipeline = codingChallengePipeline;
+        this.codeGraderPipeline = codeGraderPipeline;
+        this.youtubeTranscriptService = youtubeTranscriptService;
+        this.autonomousIngestionService = autonomousIngestionService;
         this.trackRepository = trackRepository;
         this.userRepository = userRepository;
     }
@@ -116,5 +132,44 @@ public class OrchestrationController {
                 ))
                 .build();
         return ResponseEntity.ok(sandboxExplainerPipeline.run(request));
+    }
+
+    @PostMapping("/ingest")
+    public ResponseEntity<Map<String, String>> triggerIngestion(@RequestBody Map<String, String> payload) {
+        String videoId = payload.getOrDefault("videoId", "pnWINBJ3-yA");
+        UUID userId = UUID.randomUUID(); // mock
+        
+        autonomousIngestionService.ingestVideo(videoId, userId);
+        
+        return ResponseEntity.accepted().body(Map.of(
+            "status", "Ingestion started", 
+            "videoId", videoId,
+            "topic", "/topic/ingestion/" + videoId
+        ));
+    }
+
+    @PostMapping("/challenge/generate")
+    public ResponseEntity<CodingChallengePipeline.ExtractedChallenge> generateChallenge(@RequestBody Map<String, Object> payload) {
+        String videoId = (String) payload.getOrDefault("videoId", "");
+        Double vt = payload.containsKey("videoTimestamp") ? Double.parseDouble(payload.get("videoTimestamp").toString()) : -1.0;
+        int timeInSeconds = (int) Math.max(0, Math.round(vt));
+        String doubtContext = (String) payload.getOrDefault("doubtContext", "I want to practice concepts taught here.");
+        String language = (String) payload.getOrDefault("language", "Python");
+
+        String transcript = youtubeTranscriptService.getCumulativeTranscriptUpToTimestamp(videoId, timeInSeconds)
+                .orElse("Transcript unavailable");
+
+        CodingChallengePipeline.ExtractedChallenge challenge = codingChallengePipeline.generate(transcript, doubtContext, language);
+        return ResponseEntity.ok(challenge);
+    }
+
+    @PostMapping("/challenge/grade")
+    public ResponseEntity<CodeGraderPipeline.GradingResult> gradeChallenge(@RequestBody Map<String, String> payload) {
+        String problemStatement = payload.getOrDefault("problemStatement", "");
+        String language = payload.getOrDefault("language", "Python");
+        String code = payload.getOrDefault("code", "");
+
+        CodeGraderPipeline.GradingResult result = codeGraderPipeline.evaluate(problemStatement, language, code);
+        return ResponseEntity.ok(result);
     }
 }

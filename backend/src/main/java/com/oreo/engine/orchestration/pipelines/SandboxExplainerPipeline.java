@@ -67,7 +67,6 @@ public class SandboxExplainerPipeline {
         );
     }
 
-    @io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker(name = "geminiCircuitBreaker", fallbackMethod = "fallbackRun")
     public OrchestrationResponse run(OrchestrationRequest request) {
         Double vt = -1.0;
         if (request.getContext() != null && request.getContext().containsKey("videoTimestamp")) {
@@ -147,10 +146,14 @@ public class SandboxExplainerPipeline {
             default -> "Give a standard, clear explanation.";
         };
 
-        String answer = tutor.answerDoubt(request.getUserId(), request.getUserInput(), videoTranscript, ragContext, difficultyInstructions, videoTimestampStr, videoId, language);
-        return OrchestrationResponse.builder()
-                .payload(Map.of("explanation", answer))
-                .build();
+        try {
+            String answer = tutor.answerDoubt(request.getUserId(), request.getUserInput(), videoTranscript, ragContext, difficultyInstructions, videoTimestampStr, videoId, language);
+            return OrchestrationResponse.builder()
+                    .payload(Map.of("explanation", answer))
+                    .build();
+        } catch (Exception e) {
+            return fallbackRun(request, e);
+        }
     }
 
     public OrchestrationResponse fallbackRun(OrchestrationRequest request, Throwable t) {

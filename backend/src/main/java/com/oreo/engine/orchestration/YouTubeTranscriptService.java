@@ -1,7 +1,5 @@
 package com.oreo.engine.orchestration;
 
-import com.oreo.engine.transcription.LocalWhisperTranscriptionService;
-import com.oreo.engine.translation.LocalOnnxTranslationService;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
@@ -10,22 +8,12 @@ import java.util.Optional;
 @Service
 public class YouTubeTranscriptService {
 
-    private final LocalWhisperTranscriptionService localWhisperService;
-    private final LocalOnnxTranslationService translationService;
-
-    public YouTubeTranscriptService(
-            LocalWhisperTranscriptionService localWhisperService,
-            LocalOnnxTranslationService translationService) {
-        this.localWhisperService = localWhisperService;
-        this.translationService = translationService;
+    public YouTubeTranscriptService() {
     }
 
     public Optional<String> getMultilingualCumulativeTranscript(String videoId, int timeInSeconds, String language) {
-        if (language != null && !language.isBlank() && !"en".equalsIgnoreCase(language)) {
-            var segments = localWhisperService.getCumulativeRegionalTranscript(videoId, timeInSeconds, language);
-            String translated = translationService.translateSegmentsToEnglish(segments, language);
-            return Optional.of(translated);
-        }
+        // Fall back to fetching the default transcript via the Python CLI tool,
+        // since the LLM now handles all translations natively on the backend.
         return getCumulativeTranscriptUpToTimestamp(videoId, timeInSeconds);
     }
 
@@ -40,6 +28,31 @@ public class YouTubeTranscriptService {
     public Optional<String> getCumulativeTranscriptUpToTimestamp(String videoId, int timeInSeconds) {
         if (videoId == null || videoId.isEmpty()) {
             return Optional.empty();
+        }
+
+        try {
+            // Use python youtube_transcript_api to fetch transcript
+            ProcessBuilder pb = new ProcessBuilder("python", "-c", 
+                "from youtube_transcript_api import YouTubeTranscriptApi; " +
+                "t = YouTubeTranscriptApi.get_transcript('" + videoId + "', languages=['hi', 'en', 'hi-IN', 'es', 'fr', 'de']); " +
+                "print(' '.join([x['text'] for x in t]))"
+            );
+            pb.redirectErrorStream(true);
+            Process process = pb.start();
+            java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.InputStreamReader(process.getInputStream()));
+            StringBuilder builder = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                builder.append(line).append(" ");
+            }
+            process.waitFor();
+            
+            String fullText = builder.toString().trim();
+            if (fullText.length() > 0 && !fullText.contains("No module named")) {
+                return Optional.of(fullText);
+            }
+        } catch (Exception e) {
+            // fallback below
         }
 
         if ("pnWINBJ3-yA".equals(videoId)) {

@@ -22,17 +22,22 @@ public class FlashcardGeneratorPipeline {
         public String backAnswer;
     }
 
+    public static class ExtractedCardWrapper {
+        public List<ExtractedCard> cards;
+    }
+
     interface QAExtractor {
         @SystemMessage({
                 "You are an AI assistant that extracts key educational facts from a conversation transcript.",
                 "Generate highly concise Anki-style flashcards.",
-                "Ensure the 'frontQuestion' is a single clear question, and the 'backAnswer' is a short, direct answer."
+                "Ensure the 'frontQuestion' is a single clear question, and the 'backAnswer' is a short, direct answer.",
+                "CRITICAL: Regardless of the language of the transcript, you MUST translate and generate ALL flashcards in English."
         })
         @UserMessage("Generate flashcards for this transcript snippet: {{text}}")
-        List<ExtractedCard> extractCards(@dev.langchain4j.service.V("text") String text);
+        ExtractedCardWrapper extractCards(@dev.langchain4j.service.V("text") String text);
     }
 
     public List<ExtractedCard> generateFlashcards(String transcriptSnippet) {
-        return extractor.extractCards(transcriptSnippet);
+        return extractor.extractCards(transcriptSnippet).cards;
     }
 }

@@ -2,20 +2,14 @@ package com.oreo.engine.orchestration.config;
 
 import dev.langchain4j.data.segment.TextSegment;
 import dev.langchain4j.model.embedding.EmbeddingModel;
-import dev.langchain4j.model.googleai.GoogleAiEmbeddingModel;
 import dev.langchain4j.store.embedding.EmbeddingStore;
 import dev.langchain4j.store.embedding.pgvector.PgVectorEmbeddingStore;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import java.net.URI;
-
 @Configuration
 public class RagConfig {
-
-    @Value("${oreo.llm.gemini-api-key:dummy-gemini-key}")
-    private String geminiApiKey;
 
     @Value("${spring.datasource.url}")
     private String dbUrl;

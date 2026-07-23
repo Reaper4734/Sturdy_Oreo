@@ -42,6 +42,8 @@ oreo:
   llm:
     gemini-api-key: ${GEMINI_API_KEY:AQ.Ab8RN6KoeKf1dQ4MbRZpRySorbKKwbs9j2xGX2soNZHpTjyrHg}
     openai-api-key: ${OPENAI_API_KEY:dummy-openai-key}
+  judge0:
+    api-key: ${JUDGE0_API_KEY:fb9131e7ebmshe97e2252dacd35cp1aa3a5jsn39c61e56c7de}
 
 
 logging:
@@ -51,14 +53,4 @@ logging:
     org.springframework.security: INFO
     org.hibernate.SQL: DEBUG
 
-resilience4j:
-  circuitbreaker:
-    instances:
-      geminiCircuitBreaker:
-        registerHealthIndicator: true
-        slidingWindowSize: 10
-        minimumNumberOfCalls: 5
-        permittedNumberOfCallsInHalfOpenState: 3
-        waitDurationInOpenState: 10s
-        failureRateThreshold: 50
-        eventConsumerBufferSize: 10
+

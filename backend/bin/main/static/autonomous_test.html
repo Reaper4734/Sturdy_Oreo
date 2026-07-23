@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Autonomous Engine Demo</title>
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+    <style>
+        body { font-family: sans-serif; padding: 20px; background: #121212; color: #fff; }
+        #log { background: #1e1e1e; padding: 15px; border-radius: 8px; margin-top: 20px; height: 300px; overflow-y: scroll; font-family: monospace; }
+        button { padding: 10px 20px; background: #6200ea; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        button:hover { background: #3700b3; }
+        .success { color: #00e676; }
+        .info { color: #29b6f6; }
+    </style>
+</head>
+<body>
+    <h2>Autonomous Ingestion Engine</h2>
+    <p>YouTube Video ID: <input type="text" id="videoId" value="pnWINBJ3-yA" style="padding:5px;"/></p>
+    <button onclick="startIngestion()">1-Click Ingest</button>
+
+    <div id="log"></div>
+
+    <script>
+        let stompClient = null;
+
+        function startIngestion() {
+            const videoId = document.getElementById('videoId').value;
+            const logDiv = document.getElementById('log');
+            logDiv.innerHTML = "<span class='info'>Starting job...</span><br>";
+
+            // 1. Connect WebSocket
+            const socket = new SockJS('http://localhost:8080/ws/orchestration');
+            stompClient = Stomp.over(socket);
+            stompClient.debug = null; // silence debug
+            
+            stompClient.connect({}, function (frame) {
+                stompClient.subscribe('/topic/ingestion/' + videoId, function (message) {
+                    const data = JSON.parse(message.body);
+                    logDiv.innerHTML += `<span class='success'>[${data.step}]</span> ${data.status} ${data.length ? '(' + data.length + ' bytes)' : ''} ${data.nodesCreated ? '(' + data.nodesCreated + ' nodes)' : ''} ${data.cardsCreated ? '(' + data.cardsCreated + ' cards)' : ''}<br>`;
+                    logDiv.scrollTop = logDiv.scrollHeight;
+                });
+
+                // 2. Trigger API
+                fetch('http://localhost:8080/api/orchestration/ingest', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ videoId: videoId })
+                }).then(res => res.json()).then(data => {
+                    logDiv.innerHTML += `<span class='info'>API Accepted. Job ID: ${data.videoId}</span><br>`;
+                });
+            });
+        }
+    </script>
+</body>
+</html>

@@ -25,18 +25,23 @@ public class SyllabusAnalyzerPipeline {
         public List<String> prerequisiteTitles;
     }
 
+    public static class ExtractedSkillWrapper {
+        public List<ExtractedSkill> skills;
+    }
+
     interface SyllabusExtractor {
         @SystemMessage({
                 "You are an expert curriculum designer.",
                 "Extract a logical skill tree from the provided syllabus text.",
                 "Return the exact requested JSON format mapping out concepts into manageable nodes.",
-                "Ensure advanced topics have the correct prerequisites listed."
+                "Ensure advanced topics have the correct prerequisites listed.",
+                "CRITICAL: Regardless of the language of the transcript, you MUST translate and generate ALL outputs (titles, descriptions, etc) in English."
         })
         @UserMessage("Generate a learning tree for this text: {{text}}")
-        List<ExtractedSkill> extractTree(@dev.langchain4j.service.V("text") String text);
+        ExtractedSkillWrapper extractTree(@dev.langchain4j.service.V("text") String text);
     }
 
     public List<ExtractedSkill> generateTreeFromText(String syllabusText) {
-        return extractor.extractTree(syllabusText);
+        return extractor.extractTree(syllabusText).skills;
     }
 }
