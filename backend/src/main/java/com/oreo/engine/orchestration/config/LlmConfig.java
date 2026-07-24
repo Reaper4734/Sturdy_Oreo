@@ -12,7 +12,7 @@ import dev.langchain4j.model.chat.StreamingChatLanguageModel;
 import dev.langchain4j.model.googleai.GoogleAiGeminiStreamingChatModel;
 import dev.langchain4j.model.googleai.GoogleAiGeminiChatModel;
 import dev.langchain4j.web.search.WebSearchEngine;
-import dev.langchain4j.web.search.tavily.TavilyWebSearchEngine;
+
 
 @Configuration
 public class LlmConfig {
@@ -38,16 +38,6 @@ public class LlmConfig {
                 .apiKey(apiKey)
                 .modelName("gemini-3.5-flash-lite")
                 .temperature(0.7)
-                .build();
-    }
-
-    @Value("${TAVILY_API_KEY:dummy-tavily-key}")
-    private String tavilyApiKey;
-
-    @Bean
-    public WebSearchEngine webSearchEngine() {
-        return TavilyWebSearchEngine.builder()
-                .apiKey(tavilyApiKey)
                 .build();
     }
 }
