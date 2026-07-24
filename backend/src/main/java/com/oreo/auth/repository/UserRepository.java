@@ -1,6 +1,6 @@
 package com.oreo.auth.repository;
 
-import com.oreo.auth.model.User;
+import com.oreo.auth.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

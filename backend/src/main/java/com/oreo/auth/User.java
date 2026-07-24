@@ -24,11 +24,19 @@ public class User {
     @Column(name = "auth_provider", nullable = false)
     private String authProvider = "EMAIL"; // EMAIL, GOOGLE, BOTH
 
+    @Column(name = "picture_url")
+    private String pictureUrl;
+
     @Column(name = "google_id", unique = true)
     private String googleId;
 
     @Column(name = "current_phase", nullable = false)
     private String currentPhase = "INTERVIEW"; // INTERVIEW, REVEAL, EXECUTION
+
+    // Gamification
+    private int totalPoints = 0;
+    private int currentStreak = 0;
+    private java.time.LocalDate lastActiveDate;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
@@ -66,6 +74,9 @@ public class User {
     public String getAuthProvider() { return authProvider; }
     public void setAuthProvider(String authProvider) { this.authProvider = authProvider; }
 
+    public String getPictureUrl() { return pictureUrl; }
+    public void setPictureUrl(String pictureUrl) { this.pictureUrl = pictureUrl; }
+
     public String getGoogleId() { return googleId; }
     public void setGoogleId(String googleId) { this.googleId = googleId; }
 
@@ -74,4 +85,13 @@ public class User {
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
+
+    public int getTotalPoints() { return totalPoints; }
+    public void setTotalPoints(int totalPoints) { this.totalPoints = totalPoints; }
+
+    public int getCurrentStreak() { return currentStreak; }
+    public void setCurrentStreak(int currentStreak) { this.currentStreak = currentStreak; }
+
+    public java.time.LocalDate getLastActiveDate() { return lastActiveDate; }
+    public void setLastActiveDate(java.time.LocalDate lastActiveDate) { this.lastActiveDate = lastActiveDate; }
 }

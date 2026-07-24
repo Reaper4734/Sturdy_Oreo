@@ -5,7 +5,7 @@ import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.gson.GsonFactory;
 import com.oreo.auth.JwtService;
-import com.oreo.auth.model.User;
+import com.oreo.auth.User;
 import com.oreo.auth.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
@@ -54,7 +54,7 @@ public class AuthController {
                 User user = userRepository.findByEmail(email).orElseGet(() -> {
                     User newUser = new User();
                     newUser.setEmail(email);
-                    newUser.setName(name);
+                    newUser.setDisplayName(name);
                     newUser.setPictureUrl(pictureUrl);
                     newUser.setAuthProvider("GOOGLE");
                     return userRepository.save(newUser);
