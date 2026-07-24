@@ -10,10 +10,8 @@ import org.springframework.stereotype.Component;
 public class CodeGraderPipeline {
 
     private final Grader grader;
-    private final LocalExecutionService executionService;
 
-    public CodeGraderPipeline(ChatLanguageModel chatLanguageModel, LocalExecutionService executionService) {
-        this.executionService = executionService;
+    public CodeGraderPipeline(ChatLanguageModel chatLanguageModel) {
         this.grader = AiServices.create(Grader.class, chatLanguageModel);
     }
 
@@ -25,38 +23,28 @@ public class CodeGraderPipeline {
 
     interface Grader {
         @SystemMessage({
-                "You are an expert automated code tutor.",
-                "The student's code has already been executed securely.",
-                "1. If 'executionPassed' is true, praise the student and optionally provide 'optimizedCode'. Set 'passed' to true.",
-                "2. If 'executionPassed' is false, analyze the 'executionStderr' or 'executionStdout'. Set 'passed' to false.",
-                "3. Provide targeted, educational feedback explaining the error in plain English in the 'feedback' field.",
+                "You are an expert automated code grader.",
+                "Evaluate the student's submitted code against the problem statement.",
+                "1. If the logic is correct and fulfills the requirements, set 'passed' to true.",
+                "2. If the logic is incorrect, has syntax errors, or fails edge cases, set 'passed' to false.",
+                "3. Provide targeted, educational feedback in 'feedback'. Do not just give the answer immediately if they failed.",
+                "4. Optionally provide 'optimizedCode' if there's a better way to write it.",
                 "Return the exact requested JSON format."
         })
         @UserMessage({
                 "Problem Statement: {{problem}}",
                 "Language: {{language}}",
                 "Student Code:\n{{code}}",
-                "--- Execution Results ---",
-                "Execution Passed: {{executionPassed}}",
-                "Stdout: {{stdout}}",
-                "Stderr: {{stderr}}",
-                "Evaluate the submission and tutor the student."
+                "Evaluate the submission."
         })
         GradingResult grade(
                 @dev.langchain4j.service.V("problem") String problem,
                 @dev.langchain4j.service.V("language") String language,
-                @dev.langchain4j.service.V("code") String code,
-                @dev.langchain4j.service.V("executionPassed") boolean executionPassed,
-                @dev.langchain4j.service.V("stdout") String stdout,
-                @dev.langchain4j.service.V("stderr") String stderr
+                @dev.langchain4j.service.V("code") String code
         );
     }
 
     public GradingResult evaluate(String problem, String language, String code) {
-        // Step 1: Real Code Execution via Local ProcessBuilder
-        LocalExecutionService.ExecutionResult execResult = executionService.executeCode(language, code);
-        
-        // Step 2: AI Tutoring on the actual execution results
-        return grader.grade(problem, language, code, execResult.passed, execResult.stdout, execResult.stderr);
+        return grader.grade(problem, language, code);
     }
 }
