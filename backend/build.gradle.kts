@@ -42,7 +42,10 @@ dependencies {
     // Database & Migrations
     implementation("org.flywaydb:flyway-core")
     implementation("org.flywaydb:flyway-database-postgresql")
-    runtimeOnly("org.postgresql:postgresql")
+    implementation("org.postgresql:postgresql")
+
+    // Google API Client for validating Google Sign-In ID Tokens
+    implementation("com.google.api-client:google-api-client:2.7.0")
 
     // JWT Auth
     implementation("io.jsonwebtoken:jjwt-api:0.12.6")
