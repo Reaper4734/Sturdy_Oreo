@@ -67,3 +67,12 @@ To satisfy the Hackathon rubric's "Intelligent Nudge" requirement (detecting 3 d
 *   **API Timeout Restrictions:** Flutter `http` (or Dio) default timeouts are ~10s. For AI-driven endpoints (specifically `POST /api/orchestration/planner/generate`), the HTTP timeout MUST be explicitly set to **at least 30 seconds**. The LLM and web-search tools take 10-15 seconds to return JSON, which will trigger false failures if default timeouts are used.
 *   **Disabled Overlays:** During processing, a full-screen semi-transparent overlay blocking ALL taps must appear. 
 *   **The Display:** When the backend returns the nudge string, display it as a native mobile Push Notification (using flutter_local_notifications) or as a prominent modal dialog on the screen to demonstrate the feature to the judges.
+
+---
+
+## 4. Assessment & Quiz Feedback UI (Active Learning)
+To ensure the user understands their mistakes immediately (without waiting for the Remedial Task to be injected), the Flutter UI **must** render feedback instantly during the quiz loop.
+
+*   **MCQ Instant Popups:** The `POST /api/orchestration/assessments/generate` payload provides an `explanation` string for every MCQ. If the user taps the wrong option, the UI must **instantly** display a modal or tooltip containing this `explanation` text.
+*   **Subjective Grading Popups:** When the user submits a typed answer to `POST /api/orchestration/assessments/evaluate`, the UI must show a loading spinner. When the response arrives, immediately render a dialog showing their `score` and the LLM's `feedback` paragraph. 
+*   **The Dual-Action Failure:** If `passed: false` is returned, the Flutter UI must simultaneously show the feedback dialog to the user AND silently trigger `POST /api/orchestration/planner/adapt` in the background to inject their YouTube homework.

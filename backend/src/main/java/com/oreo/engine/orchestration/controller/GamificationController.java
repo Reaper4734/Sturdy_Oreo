@@ -31,8 +31,9 @@ public class GamificationController {
         User user = userRepository.findById(UUID.fromString(userId))
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        // 1. Award Points
-        user.setTotalPoints(user.getTotalPoints() + pointsToAward);
+        // 1. Award or Deduct Points (Never drop below 0)
+        int newTotal = user.getTotalPoints() + pointsToAward;
+        user.setTotalPoints(Math.max(0, newTotal));
 
         // 2. Calculate Streaks
         LocalDate today = LocalDate.now();

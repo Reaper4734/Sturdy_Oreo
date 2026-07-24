@@ -93,4 +93,88 @@ public class PlannerController {
         
         return ResponseEntity.ok(learningPlanRepository.save(plan));
     }
+
+    @PostMapping("/adapt")
+    public ResponseEntity<LearningPlan> adaptPlan(
+            @AuthenticationPrincipal String userId,
+            @RequestBody Map<String, String> payload) {
+            
+        LearningPlan plan = learningPlanRepository.findByUserId(UUID.fromString(userId))
+                .orElseThrow(() -> new RuntimeException("Plan not found"));
+                
+        String failedQuestion = payload.get("failedQuestion");
+        String userAnswer = payload.get("userAnswer");
+        String failedTaskId = payload.get("failedTaskId");
+        
+        String context = String.format("Question: %s\nUser's incorrect answer: %s", failedQuestion, userAnswer);
+        
+        // 1. True Agentic Generation (Takes ~10 seconds)
+        LearningPlan.Task remedialTask = plannerAssistant.generateRemedialTask(context);
+        
+        // 2. Fix LLM Hallucinations (Security)
+        remedialTask.setId(UUID.randomUUID().toString());
+        remedialTask.setCompleted(false);
+        if (remedialTask.getTitle() != null && !remedialTask.getTitle().startsWith("[Remedial]")) {
+            remedialTask.setTitle("[Remedial] " + remedialTask.getTitle());
+        }
+        
+        // 3. Smart Injection Logic
+        LearningPlan.PlanData data = plan.getPlanData();
+        if (data != null && data.getMilestones() != null && !data.getMilestones().isEmpty()) {
+            java.util.List<LearningPlan.Milestone> milestones = data.getMilestones();
+            
+            LearningPlan.Milestone targetMilestone = null;
+            int insertIndex = -1;
+            
+            // Look for the exact task that failed
+            if (failedTaskId != null) {
+                for (LearningPlan.Milestone m : milestones) {
+                    if (m.getTasks() != null) {
+                        for (int i = 0; i < m.getTasks().size(); i++) {
+                            if (failedTaskId.equals(m.getTasks().get(i).getId())) {
+                                targetMilestone = m;
+                                insertIndex = i + 1; // Inject directly AFTER the failed task
+                                break;
+                            }
+                        }
+                    }
+                    if (targetMilestone != null) break;
+                }
+            }
+            
+            // Fallback if taskId not provided or not found
+            if (targetMilestone == null) {
+                targetMilestone = milestones.stream()
+                    .filter(m -> m.getTasks() != null && m.getTasks().stream().anyMatch(t -> !t.isCompleted()))
+                    .findFirst()
+                    .orElse(milestones.get(milestones.size() - 1));
+                insertIndex = targetMilestone.getTasks() != null ? targetMilestone.getTasks().size() : 0;
+            }
+                
+            if (targetMilestone.getTasks() == null) {
+                targetMilestone.setTasks(new java.util.ArrayList<>());
+                insertIndex = 0;
+            }
+            targetMilestone.getTasks().add(insertIndex, remedialTask);
+        }
+        
+        return ResponseEntity.ok(learningPlanRepository.save(plan));
+    }
+
+    @PostMapping("/reschedule")
+    public ResponseEntity<LearningPlan> reschedulePlan(@AuthenticationPrincipal String userId) {
+        LearningPlan plan = learningPlanRepository.findByUserId(UUID.fromString(userId))
+                .orElseThrow(() -> new RuntimeException("Plan not found"));
+        
+        // MVP Hackathon Logic: Shift all incomplete task deadlines forward by 2 days.
+        java.util.Optional.ofNullable(plan.getPlanData())
+            .map(LearningPlan.PlanData::getMilestones)
+            .ifPresent(milestones -> milestones.stream()
+                .filter(m -> m.getTasks() != null)
+                .flatMap(m -> m.getTasks().stream())
+                .filter(t -> !t.isCompleted() && t.getDeadlineDate() != null)
+                .forEach(t -> t.setDeadlineDate(t.getDeadlineDate().plusDays(2))));
+
+        return ResponseEntity.ok(learningPlanRepository.save(plan));
+    }
 }
