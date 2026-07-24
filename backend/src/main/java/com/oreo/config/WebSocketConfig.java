@@ -70,6 +70,16 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer, WebSoc
                             }
                         }
                     }
+                } else if (org.springframework.messaging.simp.stomp.StompCommand.SUBSCRIBE.equals(accessor.getCommand())) {
+                    // Subscription Authorization Check
+                    java.security.Principal user = accessor.getUser();
+                    String destination = accessor.getDestination();
+                    if (destination != null && destination.startsWith("/topic/session/user/")) {
+                        String targetUserId = destination.replace("/topic/session/user/", "").split("/")[0];
+                        if (user == null || !user.getName().equals(targetUserId)) {
+                            throw new org.springframework.security.access.AccessDeniedException("Unauthorized WebSocket topic subscription");
+                        }
+                    }
                 }
                 return message;
             }

@@ -107,9 +107,11 @@ public class GeminiLiveProxyWebSocketHandler extends AbstractWebSocketHandler {
     @Override
     protected void handleTextMessage(WebSocketSession clientSession, TextMessage message) throws Exception {
         String roomId = clientToRoomMap.get(clientSession.getId());
-        WebSocketSession geminiSession = roomGeminiSessions.get(roomId);
-        if (geminiSession != null && geminiSession.isOpen()) {
-            geminiSession.sendMessage(message);
+        if (roomId != null) {
+            WebSocketSession geminiSession = roomGeminiSessions.get(roomId);
+            if (geminiSession != null && geminiSession.isOpen()) {
+                geminiSession.sendMessage(message);
+            }
         }
     }
 
@@ -118,9 +120,11 @@ public class GeminiLiveProxyWebSocketHandler extends AbstractWebSocketHandler {
         // NOTE: In a true production environment, binary audio from multiple clients needs to be mixed before sending to Gemini.
         // For this MVP, we forward raw packets. The Flutter client should handle push-to-talk to prevent collision.
         String roomId = clientToRoomMap.get(clientSession.getId());
-        WebSocketSession geminiSession = roomGeminiSessions.get(roomId);
-        if (geminiSession != null && geminiSession.isOpen()) {
-            geminiSession.sendMessage(message);
+        if (roomId != null) {
+            WebSocketSession geminiSession = roomGeminiSessions.get(roomId);
+            if (geminiSession != null && geminiSession.isOpen()) {
+                geminiSession.sendMessage(message);
+            }
         }
     }
 

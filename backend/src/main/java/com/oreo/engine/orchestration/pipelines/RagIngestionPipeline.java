@@ -22,9 +22,7 @@ public class RagIngestionPipeline {
 
     public int ingestDocument(MultipartFile file) throws Exception {
         String rawContent = new String(file.getBytes(), StandardCharsets.UTF_8);
-        String sanitizedContent = HtmlUtils.htmlEscape(rawContent);
-
-        String[] chunks = sanitizedContent.split("\n\n");
+        String[] chunks = rawContent.split("\n\n");
         int count = 0;
         String fileName = file.getOriginalFilename() != null ? file.getOriginalFilename() : "Uploaded_Document.txt";
 
