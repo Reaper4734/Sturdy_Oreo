@@ -40,4 +40,19 @@ public class LlmConfig {
                 .temperature(0.7)
                 .build();
     }
+
+    @Bean
+    public com.oreo.engine.orchestration.pipelines.PlannerAssistant plannerAssistant(ChatLanguageModel chatLanguageModel, com.oreo.engine.orchestration.tools.YouTubeSearchTool youTubeSearchTool) {
+        return dev.langchain4j.service.AiServices.builder(com.oreo.engine.orchestration.pipelines.PlannerAssistant.class)
+                .chatLanguageModel(chatLanguageModel)
+                .tools(youTubeSearchTool)
+                .build();
+    }
+
+    @Bean
+    public com.oreo.engine.orchestration.pipelines.ChatSummarizer chatSummarizer(ChatLanguageModel chatLanguageModel) {
+        return dev.langchain4j.service.AiServices.builder(com.oreo.engine.orchestration.pipelines.ChatSummarizer.class)
+                .chatLanguageModel(chatLanguageModel)
+                .build();
+    }
 }

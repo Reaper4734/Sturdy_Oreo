@@ -1,31 +1,24 @@
 package com.oreo.config;
 
 import com.oreo.auth.JwtService;
-import com.oreo.engine.orchestration.controller.GeminiLiveProxyWebSocketHandler;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.simp.config.ChannelRegistration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
 import org.springframework.web.socket.config.annotation.EnableWebSocket;
 import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
-import org.springframework.web.socket.config.annotation.WebSocketConfigurer;
-import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry;
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
 
 @Configuration
 @EnableWebSocketMessageBroker
-@EnableWebSocket
-public class WebSocketConfig implements WebSocketMessageBrokerConfigurer, WebSocketConfigurer {
+public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
-    private final GeminiLiveProxyWebSocketHandler geminiLiveProxyWebSocketHandler;
     private final JwtService jwtService;
     private final String allowedOrigins;
 
     public WebSocketConfig(
-            GeminiLiveProxyWebSocketHandler geminiLiveProxyWebSocketHandler,
             JwtService jwtService,
             @org.springframework.beans.factory.annotation.Value("${oreo.cors.allowed-origins:*}") String allowedOrigins) {
-        this.geminiLiveProxyWebSocketHandler = geminiLiveProxyWebSocketHandler;
         this.jwtService = jwtService;
         this.allowedOrigins = allowedOrigins;
     }
@@ -41,13 +34,6 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer, WebSoc
         registry.addEndpoint("/ws/orchestration")
                 .setAllowedOriginPatterns(allowedOrigins.split(","))
                 .withSockJS(); // Fallback
-    }
-
-    @Override
-    public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
-        // Raw websocket proxy for Gemini Multimodal Live API (binary audio stream)
-        registry.addHandler(geminiLiveProxyWebSocketHandler, "/ws/live")
-                .setAllowedOriginPatterns(allowedOrigins.split(","));
     }
 
     @Override

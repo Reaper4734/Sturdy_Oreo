@@ -1,7 +1,7 @@
 package com.oreo.engine.orchestration.controller;
 
 import com.oreo.auth.User;
-import com.oreo.auth.repository.UserRepository;
+import com.oreo.auth.UserRepository;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;

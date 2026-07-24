@@ -22,7 +22,8 @@ Before implementing any API calls, the Flutter team **must** adhere to these rul
     }
     ```
     *(Note: If the frontend prefers to send a pre-summarized goal instead of the whole transcript, it will save 5 seconds of latency).*
-*   **Response:** Returns the full `LearningPlan` object (including the nested JSONB `planData` tree with Milestones and Tasks).
+*   **Response:** Returns `HTTP 202 Accepted` immediately with `{ "status": "processing" }`.
+*   **WebSocket Delivery:** The frontend MUST subscribe to `/topic/session/user/{userId}/plan`. The full `LearningPlan` JSON will be pushed there when 3.1 Flash Lite finishes generating it.
 
 ### 1.2 Fetch Current Plan
 *   **Endpoint:** `GET /api/orchestration/planner/`
@@ -51,7 +52,8 @@ Before implementing any API calls, the Flutter team **must** adhere to these rul
       "userAnswer": "Field injection is faster and better."
     }
     ```
-*   **Response:** Returns the updated `LearningPlan` object.
+*   **Response:** Returns `HTTP 202 Accepted`.
+*   **WebSocket Delivery:** The frontend MUST subscribe to `/topic/session/user/{userId}/plan`. The updated `LearningPlan` JSON (with the injected task) will be pushed there.
 
 ### 1.5 Reschedule Plan
 *   **Endpoint:** `POST /api/orchestration/planner/reschedule`
@@ -138,8 +140,241 @@ Before implementing any API calls, the Flutter team **must** adhere to these rul
 
 ---
 
+## 5. Spaced Repetition (Flashcards)
+
+### 5.1 Fetch Due Flashcards
+*   **Endpoint:** `GET /api/orchestration/flashcards`
+*   **Purpose:** Retrieves all flashcards for the user. (Frontend should filter by `nextReviewDate <= today` to show only due cards).
+*   **Response:** Returns a JSON Array of `Flashcard` objects.
+
+### 5.2 Generate Flashcards `[AI-Agent]`
+*   **Endpoint:** `POST /api/orchestration/flashcards/generate`
+*   **Purpose:** AI reads a transcript or topic and automatically generates a deck of study cards.
+*   **Request Body:**
+    ```json
+    {
+      "transcript": "Explain the difference between final and effectively final in Java."
+    }
+    ```
+*   **Response:** Returns the generated list of `Flashcard` objects.
+
+### 5.3 Review Flashcard (SuperMemo-2)
+*   **Endpoint:** `POST /api/orchestration/flashcards/review`
+*   **Purpose:** Submits the user's recall quality (0 to 5) to calculate the next review date via the SM-2 algorithm.
+*   **Request Body:**
+    ```json
+    {
+      "cardId": "uuid-here",
+      "quality": 4
+    }
+    ```
+    *(0 = Blackout, 3 = Hard, 4 = Good, 5 = Perfect).*
+
+---
+
+## 6. Watchdog & Idle Nudging (WebSockets)
+
+To support the real-time "Nudge" feature when a user abandons the app:
+
+### 6.1 Connect & Heartbeat
+*   **Connection URL:** `ws://<backend_url>/ws/orchestration`
+*   **Heartbeat Action:** The Flutter app must send a heartbeat every 60 seconds to `SEND /app/session/heartbeat` with payload `{ "sessionId": "user123" }`.
+
+### 6.2 Receive Interventions
+*   **Subscription Topic:** `SUBSCRIBE /topic/session/user/{userId}/interventions`
+*   **Action:** If the user stops sending heartbeats for 3 minutes, the Watchdog Daemon triggers an LLM to generate a personalized motivational message. Flutter will receive a JSON payload here containing the `message` to display as a Push Notification.
+
+### 6.3 Async Generation Queue (Latency Fix)
+*   **Subscription Topic:** `SUBSCRIBE /topic/session/user/{userId}/plan`
+*   **Action:** When Flutter calls `/generate` or `/adapt`, those HTTP requests return instantly. The frontend must listen to this WebSocket topic to receive the massive JSON object when the AI finishes building the syllabus.
+
+---
+
+## 7. AI Canvas & Diagrams (Eraser & PenEcho Clones)
+
+### 7.1 Generate Knowledge Graph / Diagram (Eraser Mode)
+*   **Endpoint:** `POST /api/orchestration/dag-generate`
+*   **Purpose:** Generates a conceptual diagram or syllabus graph based on the user's goal.
+*   **Request Body:**
+    ```json
+    {
+      "goal": "Build a real-time dashboard with React",
+      "persona": "Visual learner, needs early wins"
+    }
+    ```
+*   **Response:** Returns a `DagOutputSchema` (typically a JSON representation of nodes/edges or Mermaid diagram code).
+
+### 7.2 AI Canvas / Video Explanation (PenEcho Mode)
+*   **Endpoint:** `POST /api/orchestration/canvas-explain`
+*   **Purpose:** AI reads a specific doubt or context (from the canvas or video timestamp) and explains it.
+*   **Request Body:**
+    ```json
+    {
+      "doubt": "Why do we need a WebSocket here instead of HTTP?",
+      "difficultyLevel": 3,
+      "videoTimestamp": 10.5,
+      "videoId": "dQw4w9WgXcQ",
+      "sessionId": "11111111-1111-1111-1111-111111111111",
+      "language": "en"
+    }
+    ```
+*   **Response:** Returns a JSON object containing the AI's explanation.
+    ```json
+    {
+      "explanation": "WebSockets maintain a persistent connection..."
+    }
+    ```
+
+---
+
+## 8. Onboarding & RAG Ingestion
+
+### 8.1 Dynamic Profiler (Interview)
+*   **Endpoint:** `POST /api/orchestration/interview`
+*   **Purpose:** Chat-based onboarding to determine the user's skill level and goals.
+*   **Request Body:**
+    ```json
+    {
+      "message": "I want to learn Spring Boot",
+      "history": "User knows basic Java."
+    }
+    ```
+*   **Response:** Returns a `ProfilerOutputSchema`.
+
+### 8.2 RAG Document Upload
+*   **Endpoint:** `POST /api/orchestration/upload-document`
+*   **Purpose:** Upload a PDF or Text file to add custom knowledge to the RAG database.
+*   **Request Format:** `multipart/form-data` with a file field named `file`.
+*   **Response:** Returns `{ "message": "Successfully ingested X chunks into RAG." }`
+
+---
+
+## 9. Coding Dojo (Interactive Code Challenges)
+
+### 9.1 Generate Video Challenge
+*   **Endpoint:** `POST /api/orchestration/challenge/generate`
+*   **Purpose:** Triggers the AI to watch a YouTube video timestamp and create a programming challenge based on the exact concept being taught.
+*   **Request Body:**
+    ```json
+    {
+      "videoId": "dQw4w9WgXcQ",
+      "videoTimestamp": 45.5,
+      "doubtContext": "I want to practice concepts taught here.",
+      "language": "Python"
+    }
+    ```
+*   **Response:** Returns an `ExtractedChallenge` JSON containing the problem statement and constraints.
+
+### 9.2 Grade Code Submission
+*   **Endpoint:** `POST /api/orchestration/challenge/grade`
+*   **Purpose:** Sends the user's IDE code to the backend for strict AI grading and feedback.
+*   **Request Body:**
+    ```json
+    {
+      "problemStatement": "Write a function to...",
+      "language": "Python",
+      "code": "def my_func():..."
+    }
+    ```
+*   **Response:** Returns a `GradingResult` with pass/fail status and feedback.
+
+---
+
+## 10. Resource Map Finder
+
+### 10.1 Generate Resource Map
+*   **Endpoint:** `POST /api/resource-map/generate`
+*   **Purpose:** Builds a structured JSON graph of external documentation, videos, and articles for a subject.
+*   **Request Body:**
+    ```json
+    {
+      "subject": "Java Concurrency"
+    }
+    ```
+*   **Response:** Returns a `ResourceMapSchema` containing categorized external links.
+
+---
+
+## 11. Skill Tree (Node-Based Path)
+
+*Note: The app uses `PlannerController` (Tasks) for chronological timelines, but uses this `LearningPathController` (Nodes) to render the 2D skill map.*
+
+### 11.1 Generate Skill Tree
+*   **Endpoint:** `POST /api/learning-path/generate`
+*   **Purpose:** Parses raw syllabus text into a web of interdependent `SkillNode`s.
+*   **Request Body:**
+    ```json
+    {
+      "text": "Core Java, Advanced Java, Multithreading...",
+      "userId": "uuid"
+    }
+    ```
+*   **Response:** Returns an Array of `SkillNode`s.
+
+### 11.2 Fetch Skill Tree
+*   **Endpoint:** `GET /api/learning-path/{userId}`
+*   **Purpose:** Retrieves all nodes for the user to plot on the 2D canvas.
+*   **Response:** Returns an Array of `SkillNode`s.
+
+### 11.3 Master a Node
+*   **Endpoint:** `POST /api/learning-path/node/{nodeId}/complete`
+*   **Purpose:** Marks a node as `MASTERED`, potentially unlocking dependent nodes in the frontend UI.
+*   **Request Body:** None (Empty POST).
+*   **Response:** `200 OK` ("Node Mastered")
+
+---
+
+## 12. Video Ingestion
+
+### 12.1 Trigger Background Ingestion
+*   **Endpoint:** `POST /api/orchestration/ingest`
+*   **Purpose:** Triggers the backend to fetch YouTube transcripts/metadata and begin seeding them into the AI knowledge base.
+*   **Request Body:**
+    ```json
+    {
+      "videoId": "pnWINBJ3-yA"
+    }
+    ```
+*   **Response:** Returns `HTTP 202 Accepted` along with the WebSocket topic to subscribe to.
+    ```json
+    {
+      "status": "Ingestion started",
+      "videoId": "pnWINBJ3-yA",
+      "topic": "/topic/ingestion/pnWINBJ3-yA"
+    }
+    ```
+*   **WebSocket Delivery:** The frontend MUST subscribe to `/topic/ingestion/{videoId}` to stream live progress updates as the AI processes the video.
+
+---
+
+## 13. Chat Threads & History
+
+### 13.1 Fetch All Chat Threads
+*   **Endpoint:** `GET /api/orchestration/chats`
+*   **Purpose:** Retrieves all historical chat conversations for the current user, sorted by creation date.
+*   **Response:** Returns a JSON Array of `ChatThread` objects.
+
+### 13.2 Create New Chat Thread
+*   **Endpoint:** `POST /api/orchestration/chats`
+*   **Purpose:** Initializes a new chat session linked to a specific video.
+*   **Request Body:**
+    ```json
+    {
+      "videoId": "pnWINBJ3-yA",
+      "title": "Discussion on Spring Boot"
+    }
+    ```
+*   **Response:** Returns the created `ChatThread` object.
+
+### 13.3 Fetch Messages for Thread
+*   **Endpoint:** `GET /api/orchestration/chats/{threadId}/messages`
+*   **Purpose:** Retrieves all chat messages associated with a specific thread, sorted chronologically.
+*   **Response:** Returns a JSON Array of `ChatMessageEntity` objects.
+
+---
+
 ## 🏁 Handover Checklist for Flutter Developer
 - [ ] Ensure JWT token is injected into all API headers.
 - [ ] Configure Dio / HTTP timeouts to 30000ms for `/generate` and `/evaluate` endpoints.
 - [ ] Build the Dashboard UI to read the nested JSON tree inside `plan.planData.milestones`.
-- [ ] Build the "Simulate 3 Days Inactivity" hidden Dev Button to trigger Nudge logic locally.
+- [ ] Implement a WebSocket client (e.g. `stomp_dart_client`) for heartbeats and nudges.
