@@ -14,11 +14,11 @@ import java.util.UUID;
 @RequestMapping("/api/learning-path")
 public class LearningPathController {
 
-    private final SyllabusAnalyzerPipeline analyzerPipeline;
+    private final com.oreo.engine.orchestration.pipelines.LearningPathService learningPathService;
     private final SkillNodeRepository skillNodeRepository;
 
-    public LearningPathController(SyllabusAnalyzerPipeline analyzerPipeline, SkillNodeRepository skillNodeRepository) {
-        this.analyzerPipeline = analyzerPipeline;
+    public LearningPathController(com.oreo.engine.orchestration.pipelines.LearningPathService learningPathService, SkillNodeRepository skillNodeRepository) {
+        this.learningPathService = learningPathService;
         this.skillNodeRepository = skillNodeRepository;
     }
 
@@ -26,23 +26,7 @@ public class LearningPathController {
 
     @PostMapping("/generate")
     public ResponseEntity<List<SkillNode>> generatePath(@RequestBody SyllabusUploadRequest request) {
-        // Run LangChain4j structured extraction
-        List<SyllabusAnalyzerPipeline.ExtractedSkill> extractedSkills = analyzerPipeline.generateTreeFromText(request.text());
-        
-        List<SkillNode> savedNodes = new ArrayList<>();
-        
-        for (int i = 0; i < extractedSkills.size(); i++) {
-            SyllabusAnalyzerPipeline.ExtractedSkill ex = extractedSkills.get(i);
-            SkillNode node = new SkillNode();
-            node.setUserId(request.userId());
-            node.setTitle(ex.title);
-            node.setDescription(ex.description);
-            // First node is ACTIVE, others are LOCKED initially
-            node.setStatus(i == 0 ? SkillNode.NodeStatus.ACTIVE : SkillNode.NodeStatus.LOCKED);
-            node.setPrerequisiteIds(String.join(",", ex.prerequisiteTitles));
-            
-            savedNodes.add(skillNodeRepository.save(node));
-        }
+        List<SkillNode> savedNodes = learningPathService.generateAndSavePath(request.text(), request.userId());
 
         return ResponseEntity.ok(savedNodes);
     }

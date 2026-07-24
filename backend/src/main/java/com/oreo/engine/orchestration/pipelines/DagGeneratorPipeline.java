@@ -1,19 +1,24 @@
 package com.oreo.engine.orchestration.pipelines;
 
-import com.oreo.engine.orchestration.model.OrchestrationRequest;
-import com.oreo.engine.orchestration.model.OrchestrationResponse;
 import com.oreo.engine.orchestration.schemas.DagOutputSchema;
 import dev.langchain4j.model.chat.ChatLanguageModel;
 import dev.langchain4j.service.AiServices;
 import dev.langchain4j.service.SystemMessage;
 import dev.langchain4j.service.UserMessage;
-import jakarta.annotation.PostConstruct;
+import com.oreo.auth.User;
+import com.oreo.auth.UserRepository;
+import com.oreo.engine.orchestration.models.LearningTrack;
+import com.oreo.engine.orchestration.models.LearningTrackRepository;
 import org.springframework.stereotype.Service;
+
+import java.util.UUID;
 
 @Service
 public class DagGeneratorPipeline {
 
     private final ChatLanguageModel primaryChatModel;
+    private final UserRepository userRepository;
+    private final LearningTrackRepository trackRepository;
     private DagAiService dagAiService;
 
     interface DagAiService {
@@ -36,24 +41,31 @@ public class DagGeneratorPipeline {
         DagOutputSchema generateDag(@UserMessage String userProfileAndGoal);
     }
 
-    public DagGeneratorPipeline(ChatLanguageModel primaryChatModel) {
+    public DagGeneratorPipeline(ChatLanguageModel primaryChatModel, UserRepository userRepository, LearningTrackRepository trackRepository) {
         this.primaryChatModel = primaryChatModel;
+        this.userRepository = userRepository;
+        this.trackRepository = trackRepository;
         this.dagAiService = AiServices.builder(DagAiService.class)
                 .chatLanguageModel(primaryChatModel)
                 .build();
     }
 
-    public OrchestrationResponse run(OrchestrationRequest request) {
-        
-        String userProfile = "[Goal]: " + request.getUserInput() + "\n" +
-                             "[Context]: " + (request.getContext() != null ? request.getContext().toString() : "None");
+    public DagOutputSchema generate(String goal, String persona, UUID userId) {
+        String userProfile = "[Goal]: " + goal + "\n" +
+                             "[Context]: {persona=" + persona + "}";
 
         // 2. Call LLM Pipeline with structured output mapping
-        DagOutputSchema output = dagAiService.generateDag(userProfile);
+        DagOutputSchema schema = dagAiService.generateDag(userProfile);
 
-        // 3. Return formatted response (we pass the raw POJO since the TrackService will consume it)
-        return OrchestrationResponse.builder()
-                .payload(output)
-                .build();
+        User user = userRepository.findById(userId).orElse(null);
+        if (user != null) {
+            LearningTrack track = new LearningTrack();
+            track.setUser(user);
+            track.setGoal(schema.getGoal() != null ? schema.getGoal() : goal);
+            track.setNodes(schema.getNodes());
+            trackRepository.save(track);
+        }
+
+        return schema;
     }
 }

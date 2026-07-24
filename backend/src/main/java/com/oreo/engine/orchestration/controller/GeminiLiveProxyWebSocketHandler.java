@@ -25,12 +25,25 @@ public class GeminiLiveProxyWebSocketHandler extends AbstractWebSocketHandler {
     // Helper to find the roomId for a given client
     private final Map<String, String> clientToRoomMap = new ConcurrentHashMap<>();
 
+    private final com.oreo.engine.orchestration.YouTubeTranscriptService youTubeTranscriptService;
+
+    public GeminiLiveProxyWebSocketHandler(com.oreo.engine.orchestration.YouTubeTranscriptService youTubeTranscriptService) {
+        this.youTubeTranscriptService = youTubeTranscriptService;
+    }
+
     @Override
     public void afterConnectionEstablished(WebSocketSession clientSession) throws Exception {
         String query = clientSession.getUri().getQuery();
         String roomId = "default-room";
-        if (query != null && query.contains("roomId=")) {
-            roomId = query.split("roomId=")[1].split("&")[0];
+        String videoId = null;
+        int timestamp = 0;
+        
+        if (query != null) {
+            for (String param : query.split("&")) {
+                if (param.startsWith("roomId=")) roomId = param.split("=")[1];
+                if (param.startsWith("videoId=")) videoId = param.split("=")[1];
+                if (param.startsWith("timestamp=")) timestamp = Integer.parseInt(param.split("=")[1]);
+            }
         }
         
         clientToRoomMap.put(clientSession.getId(), roomId);
@@ -67,8 +80,26 @@ public class GeminiLiveProxyWebSocketHandler extends AbstractWebSocketHandler {
 
             roomGeminiSessions.put(roomId, geminiSession);
             
-            // Send initial setup frame telling Gemini we want Audio Out
-            String setupJson = "{\"setup\": {\"model\": \"models/gemini-2.5-flash\", \"generationConfig\": {\"responseModalities\": [\"AUDIO\"]}}}";
+            // Fetch Context
+            String transcriptContext = "No contextual video transcript available.";
+            if (videoId != null) {
+                transcriptContext = youTubeTranscriptService.getTranscriptBufferBeforeTimestamp(videoId, timestamp, 1000).orElse(transcriptContext);
+            }
+            // Escape quotes to prevent JSON injection
+            transcriptContext = transcriptContext.replace("\"", "\\\"").replace("\n", " ");
+
+            // Send initial setup frame telling Gemini we want Audio Out with system context
+            String systemInstructionText = "You are a voice tutor. The user is struggling to understand a concept. They paused the video here. Context: " + transcriptContext + " Answer concisely using voice.";
+            String setupJson = "{" +
+                "\"setup\": {" +
+                    "\"model\": \"models/gemini-2.5-flash\"," +
+                    "\"generationConfig\": {\"responseModalities\": [\"AUDIO\"]}," +
+                    "\"systemInstruction\": {" +
+                        "\"parts\": [{\"text\": \"" + systemInstructionText + "\"}]" +
+                    "}" +
+                "}" +
+            "}";
+            
             geminiSession.sendMessage(new TextMessage(setupJson));
         }
     }

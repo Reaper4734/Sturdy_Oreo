@@ -61,6 +61,7 @@ dependencies {
     implementation("dev.langchain4j:langchain4j-pgvector:0.36.2")
     implementation("dev.langchain4j:langchain4j-open-ai:0.36.2")
     implementation("dev.langchain4j:langchain4j-embeddings-all-minilm-l6-v2:0.36.2")
+    implementation("dev.langchain4j:langchain4j-web-search-engine-tavily:0.36.2")
 
     // .env file loader
     implementation("me.paulschwarz:spring-dotenv:4.0.0")

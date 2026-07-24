@@ -51,7 +51,7 @@ public class AutonomousIngestionService {
             // Step 1: Transcript
             messagingTemplate.convertAndSend(topic, Map.of("step", "TRANSCRIPT", "status", "Downloading..."));
             // We fetch the full 600 second transcript for demonstration
-            String transcript = transcriptService.getCumulativeTranscriptUpToTimestamp(videoId, 600).orElse("");
+            String transcript = transcriptService.getTranscriptBufferBeforeTimestamp(videoId, 600, 1000).orElse("");
             messagingTemplate.convertAndSend(topic, Map.of("step", "TRANSCRIPT", "status", "Done", "length", transcript.length()));
 
             // Step 2: Syllabus DAG

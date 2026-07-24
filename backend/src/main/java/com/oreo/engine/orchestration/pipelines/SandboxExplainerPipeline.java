@@ -1,7 +1,5 @@
 package com.oreo.engine.orchestration.pipelines;
 
-import com.oreo.engine.orchestration.model.OrchestrationRequest;
-import com.oreo.engine.orchestration.model.OrchestrationResponse;
 import dev.langchain4j.model.chat.ChatLanguageModel;
 import dev.langchain4j.service.AiServices;
 import dev.langchain4j.service.SystemMessage;
@@ -14,26 +12,26 @@ import java.util.Map;
 public class SandboxExplainerPipeline {
 
     private final ChatLanguageModel chatLanguageModel;
-    private final dev.langchain4j.store.embedding.EmbeddingStore<dev.langchain4j.data.segment.TextSegment> embeddingStore;
-    private final dev.langchain4j.model.embedding.EmbeddingModel embeddingModel;
     private final com.oreo.engine.orchestration.YouTubeTranscriptService youtubeTranscriptService;
     private final SandboxTutor tutor;
 
     public SandboxExplainerPipeline(
             ChatLanguageModel chatLanguageModel,
-            dev.langchain4j.store.embedding.EmbeddingStore<dev.langchain4j.data.segment.TextSegment> embeddingStore,
-            dev.langchain4j.model.embedding.EmbeddingModel embeddingModel,
-            com.oreo.engine.orchestration.YouTubeTranscriptService youtubeTranscriptService) {
+            com.oreo.engine.orchestration.YouTubeTranscriptService youtubeTranscriptService,
+            com.oreo.engine.orchestration.rag.HybridRetriever hybridRetriever) {
         this.chatLanguageModel = chatLanguageModel;
-        this.embeddingStore = embeddingStore;
-        this.embeddingModel = embeddingModel;
         this.youtubeTranscriptService = youtubeTranscriptService;
         
         dev.langchain4j.memory.chat.ChatMemoryProvider chatMemoryProvider = memoryId -> dev.langchain4j.memory.chat.MessageWindowChatMemory.withMaxMessages(6);
 
+        dev.langchain4j.rag.RetrievalAugmentor augmentor = dev.langchain4j.rag.DefaultRetrievalAugmentor.builder()
+                .contentRetriever(hybridRetriever)
+                .build();
+
         this.tutor = AiServices.builder(SandboxTutor.class)
                 .chatLanguageModel(chatLanguageModel)
                 .chatMemoryProvider(chatMemoryProvider)
+                .retrievalAugmentor(augmentor)
                 .build();
     }
 
@@ -43,7 +41,6 @@ public class SandboxExplainerPipeline {
                 "VIDEO PAUSE TIMESTAMP: {{videoTimestamp}} seconds (Video ID: {{videoId}}).",
                 "CUMULATIVE LECTURE CONTENT & TRANSCRIPT (0s up to {{videoTimestamp}}s):",
                 "{{videoTranscript}}",
-                "UPLOADED BOOK / KNOWLEDGE BASE: {{ragContext}}",
                 "UNIVERSAL LECTURE TUTORING RULES:",
                 "1. Base your explanation STRICTLY on the cumulative lecture content delivered from 0s up to timestamp {{videoTimestamp}}s.",
                 "2. DOMAIN ADAPTATION:",
@@ -59,7 +56,6 @@ public class SandboxExplainerPipeline {
                 @dev.langchain4j.service.MemoryId java.util.UUID memoryId,
                 @UserMessage String doubt,
                 @dev.langchain4j.service.V("videoTranscript") String videoTranscript,
-                @dev.langchain4j.service.V("ragContext") String ragContext,
                 @dev.langchain4j.service.V("difficultyInstructions") String difficultyInstructions,
                 @dev.langchain4j.service.V("videoTimestamp") String videoTimestamp,
                 @dev.langchain4j.service.V("videoId") String videoId,
@@ -67,74 +63,14 @@ public class SandboxExplainerPipeline {
         );
     }
 
-    public OrchestrationResponse run(OrchestrationRequest request) {
-        Double vt = -1.0;
-        if (request.getContext() != null && request.getContext().containsKey("videoTimestamp")) {
-            vt = (Double) request.getContext().get("videoTimestamp");
-        }
-        String videoTimestampStr = vt >= 0 ? String.format("%.1f", vt) : "0.0";
-
-        String videoId = "unknown";
-        if (request.getContext() != null && request.getContext().containsKey("videoId")) {
-            videoId = (String) request.getContext().get("videoId");
-        }
-
-        String language = "en";
-        if (request.getContext() != null && request.getContext().containsKey("language")) {
-            language = (String) request.getContext().get("language");
-        }
-
+    public Map<String, String> explain(java.util.UUID userId, String doubt, double videoTimestamp, String videoId, String language, int difficultyLevel) {
+        String videoTimestampStr = videoTimestamp >= 0 ? String.format("%.1f", videoTimestamp) : "0.0";
         String videoTranscript = "";
-        if (request.getContext() != null && request.getContext().containsKey("transcript")) {
-            String t = (String) request.getContext().get("transcript");
-            if (t != null && !t.isBlank()) {
-                videoTranscript = t;
-            }
-        }
-        if (videoTranscript.isBlank() && !videoId.equals("unknown")) {
-            int timeInSeconds = (int) Math.max(0, Math.round(vt));
+
+        if (!videoId.equals("unknown")) {
+            int timeInSeconds = (int) Math.max(0, Math.round(videoTimestamp));
             videoTranscript = youtubeTranscriptService.getMultilingualCumulativeTranscript(videoId, timeInSeconds, language)
                     .orElse("Video " + videoId + " segment at timestamp " + videoTimestampStr + "s.");
-        }
-
-        String ragContext = "No uploaded documents found for this query.";
-
-        // Perform RAG Retrieval from Vector DB
-        try {
-            String userQuery = request.getUserInput();
-            dev.langchain4j.data.embedding.Embedding queryEmbedding = embeddingModel.embed(userQuery).content();
-            
-            dev.langchain4j.store.embedding.EmbeddingSearchRequest searchRequest = dev.langchain4j.store.embedding.EmbeddingSearchRequest.builder()
-                    .queryEmbedding(queryEmbedding)
-                    .maxResults(2)
-                    .minScore(0.0)
-                    .build();
-
-            dev.langchain4j.store.embedding.EmbeddingSearchResult<dev.langchain4j.data.segment.TextSegment> searchResult = embeddingStore.search(searchRequest);
-            var matches = searchResult.matches();
-            
-            if (matches != null && !matches.isEmpty()) {
-                StringBuilder sb = new StringBuilder();
-                for (var match : matches) {
-                    String fn = match.embedded().metadata().getString("filename");
-                    if (fn != null) {
-                        sb.append("[File: ").append(fn).append("] ");
-                    }
-                    sb.append(match.embedded().text()).append("\n");
-                }
-                ragContext = sb.toString();
-                if (ragContext.length() > 1200) {
-                    ragContext = ragContext.substring(0, 1200) + "... [truncated for brevity]";
-                }
-            }
-        } catch (Exception e) {
-            System.err.println("RAG Search Error in SandboxExplainerPipeline: " + e.getMessage());
-            e.printStackTrace();
-        }
-
-        int difficultyLevel = 3; // Default intermediate
-        if (request.getContext() != null && request.getContext().containsKey("difficultyLevel")) {
-            difficultyLevel = (Integer) request.getContext().get("difficultyLevel");
         }
 
         String difficultyInstructions = switch (difficultyLevel) {
@@ -147,21 +83,17 @@ public class SandboxExplainerPipeline {
         };
 
         try {
-            String answer = tutor.answerDoubt(request.getUserId(), request.getUserInput(), videoTranscript, ragContext, difficultyInstructions, videoTimestampStr, videoId, language);
-            return OrchestrationResponse.builder()
-                    .payload(Map.of("explanation", answer))
-                    .build();
+            String answer = tutor.answerDoubt(userId, doubt, videoTranscript, difficultyInstructions, videoTimestampStr, videoId, language);
+            return Map.of("explanation", answer);
         } catch (Exception e) {
-            return fallbackRun(request, e);
+            return fallbackRun(e);
         }
     }
 
-    public OrchestrationResponse fallbackRun(OrchestrationRequest request, Throwable t) {
+    public Map<String, String> fallbackRun(Throwable t) {
         // Fallback response when Gemini API is down, rate-limited, or timing out.
         System.err.println("Circuit Breaker triggered in SandboxExplainerPipeline: " + t.getMessage());
         t.printStackTrace();
-        return OrchestrationResponse.builder()
-                .payload(Map.of("explanation", "The AI Tutor is currently experiencing high traffic and is taking a quick break to recharge! Please try again in a few moments."))
-                .build();
+        return Map.of("explanation", "The AI Tutor is currently experiencing high traffic and is taking a quick break to recharge! Please try again in a few moments.");
     }
 }

@@ -12,9 +12,11 @@ import java.util.List;
 public class CodingChallengePipeline {
 
     private final ChallengeGenerator generator;
+    private final com.oreo.engine.orchestration.YouTubeTranscriptService youtubeTranscriptService;
 
-    public CodingChallengePipeline(ChatLanguageModel chatLanguageModel) {
+    public CodingChallengePipeline(ChatLanguageModel chatLanguageModel, com.oreo.engine.orchestration.YouTubeTranscriptService youtubeTranscriptService) {
         this.generator = AiServices.create(ChallengeGenerator.class, chatLanguageModel);
+        this.youtubeTranscriptService = youtubeTranscriptService;
     }
 
     public static class ExtractedChallenge {
@@ -44,7 +46,9 @@ public class CodingChallengePipeline {
         );
     }
 
-    public ExtractedChallenge generate(String transcript, String doubtContext, String language) {
+    public ExtractedChallenge generate(String videoId, int timeInSeconds, String doubtContext, String language) {
+        String transcript = youtubeTranscriptService.getTranscriptBufferBeforeTimestamp(videoId, timeInSeconds, 1000)
+                .orElse("No specific transcript available for this exact timestamp.");
         return generator.generateChallenge(transcript, doubtContext, language);
     }
 }
