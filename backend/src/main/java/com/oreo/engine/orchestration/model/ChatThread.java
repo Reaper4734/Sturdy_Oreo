@@ -15,6 +15,7 @@ public class ChatThread {
     private UUID userId;
     private String title;
     private String videoId;
+    private String topic;
     private LocalDateTime createdAt = LocalDateTime.now();
 
     public UUID getId() { return id; }
@@ -25,6 +26,8 @@ public class ChatThread {
     public void setTitle(String title) { this.title = title; }
     public String getVideoId() { return videoId; }
     public void setVideoId(String videoId) { this.videoId = videoId; }
+    public String getTopic() { return topic; }
+    public void setTopic(String topic) { this.topic = topic; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 }

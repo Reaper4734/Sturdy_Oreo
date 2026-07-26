@@ -69,13 +69,17 @@ public class WatchdogDaemon {
             if (idleSeconds > INACTIVITY_THRESHOLD_SECONDS) {
                 log.info("Session {} is idle for {} seconds. Triggering nudge intervention.", sessionId, idleSeconds);
                 
-                // 1. Generate Nudge
-                String nudgeMessage = nudgeAgent.generateNudge("Student is idle. Current topic is unknown.");
+                // 1. Run LLM async to avoid blocking the Watchdog scheduled thread
+                java.util.concurrent.CompletableFuture.runAsync(() -> {
+                    try {
+                        String nudgeMessage = nudgeAgent.generateNudge("Student is idle. Current topic is unknown.");
+                        messagingTemplate.convertAndSend("/topic/session/" + sessionId + "/interventions", Map.of("intervention_type", "nudge", "message", nudgeMessage));
+                    } catch (Exception e) {
+                        log.error("Failed to generate nudge for session {}", sessionId, e);
+                    }
+                });
                 
-                // 2. Push to WebSocket Topic
-                messagingTemplate.convertAndSend("/topic/session/" + sessionId + "/interventions", Map.of("intervention_type", "nudge", "message", nudgeMessage));
-                
-                // 3. Reset heartbeat to avoid spamming the student
+                // 2. Reset heartbeat immediately to avoid spamming the student
                 registerHeartbeat(sessionId);
             }
         }

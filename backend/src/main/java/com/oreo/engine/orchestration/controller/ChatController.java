@@ -35,6 +35,7 @@ public class ChatController {
         ChatThread thread = new ChatThread();
         thread.setUserId((UUID) authentication.getPrincipal());
         thread.setVideoId(payload.get("videoId"));
+        thread.setTopic(payload.get("topic"));
         thread.setTitle(payload.getOrDefault("title", "New Conversation"));
         return ResponseEntity.ok(chatThreadRepository.save(thread));
     }

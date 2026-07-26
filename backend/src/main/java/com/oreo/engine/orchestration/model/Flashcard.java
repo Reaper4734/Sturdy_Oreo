@@ -25,6 +25,12 @@ public class Flashcard {
     @Column(length = 2000)
     private String back;
 
+    @Column(length = 255)
+    private String album;
+
+    @Column(length = 255)
+    private String subAlbum;
+
     // SuperMemo-2 Spaced Repetition Fields
     private LocalDate nextReviewDate;
     private int intervalDays;

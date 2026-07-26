@@ -12,7 +12,7 @@ import java.util.stream.Collectors;
 @Component
 public class YouTubeSearchTool {
 
-    @Value("${youtube.api.key:NONE}")
+    @Value("${oreo.youtube.api.key:NONE}")
     private String apiKey;
 
     private final RestTemplate restTemplate = new RestTemplate();

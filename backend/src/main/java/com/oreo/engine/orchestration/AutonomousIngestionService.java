@@ -50,8 +50,8 @@ public class AutonomousIngestionService {
         try {
             // Step 1: Transcript
             messagingTemplate.convertAndSend(topic, Map.of("step", "TRANSCRIPT", "status", "Downloading..."));
-            // We fetch the full 600 second transcript for demonstration
-            String transcript = transcriptService.getTranscriptBufferBeforeTimestamp(videoId, 600, 1000).orElse("");
+            // We fetch the full transcript for ingestion
+            String transcript = transcriptService.getTranscriptBufferBeforeTimestamp(videoId, Integer.MAX_VALUE, Integer.MAX_VALUE).orElse("");
             messagingTemplate.convertAndSend(topic, Map.of("step", "TRANSCRIPT", "status", "Done", "length", transcript.length()));
 
             // Step 2: Syllabus DAG
@@ -71,15 +71,12 @@ public class AutonomousIngestionService {
 
             // Step 3: Flashcards
             messagingTemplate.convertAndSend(topic, Map.of("step", "FLASHCARDS", "status", "Extracting..."));
-            var cards = flashcardGenerator.generateFlashcards(transcript);
+            var cards = flashcardGenerator.generateFlashcards(transcript, Integer.MAX_VALUE);
             for (var c : cards) {
                 com.oreo.engine.orchestration.model.Flashcard f = new com.oreo.engine.orchestration.model.Flashcard();
                 f.setUserId(userId);
                 f.setFront(c.frontQuestion);
                 f.setBack(c.backAnswer);
-                f.setEaseFactor(2.5f);
-                f.setConsecutiveCorrectAnswers(0);
-                f.setIntervalDays(0);
                 flashcardRepository.save(f);
             }
             messagingTemplate.convertAndSend(topic, Map.of("step", "FLASHCARDS", "status", "Done", "cardsCreated", cards.size()));

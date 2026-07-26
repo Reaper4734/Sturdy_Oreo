@@ -33,24 +33,60 @@ public class FlashcardController {
     }
 
     @GetMapping("/flashcards")
-    public ResponseEntity<List<Flashcard>> getAllFlashcards(Authentication authentication) {
+    public ResponseEntity<List<Flashcard>> getAllFlashcards(
+            @RequestParam(required = false) String album,
+            @RequestParam(required = false) String subAlbum,
+            Authentication authentication) {
         UUID userId = (UUID) authentication.getPrincipal();
-        return ResponseEntity.ok(flashcardRepository.findByUserId(userId));
+        List<Flashcard> cards = flashcardRepository.findByUserId(userId);
+        
+        if (album != null) {
+            cards = cards.stream()
+                    .filter(c -> album.equals(c.getAlbum()))
+                    .filter(c -> subAlbum == null || subAlbum.equals(c.getSubAlbum()))
+                    .collect(Collectors.toList());
+        }
+        return ResponseEntity.ok(cards);
+    }
+
+    @GetMapping("/flashcards/albums")
+    public ResponseEntity<Map<String, List<String>>> getFlashcardAlbums(Authentication authentication) {
+        UUID userId = (UUID) authentication.getPrincipal();
+        List<Object[]> distinctAlbums = flashcardRepository.findDistinctAlbumsByUserId(userId);
+        
+        Map<String, List<String>> albums = distinctAlbums.stream()
+                .collect(Collectors.groupingBy(
+                        row -> (String) row[0],
+                        Collectors.mapping(row -> (String) row[1], Collectors.filtering(s -> s != null, Collectors.toList()))
+                ));
+                
+        return ResponseEntity.ok(albums);
+    }
+
+    @GetMapping("/flashcards/universal")
+    public ResponseEntity<List<Flashcard>> getUniversalFlashcards(
+            @RequestParam String album,
+            @RequestParam String subAlbum) {
+        return ResponseEntity.ok(flashcardRepository.findTop5ByAlbumAndSubAlbum(album, subAlbum));
     }
 
     @PostMapping("/flashcards/generate")
-    public ResponseEntity<Map<String, Object>> generateFlashcards(@RequestBody Map<String, String> payload, Authentication authentication) {
+    public ResponseEntity<List<Flashcard>> generateFlashcards(@RequestBody Map<String, String> payload, Authentication authentication) {
         String videoId = payload.get("videoId");
         if (videoId == null) {
-            return ResponseEntity.badRequest().body(Map.of("error", "videoId is required"));
+            return ResponseEntity.badRequest().build();
         }
+        
+        int timestamp = payload.containsKey("timestamp") ? Integer.parseInt(payload.get("timestamp")) : 99999;
+        String album = payload.get("album");
+        String subAlbum = payload.get("subAlbum");
 
         try {
-            // Fetch the ENTIRE transcript for the video (passing a massive time limit)
-            String transcript = youtubeTranscriptService.getTranscriptBufferBeforeTimestamp(videoId, 99999, 2000)
+            // Fetch the transcript for the video (passing timestamp and max 2000 words for token efficiency)
+            String transcript = youtubeTranscriptService.getTranscriptBufferBeforeTimestamp(videoId, timestamp, 2000)
                     .orElse("No transcript available.");
 
-            var extractedCards = flashcardGeneratorPipeline.generateFlashcards(transcript);
+            var extractedCards = flashcardGeneratorPipeline.generateFlashcards(transcript, timestamp);
             
             // Save to DB
             UUID userId = (UUID) authentication.getPrincipal();
@@ -59,14 +95,16 @@ public class FlashcardController {
                 card.setUserId(userId);
                 card.setFront(extracted.frontQuestion);
                 card.setBack(extracted.backAnswer);
+                card.setAlbum(album);
+                card.setSubAlbum(subAlbum);
                 card.setNextReviewDate(java.time.LocalDate.now().plusDays(1));
                 card.setIntervalDays(1);
                 return flashcardRepository.save(card);
             }).collect(Collectors.toList());
 
-            return ResponseEntity.ok(Map.of("message", "Generated and saved " + savedCards.size() + " cards."));
+            return ResponseEntity.ok(savedCards);
         } catch (Exception e) {
-            return ResponseEntity.internalServerError().body(Map.of("error", "Failed to generate flashcards: " + e.getMessage()));
+            return ResponseEntity.internalServerError().build();
         }
     }
 

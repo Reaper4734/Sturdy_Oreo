@@ -11,6 +11,21 @@ import java.util.Map;
 @Component
 public class SandboxExplainerPipeline {
 
+    private static final String SYSTEM_PROMPT = "You are Oreo, an expert universal AI video tutor for any subject (Coding, Biology, Physics, Math, History, Business, etc.).\n" +
+            "VIDEO PAUSE TIMESTAMP: {{videoTimestamp}} seconds (Video ID: {{videoId}}).\n" +
+            "CUMULATIVE LECTURE CONTENT & TRANSCRIPT (0s up to {{videoTimestamp}}s):\n" +
+            "{{videoTranscript}}\n" +
+            "UNIVERSAL LECTURE TUTORING RULES:\n" +
+            "1. Base your explanation STRICTLY on the cumulative lecture content delivered from 0s up to timestamp {{videoTimestamp}}s.\n" +
+            "2. DOMAIN ADAPTATION:\n" +
+            "   - For CODING lectures: Show the exact code snippet built up to {{videoTimestamp}}s and explain it line-by-line.\n" +
+            "   - For THEORY lectures (Biology, Physics, History, etc.): Explain the core biological/scientific concepts, mechanisms, or processes introduced up to {{videoTimestamp}}s.\n" +
+            "3. Do NOT mention advanced concepts or future lecture material that the instructor has not yet covered at {{videoTimestamp}}s.\n" +
+            "4. Keep explanations practical, clear, and engaging (2 short paragraphs max).\n" +
+            "5. ALWAYS end your response with a ```canvas-diagram JSON block (2-4 nodes) to visually render the current concept/code state on the canvas.\n" +
+            "6. IMPORTANT: The user's preferred language is {{language}}. Respond to their questions in {{language}} (translating your explanation if necessary), but keep JSON blocks in English.\n" +
+            "{{difficultyInstructions}}";
+
     private final ChatLanguageModel chatLanguageModel;
     private final com.oreo.engine.orchestration.YouTubeTranscriptService youtubeTranscriptService;
     private final SandboxTutor tutor;
@@ -36,22 +51,8 @@ public class SandboxExplainerPipeline {
     }
 
     interface SandboxTutor {
-        @SystemMessage({
-                "You are Oreo, an expert universal AI video tutor for any subject (Coding, Biology, Physics, Math, History, Business, etc.).",
-                "VIDEO PAUSE TIMESTAMP: {{videoTimestamp}} seconds (Video ID: {{videoId}}).",
-                "CUMULATIVE LECTURE CONTENT & TRANSCRIPT (0s up to {{videoTimestamp}}s):",
-                "{{videoTranscript}}",
-                "UNIVERSAL LECTURE TUTORING RULES:",
-                "1. Base your explanation STRICTLY on the cumulative lecture content delivered from 0s up to timestamp {{videoTimestamp}}s.",
-                "2. DOMAIN ADAPTATION:",
-                "   - For CODING lectures: Show the exact code snippet built up to {{videoTimestamp}}s and explain it line-by-line.",
-                "   - For THEORY lectures (Biology, Physics, History, etc.): Explain the core biological/scientific concepts, mechanisms, or processes introduced up to {{videoTimestamp}}s.",
-                "3. Do NOT mention advanced concepts or future lecture material that the instructor has not yet covered at {{videoTimestamp}}s.",
-                "4. Keep explanations practical, clear, and engaging (2 short paragraphs max).",
-                "5. ALWAYS end your response with a ```canvas-diagram JSON block (2-4 nodes) to visually render the current concept/code state on the canvas.",
-                "6. IMPORTANT: The user's preferred language is {{language}}. Respond to their questions in {{language}} (translating your explanation if necessary), but keep JSON blocks in English.",
-                "{{difficultyInstructions}}"
-        })
+
+        @SystemMessage(SYSTEM_PROMPT)
         String answerDoubt(
                 @dev.langchain4j.service.MemoryId java.util.UUID memoryId,
                 @UserMessage String doubt,
@@ -61,9 +62,20 @@ public class SandboxExplainerPipeline {
                 @dev.langchain4j.service.V("videoId") String videoId,
                 @dev.langchain4j.service.V("language") String language
         );
+
+        @SystemMessage(SYSTEM_PROMPT)
+        String answerDoubtWithImage(
+                @dev.langchain4j.service.MemoryId java.util.UUID memoryId,
+                @dev.langchain4j.service.UserMessage dev.langchain4j.data.message.UserMessage userMessage,
+                @dev.langchain4j.service.V("videoTranscript") String videoTranscript,
+                @dev.langchain4j.service.V("difficultyInstructions") String difficultyInstructions,
+                @dev.langchain4j.service.V("videoTimestamp") String videoTimestamp,
+                @dev.langchain4j.service.V("videoId") String videoId,
+                @dev.langchain4j.service.V("language") String language
+        );
     }
 
-    public Map<String, String> explain(java.util.UUID userId, String doubt, double videoTimestamp, String videoId, String language, int difficultyLevel) {
+    public Map<String, String> explain(java.util.UUID userId, String doubt, double videoTimestamp, String videoId, String language, int difficultyLevel, String imageBase64) {
         String videoTimestampStr = videoTimestamp >= 0 ? String.format("%.1f", videoTimestamp) : "0.0";
         String videoTranscript = "";
 
@@ -83,7 +95,18 @@ public class SandboxExplainerPipeline {
         };
 
         try {
-            String answer = tutor.answerDoubt(userId, doubt, videoTranscript, difficultyInstructions, videoTimestampStr, videoId, language);
+            String answer;
+            if (imageBase64 != null && !imageBase64.isEmpty()) {
+                // Remove data:image/png;base64, prefix if present
+                String base64Data = imageBase64.contains(",") ? imageBase64.split(",")[1] : imageBase64;
+                dev.langchain4j.data.message.UserMessage msg = dev.langchain4j.data.message.UserMessage.from(
+                    dev.langchain4j.data.message.TextContent.from(doubt),
+                    dev.langchain4j.data.message.ImageContent.from(base64Data, "image/png")
+                );
+                answer = tutor.answerDoubtWithImage(userId, msg, videoTranscript, difficultyInstructions, videoTimestampStr, videoId, language);
+            } else {
+                answer = tutor.answerDoubt(userId, doubt, videoTranscript, difficultyInstructions, videoTimestampStr, videoId, language);
+            }
             return Map.of("explanation", answer);
         } catch (Exception e) {
             return fallbackRun(e);

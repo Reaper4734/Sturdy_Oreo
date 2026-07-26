@@ -35,9 +35,10 @@ public class ResourceMapPipeline {
         @SystemMessage("""
                 You are a highly analytical High-Authority Librarian.
                 Your task is to generate a topic tree for the given subject.
-                For each sub-topic (branch), you MUST use the provided web search tool to find the MOST authoritative resource available on the live internet.
+                For each sub-topic (branch), you MUST use your extensive internal knowledge to provide the MOST authoritative resource URL available.
                 Prioritize official documentation, .edu domains, Wikipedia, and established tech platforms (e.g., MDN, AWS, Coursera).
                 Generate 5 to 7 critical branch topics.
+                Do NOT hallucinate URLs. Only provide exact URLs that you know exist.
                 """)
         ResourceMapSchema generateMap(@UserMessage String subject);
     }
@@ -45,8 +46,7 @@ public class ResourceMapPipeline {
     private final ResourceMapAiService aiService;
 
     public ResourceMapPipeline(ChatLanguageModel chatLanguageModel, WebSearchEngine webSearchEngine) {
-        WebSearchTool searchTool = WebSearchTool.from(webSearchEngine);
-        
+        dev.langchain4j.web.search.WebSearchTool searchTool = dev.langchain4j.web.search.WebSearchTool.from(webSearchEngine);
         this.aiService = AiServices.builder(ResourceMapAiService.class)
                 .chatLanguageModel(chatLanguageModel)
                 .tools(searchTool)

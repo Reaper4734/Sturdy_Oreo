@@ -70,10 +70,10 @@ public class OrchestrationController {
             userId = UUID.fromString("11111111-1111-1111-1111-111111111111");
         }
 
-        String rawLanguage = (String) payload.getOrDefault("language", "en");
-        String language = org.springframework.web.util.HtmlUtils.htmlEscape(rawLanguage);
+        String language = (String) payload.getOrDefault("language", "en");
+        String imageBase64 = (String) payload.get("imageBase64");
 
-        return ResponseEntity.ok(sandboxExplainerPipeline.explain(userId, doubt, videoTimestamp, videoId, language, difficultyLevel));
+        return ResponseEntity.ok(sandboxExplainerPipeline.explain(userId, doubt, videoTimestamp, videoId, language, difficultyLevel, imageBase64));
     }
 
 }

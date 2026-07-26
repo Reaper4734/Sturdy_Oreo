@@ -33,11 +33,12 @@ public class FlashcardGeneratorPipeline {
                 "Ensure the 'frontQuestion' is a single clear question, and the 'backAnswer' is a short, direct answer.",
                 "CRITICAL: Regardless of the language of the transcript, you MUST translate and generate ALL flashcards in English."
         })
-        @UserMessage("Generate flashcards for this transcript snippet: {{text}}")
-        ExtractedCardWrapper extractCards(@dev.langchain4j.service.V("text") String text);
+        @UserMessage("The student is paused at timestamp {{timestamp}}. Analyze the flow of the transcript leading up to this point, identify the specific subtopic currently being discussed, and generate flashcards strictly covering this active topic. Transcript: {{text}}")
+        ExtractedCardWrapper extractCards(@dev.langchain4j.service.V("text") String text, @dev.langchain4j.service.V("timestamp") String timestamp);
     }
 
-    public List<ExtractedCard> generateFlashcards(String transcriptSnippet) {
-        return extractor.extractCards(transcriptSnippet).cards;
+    public List<ExtractedCard> generateFlashcards(String transcriptSnippet, int timestampInSeconds) {
+        String timestampStr = String.format("%02d:%02d", timestampInSeconds / 60, timestampInSeconds % 60);
+        return extractor.extractCards(transcriptSnippet, timestampStr).cards;
     }
 }

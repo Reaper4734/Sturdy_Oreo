@@ -86,18 +86,19 @@ public class PlannerController {
                 
         int timeSpent = payload.getOrDefault("actualTimeSpentMinutes", 0);
         
-        // Clean, surgical traversal using Optionals and Streams (No ugly null-nesting)
-        java.util.Optional.ofNullable(plan.getPlanData())
-            .map(LearningPlan.PlanData::getMilestones)
-            .ifPresent(milestones -> milestones.stream()
-                .filter(m -> m.getTasks() != null)
-                .flatMap(m -> m.getTasks().stream())
-                .filter(t -> taskId.equals(t.getId()))
-                .findFirst()
-                .ifPresent(task -> {
-                    task.setCompleted(true);
-                    task.setActualTimeSpentMinutes(timeSpent);
-                }));
+        if (plan.getPlanData() != null && plan.getPlanData().getMilestones() != null) {
+            for (LearningPlan.Milestone m : plan.getPlanData().getMilestones()) {
+                if (m.getTasks() != null) {
+                    for (LearningPlan.Task t : m.getTasks()) {
+                        if (taskId.equals(t.getId())) {
+                            t.setCompleted(true);
+                            t.setActualTimeSpentMinutes(timeSpent);
+                            break;
+                        }
+                    }
+                }
+            }
+        }
         
         return ResponseEntity.ok(learningPlanRepository.save(plan));
     }
@@ -131,41 +132,11 @@ public class PlannerController {
                 // 3. Smart Injection Logic
                 LearningPlan.PlanData data = plan.getPlanData();
                 if (data != null && data.getMilestones() != null && !data.getMilestones().isEmpty()) {
-                    java.util.List<LearningPlan.Milestone> milestones = data.getMilestones();
-                    
-                    LearningPlan.Milestone targetMilestone = null;
-                    int insertIndex = -1;
-                    
-                    // Look for the exact task that failed
-                    if (failedTaskId != null) {
-                        for (LearningPlan.Milestone m : milestones) {
-                            if (m.getTasks() != null) {
-                                for (int i = 0; i < m.getTasks().size(); i++) {
-                                    if (failedTaskId.equals(m.getTasks().get(i).getId())) {
-                                        targetMilestone = m;
-                                        insertIndex = i + 1; // Inject directly AFTER the failed task
-                                        break;
-                                    }
-                                }
-                            }
-                            if (targetMilestone != null) break;
-                        }
+                    LearningPlan.Milestone m = data.getMilestones().get(0);
+                    if (m.getTasks() == null) {
+                        m.setTasks(new java.util.ArrayList<>());
                     }
-                    
-                    // Fallback if taskId not provided or not found
-                    if (targetMilestone == null) {
-                        targetMilestone = milestones.stream()
-                            .filter(m -> m.getTasks() != null && m.getTasks().stream().anyMatch(t -> !t.isCompleted()))
-                            .findFirst()
-                            .orElse(milestones.get(milestones.size() - 1));
-                        insertIndex = targetMilestone.getTasks() != null ? targetMilestone.getTasks().size() : 0;
-                    }
-                        
-                    if (targetMilestone.getTasks() == null) {
-                        targetMilestone.setTasks(new java.util.ArrayList<>());
-                        insertIndex = 0;
-                    }
-                    targetMilestone.getTasks().add(insertIndex, remedialTask);
+                    m.getTasks().add(remedialTask);
                 }
                 
                 LearningPlan savedPlan = learningPlanRepository.save(plan);
@@ -184,13 +155,17 @@ public class PlannerController {
                 .orElseThrow(() -> new RuntimeException("Plan not found"));
         
         // MVP Hackathon Logic: Shift all incomplete task deadlines forward by 2 days.
-        java.util.Optional.ofNullable(plan.getPlanData())
-            .map(LearningPlan.PlanData::getMilestones)
-            .ifPresent(milestones -> milestones.stream()
-                .filter(m -> m.getTasks() != null)
-                .flatMap(m -> m.getTasks().stream())
-                .filter(t -> !t.isCompleted() && t.getDeadlineDate() != null)
-                .forEach(t -> t.setDeadlineDate(t.getDeadlineDate().plusDays(2))));
+        if (plan.getPlanData() != null && plan.getPlanData().getMilestones() != null) {
+            for (LearningPlan.Milestone m : plan.getPlanData().getMilestones()) {
+                if (m.getTasks() != null) {
+                    for (LearningPlan.Task t : m.getTasks()) {
+                        if (!t.isCompleted() && t.getDeadlineDate() != null) {
+                            t.setDeadlineDate(t.getDeadlineDate().plusDays(2));
+                        }
+                    }
+                }
+            }
+        }
 
         return ResponseEntity.ok(learningPlanRepository.save(plan));
     }

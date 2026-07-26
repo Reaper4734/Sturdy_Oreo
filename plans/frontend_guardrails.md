@@ -29,6 +29,15 @@ When the user asks a question on the Canvas, the backend dynamically fetches the
 *   **Sync Accuracy:** The frontend **must** send the exact, precise video timestamp (in seconds) in the payload when the user hits "Send" on the chat. Do not send `0` or `null` unless the video hasn't started. 
 *   **UI Pausing:** When the user focuses the chat input field, the video player **must automatically pause**. If the video keeps playing while they type, the timestamp sent to the backend will drift, and the AI will get the wrong context buffer.
 
+## 3.5 Canvas Vision Context (The Screenshot Hack)
+To prevent the backend from running expensive video frame extraction when the user asks a question on the Canvas, the Flutter frontend handles visual context via a screenshot.
+
+### UX Guardrails:
+*   **The Problem:** The native YouTube HUD (play button, timeline) blocks educational code/diagrams when paused.
+*   **The Solution:** Initialize your YouTube iframe/player with `controls=0`. This completely disables the native YouTube HUD.
+*   **Custom Overlay:** Build your own custom play/pause/timeline controls using Flutter Widgets overlaid on the video player.
+*   **The Execution:** When the user clicks to trigger the AI Canvas explanation, instantly hide your custom Flutter control widgets for exactly 1 frame, take a clean local screenshot of the webview, convert it to Base64, and send it as `imageBase64` in the `/api/orchestration/canvas-explain` payload. Restore your custom controls immediately.
+
 ## 4. Background Flashcard Generation
 Currently, the backend automatically extracts flashcards (via an Async background thread) immediately after it finishes a Canvas explanation.
 

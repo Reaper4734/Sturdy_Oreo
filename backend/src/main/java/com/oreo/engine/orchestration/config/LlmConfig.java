@@ -12,13 +12,31 @@ import dev.langchain4j.model.chat.StreamingChatLanguageModel;
 import dev.langchain4j.model.googleai.GoogleAiGeminiStreamingChatModel;
 import dev.langchain4j.model.googleai.GoogleAiGeminiChatModel;
 import dev.langchain4j.web.search.WebSearchEngine;
-
+import dev.langchain4j.web.search.WebSearchEngine;
+import com.oreo.engine.orchestration.pipelines.PlannerAssistant;
+import com.oreo.engine.orchestration.pipelines.ChatSummarizer;
+import com.oreo.engine.orchestration.tools.YouTubeSearchTool;
+import dev.langchain4j.service.AiServices;
 
 @Configuration
 public class LlmConfig {
 
     @Value("${oreo.llm.gemini-api-key:dummy-gemini-key}")
     private String apiKey;
+
+    @Value("${oreo.search.google-api-key:dummy-key}")
+    private String googleSearchApiKey;
+
+    @Value("${oreo.search.google-csx-id:dummy-csx}")
+    private String googleCsxId;
+
+    @Bean
+    public dev.langchain4j.web.search.WebSearchEngine webSearchEngine() {
+        return dev.langchain4j.web.search.google.customsearch.GoogleCustomWebSearchEngine.builder()
+                .apiKey(googleSearchApiKey)
+                .csi(googleCsxId)
+                .build();
+    }
 
     @Bean
     @Primary
@@ -42,16 +60,17 @@ public class LlmConfig {
     }
 
     @Bean
-    public com.oreo.engine.orchestration.pipelines.PlannerAssistant plannerAssistant(ChatLanguageModel chatLanguageModel, com.oreo.engine.orchestration.tools.YouTubeSearchTool youTubeSearchTool) {
-        return dev.langchain4j.service.AiServices.builder(com.oreo.engine.orchestration.pipelines.PlannerAssistant.class)
+    public PlannerAssistant plannerAssistant(ChatLanguageModel chatLanguageModel, YouTubeSearchTool youTubeSearchTool, dev.langchain4j.web.search.WebSearchEngine webSearchEngine) {
+        dev.langchain4j.web.search.WebSearchTool searchTool = dev.langchain4j.web.search.WebSearchTool.from(webSearchEngine);
+        return AiServices.builder(PlannerAssistant.class)
                 .chatLanguageModel(chatLanguageModel)
-                .tools(youTubeSearchTool)
+                .tools(youTubeSearchTool, searchTool)
                 .build();
     }
 
     @Bean
-    public com.oreo.engine.orchestration.pipelines.ChatSummarizer chatSummarizer(ChatLanguageModel chatLanguageModel) {
-        return dev.langchain4j.service.AiServices.builder(com.oreo.engine.orchestration.pipelines.ChatSummarizer.class)
+    public ChatSummarizer chatSummarizer(ChatLanguageModel chatLanguageModel) {
+        return AiServices.builder(ChatSummarizer.class)
                 .chatLanguageModel(chatLanguageModel)
                 .build();
     }
