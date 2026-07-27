@@ -34,5 +34,12 @@ flutter_*.png
 *.env
 .env.*
 application-local.yml
+application-dev.yml
 application-local.properties
 secret.json
+
+# Custom Ignored Folders
+.agents/
+docs/
+plans/
+markdowns/

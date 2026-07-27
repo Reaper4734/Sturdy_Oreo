@@ -30,9 +30,25 @@ public class LearningTrack {
     @Column(nullable = false, length = 20)
     private String status = "PROPOSED"; // PROPOSED, ACCEPTED, ARCHIVED
 
+    @Column(name = "course_title")
+    private String courseTitle;
+
+    @Column(name = "difficulty")
+    private String difficulty;
+
+    @Column(name = "estimated_hours")
+    private Integer estimatedHours;
+
+    @Column(name = "graph_type")
+    private String graphType = "DAG";
+
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb", nullable = false)
-    private List<DagNode> nodes;
+    private List<com.oreo.engine.orchestration.schemas.KnowledgeGraphSchema.KnowledgeNode> nodes;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(columnDefinition = "jsonb")
+    private List<com.oreo.engine.orchestration.schemas.GraphEdge> edges;
 
     @Version
     private Integer version;

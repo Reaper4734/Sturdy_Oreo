@@ -46,6 +46,7 @@ public class DynamicProfilerPipeline {
         // 4. Return formatted response
         return OrchestrationResponse.builder()
                 .replyToUser(output.getReplyToUser())
+                .options(output.getOptions())
                 .internalState(stateMap)
                 .build();
     }

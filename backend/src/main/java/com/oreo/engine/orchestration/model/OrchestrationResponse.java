@@ -13,6 +13,7 @@ import java.util.Map;
 @AllArgsConstructor
 public class OrchestrationResponse {
     private String replyToUser; // For chat
+    private java.util.List<String> options; // Dynamic action chips/buttons
     private Map<String, Object> internalState; // Extracted persona, confidence, etc.
     private Object payload; // e.g., DAG output, Canvas payload, Quiz output
 }

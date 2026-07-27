@@ -1,0 +1,43 @@
+name: frontend
+description: "Oreo Platform Standalone UI Shell & Screen Harness"
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.11.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+  flutter_riverpod: ^2.5.1
+  go_router: ^13.2.0
+  flutter_animate: ^4.5.0
+  skeletonizer: ^1.4.2
+  lordicon: ^1.0.3
+  fl_chart: ^0.68.0
+  google_fonts: ^6.2.1
+  animated_text_kit: ^4.2.2
+  smooth_page_indicator: ^1.1.0
+  file_picker: ^8.0.0
+  speech_to_text: ^7.0.0
+  flutter_tts: ^4.0.0
+  vector_math: ^2.2.0
+  uuid: ^4.6.0
+  flutter_svg: ^2.3.0
+  path_drawing: ^1.0.1
+  intl: ^0.20.3
+  shared_preferences: ^2.5.5
+  http: ^1.6.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/mascots/cube_pets/png/
+    - assets/mascots/cube_characters/png/

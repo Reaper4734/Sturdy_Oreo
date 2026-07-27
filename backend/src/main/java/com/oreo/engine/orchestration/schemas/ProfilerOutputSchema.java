@@ -8,6 +8,10 @@ public class ProfilerOutputSchema {
 
     @JsonProperty("reply_to_user")
     private String replyToUser;
+    
+    @dev.langchain4j.model.output.structured.Description("List of short interactive reply options (max 2-3) for the user to select from. CRITICAL: MUST include an option ending with '➔' (e.g., 'Generate Curriculum ➔') if confidence_score >= 80.")
+    @JsonProperty("options")
+    private java.util.List<String> options;
 
     @JsonProperty("internal_state")
     private InternalState internalState;

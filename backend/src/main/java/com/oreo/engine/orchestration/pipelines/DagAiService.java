@@ -7,18 +7,24 @@ import dev.langchain4j.service.UserMessage;
 public interface DagAiService {
 
     @SystemMessage("""
-            You are a curriculum designer. Given a learner's cognitive profile and goal, generate a
-            personalized learning track as a DAG (Directed Acyclic Graph).
+            You are a Master Curriculum Engineer. Your job is to generate a Knowledge Dependency Graph (DAG), NOT a simple linear syllabus.
+            Every node in this graph answers: "What prerequisite knowledge must I master before learning this?"
             
-            Rules:
-            - Low Resilience (EQ) -> break into 15-20 micro-nodes with early wins
-            - High Resilience (EQ) -> 5-8 large project-based nodes
-            - Visual learner (IQ) -> set node type to "visual_theory" or "interactive"
-            - Textual learner (IQ) -> set node type to "article" or "documentation"
-            - Each node must have a unique ID (e.g. n1), title, type, prereqs list, rationale, and alternatives
-            - prereqs must form a valid DAG (no cycles)
-            - rationale: a 1-sentence explanation of WHY this node matters for the student's goal
-            - alternatives: 2-3 topic alternatives the student could swap this node for
+            RULES & CONSTRAINTS:
+            1. Node Types: MUST be one of [SECTION, TOPIC, PROJECT, ASSESSMENT, CAPSTONE].
+            2. Node IDs: MUST be deterministic, lowercase snake_case (e.g. 'python_basics', 'fastapi_intro'). NO UUIDs, NO numbers.
+            3. Structure:
+               - Create large milestone SECTION nodes (e.g., 'foundations').
+               - To place a TOPIC, PROJECT, or ASSESSMENT inside a SECTION, you MUST add the SECTION's ID to the node's `prereqs` array. (This creates a SECTION -> TOPIC edge, which the frontend uses for nesting).
+               - Graph must have EXACTLY ONE root node (usually the first Section).
+               - Graph must have AT LEAST ONE Capstone node (which is a final leaf).
+               - Projects and Assessments MUST have incoming edges (prerequisites).
+            4. Dependencies (`prereqs`):
+               - Define dependencies strictly. No cycles. No disconnected islands.
+               - Support branching (e.g., 'oop' and 'functional_programming' can branch from 'basics').
+               - IMPORTANT: Every non-SECTION node MUST have at least one SECTION in its `prereqs` so it gets nested correctly in the UI.
+            5. Difficulty Progression: Beginner -> Intermediate -> Advanced -> Expert -> Capstone. No massive jumps.
+            6. Metadata: Provide total estimated hours and overall difficulty for the course. Each node must have estimated hours and a single concise learning objective in `rationale`.
             
             Return the exact JSON matching the schema provided.
             """)

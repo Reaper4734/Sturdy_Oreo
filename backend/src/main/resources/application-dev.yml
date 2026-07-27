@@ -40,7 +40,7 @@ oreo:
   auth:
     google-client-id: ${GOOGLE_CLIENT_ID:test-client-id.apps.googleusercontent.com}
   llm:
-    gemini-api-key: ${GEMINI_API_KEY:AQ.Ab8RN6KoeKf1dQ4MbRZpRySorbKKwbs9j2xGX2soNZHpTjyrHg}
+    gemini-api-key: ${GEMINI_API_KEY:dummy-gemini-key}
     openai-api-key: ${OPENAI_API_KEY:dummy-openai-key}
 
 
