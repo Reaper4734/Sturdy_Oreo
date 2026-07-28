@@ -33,6 +33,11 @@ public class User {
     @Column(name = "current_phase", nullable = false)
     private String currentPhase = "INTERVIEW"; // INTERVIEW, REVEAL, EXECUTION
 
+    // Permanent Persona Traits
+    private String domain;
+    private String iqLogic;
+    private String eqResilience;
+
     // Gamification
     private int totalPoints = 0;
     private int currentStreak = 0;
@@ -82,6 +87,15 @@ public class User {
 
     public String getCurrentPhase() { return currentPhase; }
     public void setCurrentPhase(String currentPhase) { this.currentPhase = currentPhase; }
+
+    public String getDomain() { return domain; }
+    public void setDomain(String domain) { this.domain = domain; }
+
+    public String getIqLogic() { return iqLogic; }
+    public void setIqLogic(String iqLogic) { this.iqLogic = iqLogic; }
+
+    public String getEqResilience() { return eqResilience; }
+    public void setEqResilience(String eqResilience) { this.eqResilience = eqResilience; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }

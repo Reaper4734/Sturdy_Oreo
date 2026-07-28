@@ -2,9 +2,7 @@ package com.oreo.engine.orchestration.controller;
 
 
 import com.oreo.engine.orchestration.pipelines.DynamicProfilerPipeline;
-import com.oreo.engine.orchestration.pipelines.DagGeneratorPipeline;
 import com.oreo.engine.orchestration.pipelines.SandboxExplainerPipeline;
-import com.oreo.engine.orchestration.schemas.DagOutputSchema;
 import com.oreo.engine.orchestration.schemas.ProfilerOutputSchema;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -12,20 +10,25 @@ import org.springframework.web.bind.annotation.*;
 import java.util.Map;
 import java.util.UUID;
 
+import com.oreo.auth.User;
+import com.oreo.auth.UserRepository;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+
 @RestController
 @RequestMapping("/api/orchestration")
 public class OrchestrationController {
 
     private final DynamicProfilerPipeline dynamicProfilerPipeline;
-    private final DagGeneratorPipeline dagGeneratorPipeline;
     private final SandboxExplainerPipeline sandboxExplainerPipeline;
+    private final UserRepository userRepository;
+
     public OrchestrationController(
             DynamicProfilerPipeline dynamicProfilerPipeline,
-            DagGeneratorPipeline dagGeneratorPipeline,
-            SandboxExplainerPipeline sandboxExplainerPipeline) {
+            SandboxExplainerPipeline sandboxExplainerPipeline,
+            UserRepository userRepository) {
         this.dynamicProfilerPipeline = dynamicProfilerPipeline;
-        this.dagGeneratorPipeline = dagGeneratorPipeline;
         this.sandboxExplainerPipeline = sandboxExplainerPipeline;
+        this.userRepository = userRepository;
     }
 
     @PostMapping("/interview")
@@ -35,16 +38,24 @@ public class OrchestrationController {
         return ResponseEntity.ok(dynamicProfilerPipeline.run(history, userInput));
     }
 
-    @PostMapping("/dag-generate")
-    public ResponseEntity<DagOutputSchema> triggerDagGenerate(@RequestBody Map<String, String> payload) {
-        String goal = payload.getOrDefault("goal", "Build a real-time dashboard with React");
-        String persona = payload.getOrDefault("persona", "Visual learner, needs early wins");
-        UUID userId = UUID.randomUUID(); // Mock user ID for now
+    @PostMapping("/interview/complete")
+    public ResponseEntity<Map<String, String>> completeInterview(
+            @AuthenticationPrincipal String userId,
+            @RequestBody Map<String, String> payload) {
         
-        DagOutputSchema schema = dagGeneratorPipeline.generate(goal, persona, userId);
+        User user = userRepository.findById(UUID.fromString(userId))
+                .orElseThrow(() -> new RuntimeException("User not found"));
+                
+        user.setDomain(payload.get("domain"));
+        user.setIqLogic(payload.get("iqLogic"));
+        user.setEqResilience(payload.get("eqResilience"));
+        user.setCurrentPhase("EXECUTION");
         
-        return ResponseEntity.ok(schema);
+        userRepository.save(user);
+        
+        return ResponseEntity.ok(Map.of("status", "success", "message", "User persona permanently saved."));
     }
+
 
     @PostMapping("/canvas-explain")
     public ResponseEntity<Map<String, String>> triggerCanvasExplain(@RequestBody Map<String, Object> payload) {

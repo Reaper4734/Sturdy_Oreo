@@ -9,26 +9,25 @@ import dev.langchain4j.service.UserMessage;
 import dev.langchain4j.service.V;
 import org.springframework.stereotype.Service;
 
-import java.util.Map;
 
 @Service
 public class DynamicProfilerPipeline {
 
-    private final ChatLanguageModel primaryChatModel;
-    private final ObjectMapper objectMapper;
     private ProfilerAiService profilerAiService;
 
     interface ProfilerAiService {
         @SystemMessage("""
                 You are an AI learning counselor. Guide the user through a 4-phase interview.
-                Phase 1 (Anchor): Ask about their goal.
+                Phase 1 (Anchor): Ask about their broad learning goals, and explicitly identify the EXACT 'subject' they want to learn today (e.g. "Python", "Data Structures", "Accounting").
                 Phase 2 (Friction): Ask about past learning blockers. Use observational language, not emotional.
                   Do NOT ask "what frustrated you" — instead ask "where did you get stuck or lose interest?"
                 Phase 3 (Scenario): Ask about their problem-solving style.
                 Phase 4 (Pivot): Summarize and ask for permission to build a plan.
-                
+
+                IMPORTANT: When filling the JSON schema, the 'domain' field MUST be categorized as a broad Industry (e.g., "Computer Science", "Finance"), but the 'subject' field MUST be the specific topic they want to learn (e.g., "Python", "Accounting").
+
                 On EVERY response, you must return a strictly formatted JSON object matching the provided schema.
-                
+
                 [Conversation History]:
                 {{history}}
                 """)
@@ -36,8 +35,6 @@ public class DynamicProfilerPipeline {
     }
 
     public DynamicProfilerPipeline(ChatLanguageModel primaryChatModel, ObjectMapper objectMapper) {
-        this.primaryChatModel = primaryChatModel;
-        this.objectMapper = objectMapper;
         this.profilerAiService = AiServices.builder(ProfilerAiService.class)
                 .chatLanguageModel(primaryChatModel)
                 .build();

@@ -35,6 +35,9 @@ public class ProfilerOutputSchema {
         @JsonProperty("domain")
         private String domain;
 
+        @JsonProperty("subject")
+        private String subject;
+
         @JsonProperty("iq_logic")
         private String iqLogic;
 

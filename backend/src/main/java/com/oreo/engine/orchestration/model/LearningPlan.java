@@ -18,6 +18,10 @@ public class LearningPlan {
     private UUID id;
 
     private UUID userId;
+    
+    @Column(name = "chat_thread_id", unique = true)
+    private UUID chatThreadId;
+    
     private String goalStatement;
 
     @JdbcTypeCode(SqlTypes.JSON)

@@ -18,7 +18,8 @@ Before implementing any API calls, the Flutter team **must** adhere to these rul
 *   **Request Body:**
     ```json
     {
-      "chatTranscript": "I want to learn AWS Basics. I have 1 week. I am a beginner."
+      "chatTranscript": "I want to learn AWS Basics...",
+      "chatThreadId": "abc-123-xyz"
     }
     ```
     *(Note: If the frontend prefers to send a pre-summarized goal instead of the whole transcript, it will save 5 seconds of latency).*
@@ -26,12 +27,12 @@ Before implementing any API calls, the Flutter team **must** adhere to these rul
 *   **WebSocket Delivery:** The frontend MUST subscribe to `/topic/session/user/{userId}/plan`. The full `LearningPlan` JSON will be pushed there when 3.1 Flash Lite finishes generating it.
 
 ### 1.2 Fetch Current Plan
-*   **Endpoint:** `GET /api/orchestration/planner/`
+*   **Endpoint:** `GET /api/orchestration/planner/{chatThreadId}`
 *   **Purpose:** Loads the user's current plan for the Dashboard.
 *   **Response:** Returns the full `LearningPlan` object. Returns 404 if no plan exists.
 
 ### 1.3 Mark Task Complete
-*   **Endpoint:** `PUT /api/orchestration/planner/task/{taskId}/complete`
+*   **Endpoint:** `PUT /api/orchestration/planner/{chatThreadId}/task/{taskId}/complete`
 *   **Purpose:** Securely updates a single task's completion status and tracks the time spent.
 *   **Request Body:**
     ```json
@@ -42,7 +43,7 @@ Before implementing any API calls, the Flutter team **must** adhere to these rul
 *   **Response:** Returns the updated `LearningPlan` object.
 
 ### 1.4 Adapt Plan (Remedial Injection)
-*   **Endpoint:** `POST /api/orchestration/planner/adapt`
+*   **Endpoint:** `POST /api/orchestration/planner/{chatThreadId}/adapt`
 *   **Purpose:** Called when a user fails a quiz. Injects a `[Remedial]` task into the timeline instantly.
 *   **Request Body:**
     ```json
@@ -56,7 +57,7 @@ Before implementing any API calls, the Flutter team **must** adhere to these rul
 *   **WebSocket Delivery:** The frontend MUST subscribe to `/topic/session/user/{userId}/plan`. The updated `LearningPlan` JSON (with the injected task) will be pushed there.
 
 ### 1.5 Reschedule Plan
-*   **Endpoint:** `POST /api/orchestration/planner/reschedule`
+*   **Endpoint:** `POST /api/orchestration/planner/{chatThreadId}/reschedule`
 *   **Purpose:** Shifts all incomplete task deadlines forward by 2 days if the user falls behind.
 *   **Request Body:** None (Empty POST).
 *   **Response:** Returns the updated `LearningPlan` object.
@@ -193,16 +194,27 @@ To support the real-time "Nudge" feature when a user abandons the app:
 ## 7. AI Canvas & Diagrams (Eraser & PenEcho Clones)
 
 ### 7.1 Generate Knowledge Graph / Diagram (Eraser Mode)
-*   **Endpoint:** `POST /api/orchestration/dag-generate`
-*   **Purpose:** Generates a conceptual diagram or syllabus graph based on the user's goal.
+*   **Endpoint:** `POST /api/resource-map/generate`
+*   **Purpose:** Builds a Mermaid diagram code for the canvas AND a structured JSON graph of external resources (GeeksForGeeks, W3Schools, etc.).
 *   **Request Body:**
     ```json
     {
-      "goal": "Build a real-time dashboard with React",
-      "persona": "Visual learner, needs early wins"
+      "subject": "Build a real-time dashboard with React"
     }
     ```
-*   **Response:** Returns a `DagOutputSchema` (typically a JSON representation of nodes/edges or Mermaid diagram code).
+*   **Response:** Returns a `ResourceMapSchema` containing the Mermaid diagram code and categorized branches.
+    ```json
+    {
+      "subject": "React Dashboard",
+      "mermaidGraph": "graph TD\\n  [React Basics] --> (State Management)...",
+      "branches": [
+        {
+          "topic": "React Basics",
+          "authoritativeResource": { "url": "https://geeksforgeeks.org/..." }
+        }
+      ]
+    }
+    ```
 
 ### 7.2 AI Canvas / Video Explanation (PenEcho Mode)
 *   **Endpoint:** `POST /api/orchestration/canvas-explain`
@@ -241,6 +253,19 @@ To support the real-time "Nudge" feature when a user abandons the app:
     ```
 *   **Response:** Returns a `ProfilerOutputSchema`.
 
+### 8.1.1 Save User Persona (Complete Interview)
+*   **Endpoint:** `POST /api/orchestration/interview/complete`
+*   **Purpose:** Permanently saves the user's profiled traits to their database account.
+*   **Request Body:**
+    ```json
+    {
+      "domain": "Software Engineering",
+      "iqLogic": "Visual Learner",
+      "eqResilience": "Needs early wins"
+    }
+    ```
+*   **Response:** `200 OK` with success message.
+
 ### 8.2 RAG Document Upload
 *   **Endpoint:** `POST /api/orchestration/upload-document`
 *   **Purpose:** Upload a PDF or Text file to add custom knowledge to the RAG database.
@@ -277,50 +302,6 @@ To support the real-time "Nudge" feature when a user abandons the app:
     }
     ```
 *   **Response:** Returns a `GradingResult` with pass/fail status and feedback.
-
----
-
-## 10. Resource Map Finder
-
-### 10.1 Generate Resource Map
-*   **Endpoint:** `POST /api/resource-map/generate`
-*   **Purpose:** Builds a structured JSON graph of external documentation, videos, and articles for a subject.
-*   **Request Body:**
-    ```json
-    {
-      "subject": "Java Concurrency"
-    }
-    ```
-*   **Response:** Returns a `ResourceMapSchema` containing categorized external links.
-
----
-
-## 11. Skill Tree (Node-Based Path)
-
-*Note: The app uses `PlannerController` (Tasks) for chronological timelines, but uses this `LearningPathController` (Nodes) to render the 2D skill map.*
-
-### 11.1 Generate Skill Tree
-*   **Endpoint:** `POST /api/learning-path/generate`
-*   **Purpose:** Parses raw syllabus text into a web of interdependent `SkillNode`s.
-*   **Request Body:**
-    ```json
-    {
-      "text": "Core Java, Advanced Java, Multithreading...",
-      "userId": "uuid"
-    }
-    ```
-*   **Response:** Returns an Array of `SkillNode`s.
-
-### 11.2 Fetch Skill Tree
-*   **Endpoint:** `GET /api/learning-path/{userId}`
-*   **Purpose:** Retrieves all nodes for the user to plot on the 2D canvas.
-*   **Response:** Returns an Array of `SkillNode`s.
-
-### 11.3 Master a Node
-*   **Endpoint:** `POST /api/learning-path/node/{nodeId}/complete`
-*   **Purpose:** Marks a node as `MASTERED`, potentially unlocking dependent nodes in the frontend UI.
-*   **Request Body:** None (Empty POST).
-*   **Response:** `200 OK` ("Node Mastered")
 
 ---
 
