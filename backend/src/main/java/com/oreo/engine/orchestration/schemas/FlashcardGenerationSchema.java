@@ -15,10 +15,19 @@ public class FlashcardGenerationSchema {
         @JsonProperty("id")
         private String id;
 
-        @JsonProperty("frontHtml")
-        private String frontHtml;
+        @JsonProperty("front")
+        private String front;
 
-        @JsonProperty("backHtml")
-        private String backHtml;
+        @JsonProperty("back")
+        private String back;
+        
+        @JsonProperty("topicTag")
+        private String topicTag;
+        
+        @JsonProperty("type")
+        private String type;
+        
+        @JsonProperty("tags")
+        private List<String> tags;
     }
 }
