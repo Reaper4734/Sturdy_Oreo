@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../../../app/theme/app_theme.dart';
 import '../../../../shared/models/mastery_test_model.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class LongMcqSurveyLayout extends StatefulWidget {
+class LongMcqSurveyLayout extends ConsumerStatefulWidget {
   final List<QuestionItem> questions;
   final VoidCallback onCompleteTest;
 
@@ -13,10 +14,10 @@ class LongMcqSurveyLayout extends StatefulWidget {
   });
 
   @override
-  State<LongMcqSurveyLayout> createState() => _LongMcqSurveyLayoutState();
+  ConsumerState<LongMcqSurveyLayout> createState() => _LongMcqSurveyLayoutState();
 }
 
-class _LongMcqSurveyLayoutState extends State<LongMcqSurveyLayout> {
+class _LongMcqSurveyLayoutState extends ConsumerState<LongMcqSurveyLayout> {
   int _currentIndex = 0;
   final Map<int, String> _userAnswers = {};
 

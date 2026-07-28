@@ -7,16 +7,18 @@ class HttpFlashcardRepository {
   final ApiClient _apiClient = ApiClient();
 
   Future<List<FlashcardItem>> generateFlashcards(String topic) async {
-    final response = await _apiClient.post('/orchestration/assessments/flashcards', body: {
+    final response = await _apiClient.post('/orchestration/generate-flashcards', body: {
       'topic': topic,
     });
 
     if (response.statusCode == 200) {
-      final List<dynamic> data = jsonDecode(response.body);
-      return data.map((f) => FlashcardItem(
-          id: f['id'] ?? 'fc_${DateTime.now().millisecondsSinceEpoch}',
-          front: f['frontText'] ?? f['question'] ?? 'Question?',
-          back: f['backText'] ?? f['answer'] ?? 'Answer.',
+      final decoded = jsonDecode(response.body);
+      // Backend returns [{frontQuestion, backAnswer}, ...] directly
+      final List<dynamic> flashcardsList = decoded is List ? decoded : (decoded['cards'] ?? decoded['flashcards'] ?? []);
+      return flashcardsList.asMap().entries.map((entry) => FlashcardItem(
+          id: 'fc_${DateTime.now().millisecondsSinceEpoch}_${entry.key}',
+          front: entry.value['frontQuestion'] ?? entry.value['front'] ?? entry.value['question'] ?? 'Question?',
+          back: entry.value['backAnswer'] ?? entry.value['back'] ?? entry.value['answer'] ?? 'Answer.',
           topicTag: topic,
         )).toList();
     } else {

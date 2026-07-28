@@ -1,18 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'app/theme/app_theme.dart';
-import 'shared/widgets/responsive_scaffold.dart';
+import 'features/auth/providers/auth_provider.dart';
+import 'features/auth/presentation/auth_screen.dart';
 import 'features/onboarding/presentation/micro_interview_screen.dart';
 import 'features/onboarding/presentation/persona_reveal_screen.dart';
-
 import 'features/dashboard/presentation/command_center_screen.dart';
 import 'features/survey/presentation/mastery_survey_screen.dart';
 import 'features/knowledge_hub/presentation/knowledge_hub_screen.dart';
 import 'features/settings/presentation/profile_settings_screen.dart';
+// Removed LearningLabScreen
 import 'shared/providers/workspace_providers.dart';
+import 'shared/widgets/responsive_scaffold.dart';
 
 void main() {
-  runApp(const ProviderScope(child: OreoApp()));
+  runApp(
+    const ProviderScope(
+      child: OreoApp(),
+    ),
+  );
 }
 
 class OreoApp extends ConsumerStatefulWidget {
@@ -23,28 +30,48 @@ class OreoApp extends ConsumerStatefulWidget {
 }
 
 class _OreoAppState extends ConsumerState<OreoApp> {
-  int _selectedIndex = 0; // Default to Screen 03: Command Center Dashboard
+  int _selectedIndex = 0;
+
+  bool _hasCheckedWorkspaces = false;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(workspaceListProvider.notifier).loadWorkspaces().then((_) {
-        final list = ref.read(workspaceListProvider);
-        if (list.isNotEmpty && ref.read(activeWorkspaceIdProvider) == null) {
-          ref.read(activeWorkspaceIdProvider.notifier).state = list.first.id;
-        }
-      });
-    });
   }
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Oreo AI Tutor',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.darkTheme,
-      home: ResponsiveScaffold(
+    final authState = ref.watch(authProvider);
+
+    if (authState.isAuthenticated && !_hasCheckedWorkspaces) {
+      _hasCheckedWorkspaces = true;
+      Future.microtask(() {
+        ref.read(workspaceListProvider.notifier).loadWorkspaces().then((_) {
+          final list = ref.read(workspaceListProvider);
+          if (list.isNotEmpty && ref.read(activeWorkspaceIdProvider) == null) {
+            ref.read(activeWorkspaceIdProvider.notifier).state = list.first.id;
+          }
+          if (list.isEmpty && mounted) {
+            setState(() {
+              _selectedIndex = 1;
+            });
+          }
+        });
+      });
+    } else if (!authState.isAuthenticated) {
+      _hasCheckedWorkspaces = false;
+    }
+
+    Widget homeWidget;
+    if (authState.isLoading) {
+      homeWidget = const Scaffold(
+        backgroundColor: AppColors.bgCanvas,
+        body: Center(child: CircularProgressIndicator()),
+      );
+    } else if (!authState.isAuthenticated) {
+      homeWidget = const AuthScreen();
+    } else {
+      homeWidget = ResponsiveScaffold(
         selectedIndex: _selectedIndex,
         onDestinationSelected: (index) {
           setState(() {
@@ -52,7 +79,16 @@ class _OreoAppState extends ConsumerState<OreoApp> {
           });
         },
         child: _buildCurrentScreen(),
+      );
+    }
+
+    return MaterialApp(
+      title: 'Oreo Platform',
+      debugShowCheckedModeBanner: false,
+      theme: AppTheme.darkTheme.copyWith(
+        textTheme: GoogleFonts.interTextTheme(AppTheme.darkTheme.textTheme),
       ),
+      home: homeWidget,
     );
   }
 
@@ -82,7 +118,7 @@ class _OreoAppState extends ConsumerState<OreoApp> {
             });
           },
         );
-      case 4:
+      case 3:
         return MasterySurveyScreen(
           onReturnToDashboard: () {
             setState(() {
@@ -90,17 +126,17 @@ class _OreoAppState extends ConsumerState<OreoApp> {
             });
           },
         );
-      case 5:
+      case 4:
         return KnowledgeHubScreen(
           onNavigateToWorkspace: () {
             setState(() {
-              _selectedIndex = 3;
+              _selectedIndex = 2; // Route to Workspace
             });
           },
         );
-      case 6:
+      case 5:
         return const ProfileSettingsScreen();
-      case 3:
+
       default:
         return Center(
           child: Column(
@@ -109,7 +145,7 @@ class _OreoAppState extends ConsumerState<OreoApp> {
               const Icon(Icons.construction, size: 48, color: AppColors.accentAmber),
               const SizedBox(height: 16),
               Text(
-                'Screen 0${_selectedIndex + 1} Under Development (Mock Mode)',
+                'Screen 0${_selectedIndex + 1} Under Development',
                 style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.fgPrimary),
               ),
               const SizedBox(height: 8),

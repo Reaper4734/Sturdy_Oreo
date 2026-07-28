@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../app/theme/app_theme.dart';
-import '../../data/mock_dashboard_data.dart';
+import '../../data/dashboard_model.dart';
 
 class LearningJourneyCard extends StatelessWidget {
   final LearningJourneyData data;

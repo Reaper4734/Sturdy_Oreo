@@ -71,12 +71,12 @@ class ResponsiveScaffold extends ConsumerWidget {
                 const Divider(height: 1, color: AppColors.borderSubtle, indent: 8, endIndent: 8),
                 const SizedBox(height: 8),
 
-                // Nav Icons with Hover Tooltips (All 6 Existing Tabs Preserved Exactly)
+                // Nav Icons with Hover Tooltips (All 5 Existing Tabs Preserved Exactly)
                 _buildRailIconButton(0, Icons.dashboard_outlined, 'Dashboard'),
                 _buildRailIconButton(1, Icons.chat_bubble_outline, 'Interview'),
                 _buildRailIconButton(2, Icons.radar_outlined, 'Studio'),
-                _buildRailIconButton(4, Icons.assignment_turned_in_outlined, 'Quizzes'),
-                _buildRailIconButton(5, Icons.explore_outlined, 'Hub'),
+                _buildRailIconButton(3, Icons.assignment_turned_in_outlined, 'Quizzes'),
+                _buildRailIconButton(4, Icons.explore_outlined, 'Hub'),
 
                 const Spacer(),
 
@@ -90,7 +90,7 @@ class ResponsiveScaffold extends ConsumerWidget {
                   preferBelow: false,
                   verticalOffset: 20,
                   child: InkWell(
-                    onTap: () => onDestinationSelected(6),
+                    onTap: () => onDestinationSelected(5),
                     child: const Padding(
                       padding: EdgeInsets.only(bottom: 20.0),
                       child: CircleAvatar(
@@ -123,6 +123,9 @@ class ResponsiveScaffold extends ConsumerWidget {
                     child: WorkspacePanel(
                       onNewWorkspaceClicked: () {
                         onDestinationSelected(1); // Navigate to Screen 01: Micro-Interview
+                      },
+                      onWorkspaceSelected: () {
+                        onDestinationSelected(2); // Navigate to Learning Studio (PersonaRevealScreen)
                       },
                     ),
                   ),
@@ -184,6 +187,9 @@ class ResponsiveScaffold extends ConsumerWidget {
                 onNewWorkspaceClicked: () {
                   onDestinationSelected(1);
                 },
+                onWorkspaceSelected: () {
+                  onDestinationSelected(2);
+                },
               ),
             ),
         ],
@@ -198,8 +204,7 @@ class ResponsiveScaffold extends ConsumerWidget {
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.dashboard_outlined), label: 'Center'),
           BottomNavigationBarItem(icon: Icon(Icons.chat_bubble_outline), label: 'Chat'),
-          BottomNavigationBarItem(icon: Icon(Icons.radar_outlined), label: 'Persona'),
-          BottomNavigationBarItem(icon: Icon(Icons.science_outlined), label: 'Lab'),
+          BottomNavigationBarItem(icon: Icon(Icons.radar_outlined), label: 'Studio'),
           BottomNavigationBarItem(icon: Icon(Icons.assignment_outlined), label: 'Quiz'),
         ],
       ),

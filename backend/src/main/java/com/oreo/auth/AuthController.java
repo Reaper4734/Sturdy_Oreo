@@ -7,7 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/auth")
+@RequestMapping("/api/auth")
 @Tag(name = "Authentication", description = "Register, Login, and Google OAuth2 Authentication")
 public class AuthController {
 
@@ -41,17 +41,16 @@ public class AuthController {
     @Operation(summary = "Get current user profile stats")
     @io.swagger.v3.oas.annotations.security.SecurityRequirement(name = "bearerAuth")
     public ResponseEntity<AuthDto.UserProfileResponse> getProfile(org.springframework.security.core.Authentication authentication) {
-        java.util.UUID userId = (java.util.UUID) authentication.getPrincipal();
+        java.util.UUID userId = java.util.UUID.fromString(authentication.getPrincipal().toString());
         User user = userRepository.findById(userId).orElseThrow();
-        // Ponytail Mode: Fetch user from DB, hardcode missing gamification fields for now
         return ResponseEntity.ok(new AuthDto.UserProfileResponse(
                 userId,
                 user.getDisplayName(),
                 user.getEmail(),
-                "Your Java backend is now connected to Flutter! Welcome " + user.getDisplayName() + ".",
-                2,
-                180,
-                3
+                "Welcome back, " + user.getDisplayName() + "!",
+                user.getTotalPoints() / 100,
+                user.getTotalPoints(),
+                user.getCurrentStreak()
         ));
     }
 }

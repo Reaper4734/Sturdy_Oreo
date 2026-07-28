@@ -7,10 +7,6 @@ import '../../../shared/models/learning_lab_model.dart';
 import '../../../shared/models/mind_map_model.dart';
 import '../../../shared/models/persona_model.dart';
 import '../../../shared/providers/workspace_providers.dart';
-import '../../../shared/repositories/mock_flashcard_repository.dart';
-import '../../../shared/repositories/mock_learning_lab_repository.dart';
-import '../../../shared/repositories/mock_mind_map_repository.dart';
-import '../../../shared/repositories/mock_persona_repository.dart';
 import '../../../shared/widgets/top_tab_bar_widget.dart';
 import '../../lab/presentation/learning_lab_workspace_screen.dart';
 import '../../lab/presentation/widgets/bounded_grid_canvas_widget.dart';
@@ -18,6 +14,7 @@ import '../../lab/presentation/widgets/flashcard_canvas_widget.dart';
 import '../../lab/presentation/widgets/learning_lab_sidebar.dart';
 import '../../roadmap/presentation/roadmap_explorer_widget.dart';
 import '../../knowledge_graph/presentation/knowledge_graph_screen.dart';
+import '../../knowledge_graph/domain/models/knowledge_graph_model.dart';
 import 'widgets/progress_timeline_widget.dart';
 
 class PersonaRevealScreen extends ConsumerStatefulWidget {
@@ -30,11 +27,6 @@ class PersonaRevealScreen extends ConsumerStatefulWidget {
 }
 
 class _PersonaRevealScreenState extends ConsumerState<PersonaRevealScreen> {
-  final MockPersonaRepository _personaRepo = MockPersonaRepository();
-  final MockMindMapRepository _mindMapRepo = MockMindMapRepository();
-  final MockLearningLabRepository _labRepo = MockLearningLabRepository();
-  final MockFlashcardRepository _flashcardRepo = MockFlashcardRepository();
-
   PersonaProfile? _profile;
   SubjectCluster? _cluster;
   List<CanvasGridCell> _canvasCells = [];
@@ -79,17 +71,20 @@ class _PersonaRevealScreenState extends ConsumerState<PersonaRevealScreen> {
       return;
     }
 
-    final profile = await _personaRepo.getPersonaProfile();
-    final cluster = await _mindMapRepo.getSubjectCluster();
-    final cells = await _labRepo.getInitialCanvasGrid();
-    final cards = await _flashcardRepo.getAllFlashcards();
-
     if (mounted) {
       setState(() {
-        _profile = profile;
-        _cluster = cluster;
-        _canvasCells = cells;
-        _allFlashcards = cards;
+        _profile = PersonaProfile(
+          renderMode: '3d_avatar',
+          title: 'Curious Learner',
+          subtitle: 'Loves to explore',
+          summary: 'Generated summary',
+          traits: ['Visual'],
+          metrics: CognitiveMetrics(visualization: 0.8, applied: 0.8, theoretical: 0.6, pacing: 0.8, logic: 0.9),
+          blueprintNodes: [],
+        );
+        _cluster = SubjectCluster(subjectId: 's1', subjectTitle: 'Subject', rootNode: ConceptNode(id: 'root', label: 'root'));
+        _canvasCells = [];
+        _allFlashcards = [];
 
         // Initialize shared canvas objects (same instance used by Canvas tab + Lab)
         _sharedCanvasObjects.addAll([
@@ -246,7 +241,7 @@ class _PersonaRevealScreenState extends ConsumerState<PersonaRevealScreen> {
           roadmap: currentRoadmap,
           activeLearningContext: currentContext,
           onSelectNode: _updateActiveContext,
-          onLaunchInLab: () => _openLearningLab(currentContext),
+          onLaunchInLab: (title) => _openLearningLab(title),
         );
         break;
       case 'persona':
@@ -295,8 +290,12 @@ class _PersonaRevealScreenState extends ConsumerState<PersonaRevealScreen> {
         break;
       case 'mind_map':
       default:
+        final graph = activeWs?.subjectCluster != null
+            ? _buildGraphFromCluster(activeWs!.subjectCluster!)
+            : null;
         content = KnowledgeGraphScreen(
-          initialWorkspaceId: 'python_backend',
+          initialWorkspaceId: activeWs?.id ?? '',
+          graph: graph,
           onNodeSelected: (label) => _updateActiveContext(label),
           onLaunchLearningLab: (label) => _openLearningLab(label),
         );
@@ -476,6 +475,50 @@ class _PersonaRevealScreenState extends ConsumerState<PersonaRevealScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  KnowledgeGraph _buildGraphFromCluster(SubjectCluster cluster) {
+    final List<GraphNode> nodes = [];
+    final List<GraphEdge> edges = [];
+    int edgeIdx = 0;
+
+    void walk(ConceptNode cn, String? parentId) {
+      final nodeType = cn.depthLevel == 0
+          ? NodeType.section
+          : cn.isTerminal
+              ? NodeType.subtopic
+              : NodeType.topic;
+      final childIds = cn.children.map((c) => c.id).toList();
+      nodes.add(GraphNode(
+        id: cn.id,
+        type: nodeType,
+        label: cn.label,
+        description: '',
+        parentId: parentId,
+        childrenNodeIds: childIds,
+        // Dummy geometry — LayoutManager.computeLayout() overwrites this
+        geometry: const NodeGeometry(x: 0, y: 0, width: 180, height: 50),
+      ));
+      if (parentId != null) {
+        edges.add(GraphEdge(
+          id: 'e_${edgeIdx++}',
+          sourceNodeId: parentId,
+          targetNodeId: cn.id,
+        ));
+      }
+      for (final child in cn.children) {
+        walk(child, cn.id);
+      }
+    }
+
+    walk(cluster.rootNode, null);
+    return KnowledgeGraph(
+      graphId: cluster.subjectId,
+      title: cluster.subjectTitle,
+      description: '',
+      nodes: nodes,
+      edges: edges,
     );
   }
 }

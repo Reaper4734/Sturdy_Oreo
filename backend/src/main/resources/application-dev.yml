@@ -38,10 +38,10 @@ oreo:
     secret: ${JWT_SECRET:9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f1a0b9c8d7e6f5a4b3c2d1e0f9a8b}
     expiration-ms: 604800000 # 7 days
   auth:
-    google-client-id: ${GOOGLE_CLIENT_ID:535291260400-mufpocj4te32evfusavcb5e7ee6250rq.apps.googleusercontent.com}
+    google-client-id: 591562728024-n2v4rgro07374dm04cn5dj79e2t8gnv7.apps.googleusercontent.com
   llm:
-<<<<<<< HEAD
-    gemini-api-key: ${GEMINI_API_KEY:AQ.Ab8RN6KoeKf1dQ4MbRZpRySorbKKwbs9j2xGX2soNZHpTjyrHg}
+    gemini-api-key: ${GEMINI_API_KEY:dummy-gemini-key}
+    openai-api-key: ${OPENAI_API_KEY:dummy-openai-key}
   search:
     google-api-key: ${GOOGLE_SEARCH_API_KEY:dummy-key}
     google-csx-id: ${GOOGLE_CSX_ID:dummy-csx}
@@ -49,11 +49,6 @@ oreo:
   youtube:
     api:
       key: ${YOUTUBE_API_KEY:mock-key}
-=======
-    gemini-api-key: ${GEMINI_API_KEY:dummy-gemini-key}
-    openai-api-key: ${OPENAI_API_KEY:dummy-openai-key}
-
->>>>>>> origin/master
 
 logging:
   level:

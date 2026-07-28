@@ -1,6 +1,6 @@
-/// Generic Learning Node for the Roadmap-Centric Learning Architecture.
-/// Supports arbitrary AI-generated hierarchies (Days, Weeks, Modules, Phases, Milestones, Topics)
-/// without hardcoded type assumptions.
+// Generic Learning Node for the Roadmap-Centric Learning Architecture.
+// Supports arbitrary AI-generated hierarchies (Days, Weeks, Modules, Phases, Milestones, Topics)
+// without hardcoded type assumptions.
 
 enum NodeType {
   section,
@@ -102,5 +102,51 @@ class RoadmapNode {
       if (found != null) return found;
     }
     return null;
+  }
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'title': title,
+    'subtitle': subtitle,
+    'type': type.toString(),
+    'estimatedHours': estimatedHours,
+    'difficulty': difficulty,
+    'progressPercent': progressPercent,
+    'todaysGoal': todaysGoal,
+    'estimatedTime': estimatedTime,
+    'status': status,
+    'activityType': activityType,
+    'flashcardsCount': flashcardsCount,
+    'canvasNotesCount': canvasNotesCount,
+    'labsCount': labsCount,
+    'prerequisites': prerequisites,
+    'resources': resources,
+    'children': children.map((c) => c.toJson()).toList(),
+    'isExpanded': isExpanded,
+    'isSelected': isSelected,
+  };
+
+  factory RoadmapNode.fromJson(Map<String, dynamic> json) {
+    return RoadmapNode(
+      id: json['id'] as String,
+      title: json['title'] as String,
+      subtitle: json['subtitle'] as String?,
+      type: NodeType.values.firstWhere((e) => e.toString() == json['type'], orElse: () => NodeType.topic),
+      estimatedHours: json['estimatedHours'] as int?,
+      difficulty: json['difficulty'] as String?,
+      progressPercent: (json['progressPercent'] ?? 0.0).toDouble(),
+      todaysGoal: json['todaysGoal'] as String?,
+      estimatedTime: json['estimatedTime'] as String?,
+      status: json['status'] as String? ?? 'Not Started',
+      activityType: json['activityType'] as String?,
+      flashcardsCount: json['flashcardsCount'] as int? ?? 0,
+      canvasNotesCount: json['canvasNotesCount'] as int? ?? 0,
+      labsCount: json['labsCount'] as int? ?? 0,
+      prerequisites: (json['prerequisites'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [],
+      resources: (json['resources'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [],
+      children: (json['children'] as List<dynamic>?)?.map((e) => RoadmapNode.fromJson(e)).toList() ?? [],
+      isExpanded: json['isExpanded'] as bool? ?? false,
+      isSelected: json['isSelected'] as bool? ?? false,
+    );
   }
 }

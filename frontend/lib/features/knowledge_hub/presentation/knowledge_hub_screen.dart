@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../app/theme/app_theme.dart';
-import '../data/mock_course_catalog.dart';
+import '../data/course_catalog_model.dart';
+import '../data/http_course_catalog_repository.dart';
 import 'widgets/course_card_widget.dart';
 import 'course_preview_screen.dart';
 
-class KnowledgeHubScreen extends StatefulWidget {
+class KnowledgeHubScreen extends ConsumerStatefulWidget {
   final VoidCallback onNavigateToWorkspace;
 
   const KnowledgeHubScreen({
@@ -13,29 +15,58 @@ class KnowledgeHubScreen extends StatefulWidget {
   });
 
   @override
-  State<KnowledgeHubScreen> createState() => _KnowledgeHubScreenState();
+  ConsumerState<KnowledgeHubScreen> createState() => _KnowledgeHubScreenState();
 }
 
-class _KnowledgeHubScreenState extends State<KnowledgeHubScreen> {
+class _KnowledgeHubScreenState extends ConsumerState<KnowledgeHubScreen> {
   final TextEditingController _searchController = TextEditingController();
   List<CourseCatalogEntry> _searchResults = [];
   bool _isSearching = false;
-  late final List<CourseCatalogEntry> _recommendations;
-  late final List<CourseCatalogEntry> _allCourses;
+  List<CourseCatalogEntry> _recommendations = [];
+  List<CourseCatalogEntry> _allCourses = [];
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _allCourses = MockCourseCatalog.getAllCourses();
-    _recommendations = MockCourseCatalog.getRecommendations(null); // Mock interview domain
-    _searchResults = _allCourses;
+    _loadData();
   }
 
-  void _onSearchChanged(String query) {
-    setState(() {
-      _isSearching = query.isNotEmpty;
-      _searchResults = MockCourseCatalog.search(query);
-    });
+  Future<void> _loadData() async {
+    try {
+      final repo = ref.read(httpCourseCatalogRepositoryProvider);
+      final all = await repo.getAllCourses();
+      final recs = await repo.getRecommendations(null);
+      if (mounted) {
+        setState(() {
+          _allCourses = all;
+          _recommendations = recs;
+          _searchResults = all;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Failed to load catalog: $e');
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  void _onSearchChanged(String query) async {
+    setState(() => _isSearching = query.isNotEmpty);
+    if (query.isEmpty) {
+      setState(() => _searchResults = _allCourses);
+      return;
+    }
+    
+    try {
+      final repo = ref.read(httpCourseCatalogRepositoryProvider);
+      final results = await repo.search(query);
+      if (mounted) {
+        setState(() => _searchResults = results);
+      }
+    } catch (e) {
+      debugPrint('Search failed: $e');
+    }
   }
 
   void _navigateToPreview(CourseCatalogEntry course) {
@@ -119,7 +150,9 @@ class _KnowledgeHubScreenState extends State<KnowledgeHubScreen> {
           
           // Content Scroll
           Expanded(
-            child: _searchResults.isEmpty
+            child: _isLoading 
+                ? const Center(child: CircularProgressIndicator(color: AppColors.accentPrimary))
+                : _searchResults.isEmpty
                 ? _buildEmptyState()
                 : SingleChildScrollView(
                     padding: const EdgeInsets.all(32),

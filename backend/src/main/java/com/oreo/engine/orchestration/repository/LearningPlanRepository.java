@@ -10,4 +10,5 @@ import java.util.UUID;
 @Repository
 public interface LearningPlanRepository extends JpaRepository<LearningPlan, UUID> {
     Optional<LearningPlan> findByChatThreadId(UUID chatThreadId);
+    Optional<LearningPlan> findByUserId(UUID userId);
 }

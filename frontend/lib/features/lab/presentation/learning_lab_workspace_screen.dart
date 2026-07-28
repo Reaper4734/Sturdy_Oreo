@@ -2,13 +2,12 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../app/theme/app_theme.dart';
-import '../../../shared/models/workspace_model.dart';
 import '../../../shared/models/roadmap_model.dart';
 import '../../../shared/models/flashcard_model.dart';
+import '../../../shared/models/mastery_test_model.dart';
 import '../../../shared/models/learning_lab_model.dart';
 import '../../../shared/providers/workspace_providers.dart';
-import '../../../shared/repositories/mock_flashcard_repository.dart';
-import '../../../shared/repositories/mock_mastery_test_repository.dart';
+import '../../../shared/repositories/http_mastery_test_repository.dart';
 import '../../survey/presentation/widgets/long_mcq_survey_layout.dart';
 import '../../survey/presentation/widgets/code_terminal_challenge_layout.dart';
 import '../../survey/presentation/widgets/popup_questionnaire_layout.dart';
@@ -18,6 +17,7 @@ import 'widgets/bounded_grid_canvas_widget.dart';
 import 'widgets/flashcard_deck_panel.dart';
 import 'widgets/learning_lab_sidebar.dart';
 import 'widgets/video_player_panel.dart';
+import '../../../shared/repositories/http_ingestion_repository.dart';
 
 class LearningLabWorkspaceScreen extends ConsumerStatefulWidget {
   final String? activeNodeTitle;
@@ -42,8 +42,7 @@ class LearningLabWorkspaceScreen extends ConsumerStatefulWidget {
 }
 
 class _LearningLabWorkspaceScreenState extends ConsumerState<LearningLabWorkspaceScreen> {
-  final MockFlashcardRepository _flashcardRepo = MockFlashcardRepository();
-  final MockMasteryTestRepository _masteryRepo = MockMasteryTestRepository();
+  List<QuestionItem>? _topicAssessments;
 
   List<FlashcardItem> _topicFlashcards = [];
   List<Map<String, dynamic>> _topicVideos = [];
@@ -68,15 +67,6 @@ class _LearningLabWorkspaceScreenState extends ConsumerState<LearningLabWorkspac
 
   Future<void> _loadData() async {
     final activeWs = ref.read(activeWorkspaceProvider);
-    if (activeWs != null && activeWs.flashcards.isNotEmpty) {
-      if (mounted) {
-        setState(() {
-          _topicFlashcards = activeWs.flashcards;
-          _isLoading = false;
-        });
-      }
-      return;
-    }
 
     if (activeWs == null || !activeWs.isCourseConfirmed) {
       if (mounted) {
@@ -87,29 +77,64 @@ class _LearningLabWorkspaceScreenState extends ConsumerState<LearningLabWorkspac
       return;
     }
 
-    List<FlashcardItem> cards = [];
-    try {
-      final flashRepo = ref.read(httpFlashcardRepositoryProvider);
-      cards = await flashRepo.generateFlashcards(activeWs.activeLearningContext);
-      // Store back to workspace so we don't re-generate every time
-      activeWs.flashcards = cards;
-    } catch (e) {
-      debugPrint('Flashcard generation failed: $e');
-      cards = await _flashcardRepo.getFlashcardsForTopic('Heap Memory'); // fallback
+    // 1. Flashcards: use cached if available, else generate
+    List<FlashcardItem> cards = activeWs.flashcards;
+    if (cards.isEmpty) {
+      try {
+        final flashRepo = ref.read(httpFlashcardRepositoryProvider);
+        cards = await flashRepo.generateFlashcards(activeWs.activeLearningContext);
+        activeWs.flashcards = cards;
+        await ref.read(workspaceListProvider.notifier).updateWorkspace(activeWs);
+      } catch (e) {
+        debugPrint('Flashcard generation failed: $e');
+        cards = [];
+      }
     }
+
+    final activeNode = _findNodeByTitle(activeWs.roadmap, activeWs.activeLearningContext);
+    final String subtopicsContext = activeNode != null 
+        ? activeNode.children.map((c) => c.title).join(", ") 
+        : "";
 
     List<Map<String, dynamic>> videos = [];
     try {
       final repo = ref.read(httpWorkspaceRepositoryProvider);
-      videos = await repo.searchVideos(activeWs.activeLearningContext);
+      // Use subject and 'tutorial' to get specific videos, avoiding broad workspace titles that confuse the algorithm
+      final enhancedContext = "${activeWs.subject} tutorial".trim();
+      videos = await repo.searchVideos(activeWs.id, activeWs.activeLearningContext, context: enhancedContext);
+      if (videos.isNotEmpty) {
+        final videoId = videos.first['id'] as String?;
+        if (videoId != null && videoId.isNotEmpty) {
+          try {
+            await ref.read(httpIngestionRepositoryProvider).ingestVideo(videoId);
+          } catch (e) {
+            debugPrint('Ingestion failed: $e');
+          }
+        }
+      }
     } catch (e) {
       debugPrint('Video search failed: $e');
+    }
+
+    final activityType = activeNode?.activityType ?? '';
+    final isLongQuiz = activityType == 'Long Quiz' || activityType == 'LONG_QUIZ' || activityType == 'Mastery Assessment' || activityType == 'Mastery Survey';
+    
+    List<QuestionItem>? assessments;
+    if (isLongQuiz) {
+      try {
+        final mRepo = ref.read(httpMasteryTestRepositoryProvider);
+        assessments = await mRepo.generateAssessment(activeWs.activeLearningContext);
+      } catch (e) {
+        debugPrint('Mastery generation failed: $e');
+        // No fallback
+      }
     }
 
     if (mounted) {
       setState(() {
         _topicFlashcards = cards;
         _topicVideos = videos;
+        if (assessments != null) _topicAssessments = assessments;
         _isLoading = false;
       });
     }
@@ -125,7 +150,7 @@ class _LearningLabWorkspaceScreenState extends ConsumerState<LearningLabWorkspac
   }
 
   void _handleReviewCard(String cardId, int quality) {
-    _flashcardRepo.reviewCard(cardId, quality);
+    // _flashcardRepo.reviewCard(cardId, quality); // TODO: wire to http repository if needed
     setState(() {});
   }
 
@@ -165,7 +190,10 @@ class _LearningLabWorkspaceScreenState extends ConsumerState<LearningLabWorkspac
     final currentContext = widget.activeNodeTitle ?? activeWs?.activeLearningContext ?? 'Heap Memory';
     final videoTitle = _topicVideos.isNotEmpty 
         ? _topicVideos.first['title'] as String 
-        : (activeWs != null ? '${activeWs.title}: $currentContext Walkthrough' : 'CPython Heap Memory & Pointer Allocation Walkthrough');
+        : (activeWs != null ? '${activeWs.title}: $currentContext Walkthrough' : 'Module Walkthrough');
+    final videoId = _topicVideos.isNotEmpty 
+        ? _topicVideos.first['id'] as String 
+        : '';
     final topicTag = currentContext;
     final currentCards = activeWs?.flashcards ?? _topicFlashcards;
     final currentCells = activeWs?.canvasCells ?? widget.sharedCanvasCells;
@@ -183,11 +211,12 @@ class _LearningLabWorkspaceScreenState extends ConsumerState<LearningLabWorkspac
                   child: SingleChildScrollView(
                     child: Column(
                       children: [
-                        if (widget.isEmbedded) _buildEmbeddedBar(currentContext),
+                        if (widget.isEmbedded) _buildModeToggle(),
                         SizedBox(
-                          height: totalHeight > 0 ? totalHeight - 40 : 600,
+                          height: 400,
                           child: VideoPlayerPanel(
                             videoTitle: videoTitle,
+                            videoId: videoId,
                             currentTimestampSeconds: _currentTimestampSeconds,
                             onTimestampChanged: (sec) {
                               setState(() => _currentTimestampSeconds = sec);
@@ -200,7 +229,7 @@ class _LearningLabWorkspaceScreenState extends ConsumerState<LearningLabWorkspac
                         ),
                         const SizedBox(height: 12),
                         SizedBox(
-                          height: totalHeight > 0 ? totalHeight - 40 : 600,
+                          height: 550,
                           child: _showFlashcards
                               ? FlashcardDeckPanel(
                                   cards: currentCards,
@@ -232,12 +261,13 @@ class _LearningLabWorkspaceScreenState extends ConsumerState<LearningLabWorkspac
                 padding: const EdgeInsets.all(12.0),
                 child: Column(
                   children: [
-                    if (widget.isEmbedded) _buildEmbeddedBar(currentContext),
+                    if (widget.isEmbedded) _buildModeToggle(),
                     // Video Player
                     Expanded(
                       flex: (_videoFraction * 1000).toInt(),
                       child: VideoPlayerPanel(
                         videoTitle: videoTitle,
+                        videoId: videoId,
                         currentTimestampSeconds: _currentTimestampSeconds,
                         onTimestampChanged: (sec) {
                           setState(() => _currentTimestampSeconds = sec);
@@ -314,8 +344,10 @@ class _LearningLabWorkspaceScreenState extends ConsumerState<LearningLabWorkspac
     if (_isLoading) {
       activityStageContent = const Center(child: CircularProgressIndicator(color: AppColors.accentPrimary));
     } else if (isLongQuiz && _dismissedQuizForContext != currentContext) {
-      activityStageContent = LongMcqSurveyLayout(
-        questions: _masteryRepo.getLongMcqQuestions(),
+      activityStageContent = _topicAssessments == null 
+        ? const Center(child: CircularProgressIndicator(color: AppColors.accentPrimary))
+        : LongMcqSurveyLayout(
+        questions: _topicAssessments!,
         onCompleteTest: () {
           setState(() {
             _dismissedQuizForContext = currentContext;
@@ -329,7 +361,8 @@ class _LearningLabWorkspaceScreenState extends ConsumerState<LearningLabWorkspac
       );
     } else if (isCodeChallenge && _dismissedQuizForContext != currentContext) {
       activityStageContent = CodeTerminalChallengeLayout(
-        question: _masteryRepo.getCodeTerminalQuestion(),
+        // TODO: Wire up to real coding challenge API
+        question: QuestionItem(id: 'c1', topicTag: 'code', questionText: 'Write a Python program', type: QuestionType.subjective, options: []),
         onCompleteTest: () {
           setState(() {
             _dismissedQuizForContext = currentContext;
@@ -351,7 +384,7 @@ class _LearningLabWorkspaceScreenState extends ConsumerState<LearningLabWorkspac
                   child: SingleChildScrollView(
                     padding: const EdgeInsets.all(24),
                     child: PopupQuestionnaireLayout(
-                      questions: _masteryRepo.getShortPopupQuestions(),
+                      questions: [], // TODO: Wire up to real short popups
                       onCompleteTest: () {
                         setState(() {
                           _dismissedQuizForContext = currentContext;
@@ -438,28 +471,12 @@ class _LearningLabWorkspaceScreenState extends ConsumerState<LearningLabWorkspac
     );
   }
 
-  Widget _buildEmbeddedBar(String currentContext) {
+  Widget _buildModeToggle() {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8.0),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.end,
         children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: AppColors.accentPrimary.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: AppColors.accentPrimary.withValues(alpha: 0.3)),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.science_outlined, size: 14, color: AppColors.accentPrimary),
-                const SizedBox(width: 6),
-                Text('Active Context: $currentContext', style: const TextStyle(fontSize: 12, color: AppColors.accentPrimary, fontWeight: FontWeight.bold)),
-              ],
-            ),
-          ),
-          const Spacer(),
           InkWell(
             onTap: () {
               setState(() => _isScrollMode = !_isScrollMode);

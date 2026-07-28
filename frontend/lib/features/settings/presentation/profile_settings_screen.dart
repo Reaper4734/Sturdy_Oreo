@@ -1,21 +1,24 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../app/theme/app_theme.dart';
-import '../data/mock_settings_data.dart';
+import '../data/settings_model.dart';
+import '../data/http_settings_repository.dart';
 import 'widgets/inline_edit_field.dart';
+import '../../auth/providers/auth_provider.dart';
 
-class ProfileSettingsScreen extends StatefulWidget {
+class ProfileSettingsScreen extends ConsumerStatefulWidget {
   const ProfileSettingsScreen({super.key});
 
   @override
-  State<ProfileSettingsScreen> createState() => _ProfileSettingsScreenState();
+  ConsumerState<ProfileSettingsScreen> createState() => _ProfileSettingsScreenState();
 }
 
-class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
+class _ProfileSettingsScreenState extends ConsumerState<ProfileSettingsScreen> {
   int _activeSectionIndex = 0;
-  late MockUser _user;
-  late MockSettings _settings;
-  late MockNotificationPreferences _notifications;
-  final MockAboutInformation _about = MockAboutInformation.data;
+  late UserProfile _user;
+  late AppThemeSettings _settings;
+  late NotificationPreferences _notifications;
+  final AboutInformation _about = AboutInformation.data;
 
   final List<_NavItem> _navItems = const [
     _NavItem(icon: Icons.person_outline, label: 'Account'),
@@ -25,12 +28,30 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
     _NavItem(icon: Icons.info_outline, label: 'About'),
   ];
 
+  bool _isLoading = true;
+
   @override
   void initState() {
     super.initState();
-    _user = MockUser.defaultUser();
-    _settings = MockSettings.defaults();
-    _notifications = MockNotificationPreferences.defaults();
+    _loadSettings();
+  }
+
+  Future<void> _loadSettings() async {
+    try {
+      final repo = ref.read(httpSettingsRepositoryProvider);
+      final data = await repo.fetchSettingsProfile();
+      if (mounted) {
+        setState(() {
+          _user = data['user'];
+          _settings = data['settings'];
+          _notifications = data['notifications'];
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading settings: $e');
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   void _showSaveSnackbar(String message) {}
@@ -77,7 +98,9 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
 
           // Content Area
           Expanded(
-            child: SingleChildScrollView(
+            child: _isLoading 
+                ? const Center(child: CircularProgressIndicator(color: AppColors.accentPrimary))
+                : SingleChildScrollView(
               padding: const EdgeInsets.all(48),
               child: Container(
                 constraints: const BoxConstraints(maxWidth: 640),
@@ -444,6 +467,29 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
         ),
 
         const SizedBox(height: 48),
+        const Text('ACCOUNT ACTIONS', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.fgSecondary, letterSpacing: 0.5)),
+        const SizedBox(height: 12),
+        Container(
+          decoration: BoxDecoration(
+            color: AppColors.bgSurface,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: AppColors.borderSubtle),
+          ),
+          child: Column(
+            children: [
+              _buildActionRow(
+                icon: Icons.logout_outlined,
+                title: 'Log Out',
+                description: 'Sign out of your current session securely.',
+                onTap: () {
+                  ref.read(authProvider.notifier).logout();
+                },
+              ),
+            ],
+          ),
+        ),
+
+        const SizedBox(height: 48),
         const Text('DANGER ZONE', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.accentRose, letterSpacing: 0.5)),
         const SizedBox(height: 12),
         _buildDangerCard(
@@ -608,8 +654,8 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
         const Text('Application information.', style: TextStyle(color: AppColors.fgSecondary)),
         const SizedBox(height: 32),
 
-        _buildInfoRow('Oreo Version', _about.version),
-        _buildInfoRow('Release', _about.releaseDate),
+        _buildInfoRow('Version', _about.appVersion),
+        _buildInfoRow('Release Date', 'July 2026'),
         const SizedBox(height: 16),
         const Divider(color: AppColors.borderSubtle),
         const SizedBox(height: 16),

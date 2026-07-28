@@ -9,7 +9,8 @@ class RoadmapExplorerWidget extends StatefulWidget {
   final List<RoadmapNode> roadmap;
   final String activeLearningContext;
   final ValueChanged<String> onSelectNode;
-  final VoidCallback? onLaunchInLab;
+  final ValueChanged<String>? onLaunchInLab;
+  final ValueChanged<String>? onGenerateFlashcards;
   final bool isCompact;
 
   const RoadmapExplorerWidget({
@@ -18,6 +19,7 @@ class RoadmapExplorerWidget extends StatefulWidget {
     required this.activeLearningContext,
     required this.onSelectNode,
     this.onLaunchInLab,
+    this.onGenerateFlashcards,
     this.isCompact = false,
   });
 
@@ -220,6 +222,8 @@ class _RoadmapExplorerWidgetState extends State<RoadmapExplorerWidget> {
                 setState(() {
                   day.isExpanded = !day.isExpanded;
                 });
+                widget.onSelectNode(day.title);
+                widget.onLaunchInLab?.call(day.title);
               },
               hoverColor: AppColors.bgElevated,
               child: Padding(
@@ -234,7 +238,8 @@ class _RoadmapExplorerWidgetState extends State<RoadmapExplorerWidget> {
                       style: TextStyle(
                         fontSize: widget.isCompact ? 12 : 14,
                         fontWeight: FontWeight.w600,
-                        color: AppColors.fgPrimary,
+                        color: AppColors.accentEmerald,
+                        decoration: TextDecoration.underline,
                       ),
                     ),
                     const Spacer(),
@@ -289,68 +294,145 @@ class _RoadmapExplorerWidgetState extends State<RoadmapExplorerWidget> {
 
     final borderColor = inProgress ? AppColors.fgAccent : AppColors.borderSubtle;
 
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 150),
-      margin: EdgeInsets.symmetric(
-        horizontal: widget.isCompact ? 8 : 20,
-        vertical: widget.isCompact ? 3 : 5,
-      ),
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: borderColor, width: inProgress ? 1.5 : 1.0),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () {
-            widget.onSelectNode(activity.title);
-            widget.onLaunchInLab?.call();
-          },
-          borderRadius: BorderRadius.circular(8),
-          hoverColor: AppColors.bgElevated,
-          child: Padding(
-            padding: EdgeInsets.symmetric(
-              horizontal: widget.isCompact ? 10 : 16,
-              vertical: widget.isCompact ? 8 : 12,
-            ),
-            child: Row(
-              children: [
-                if (completed)
-                  Icon(Icons.check_circle_rounded, color: AppColors.accentEmerald, size: widget.isCompact ? 16 : 18)
-                else
-                  Icon(_getActivityIcon(activity.activityType), color: inProgress ? AppColors.fgPrimary : AppColors.fgSecondary, size: widget.isCompact ? 16 : 18),
-                SizedBox(width: widget.isCompact ? 8 : 14),
-                Expanded(
-                  child: Text(
-                    activity.title,
-                    style: TextStyle(
-                      fontSize: widget.isCompact ? 12 : 14,
-                      fontWeight: inProgress ? FontWeight.bold : FontWeight.w500,
-                      color: completed ? AppColors.fgPrimary.withValues(alpha: 0.8) : AppColors.fgPrimary,
-                    ),
-                    maxLines: widget.isCompact ? 1 : 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
+    return Column(
+      children: [
+        AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          margin: EdgeInsets.symmetric(
+            horizontal: widget.isCompact ? 8 : 20,
+            vertical: widget.isCompact ? 3 : 5,
+          ),
+          decoration: BoxDecoration(
+            color: bgColor,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: borderColor, width: inProgress ? 1.5 : 1.0),
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () {
+                widget.onSelectNode(activity.title);
+                widget.onLaunchInLab?.call(activity.title);
+              },
+              borderRadius: BorderRadius.circular(8),
+              hoverColor: AppColors.bgElevated,
+              child: Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: widget.isCompact ? 10 : 16,
+                  vertical: widget.isCompact ? 8 : 12,
                 ),
-                if (activity.estimatedTime != null) ...[
-                  Text(
-                    activity.estimatedTime!,
-                    style: TextStyle(
-                      fontSize: widget.isCompact ? 11 : 12,
+                child: Row(
+                  children: [
+                    if (completed)
+                      Icon(Icons.check_circle_rounded, color: AppColors.accentEmerald, size: widget.isCompact ? 16 : 18)
+                    else
+                      Icon(_getActivityIcon(activity.activityType), color: inProgress ? AppColors.fgPrimary : AppColors.fgSecondary, size: widget.isCompact ? 16 : 18),
+                    SizedBox(width: widget.isCompact ? 8 : 14),
+                    Expanded(
+                      child: Text(
+                        activity.title,
+                        style: TextStyle(
+                          fontSize: widget.isCompact ? 12 : 14,
+                          fontWeight: inProgress ? FontWeight.bold : FontWeight.w500,
+                          color: AppColors.accentEmerald,
+                          decoration: TextDecoration.underline,
+                        ),
+                        maxLines: widget.isCompact ? 1 : 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (activity.estimatedTime != null) ...[
+                      Text(
+                        activity.estimatedTime!,
+                        style: TextStyle(
+                          fontSize: widget.isCompact ? 11 : 12,
+                          color: AppColors.fgSecondary,
+                        ),
+                      ),
+                      SizedBox(width: widget.isCompact ? 4 : 12),
+                    ],
+                    Icon(
+                      activity.isExpanded ? Icons.keyboard_arrow_down_rounded : Icons.keyboard_arrow_right_rounded,
+                      size: widget.isCompact ? 12 : 14,
                       color: AppColors.fgSecondary,
                     ),
-                  ),
-                  SizedBox(width: widget.isCompact ? 4 : 12),
-                ],
-                Icon(
-                  Icons.arrow_forward_ios_rounded,
-                  size: widget.isCompact ? 12 : 14,
-                  color: AppColors.fgSecondary,
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
+        ),
+        AnimatedSize(
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeInOut,
+          alignment: Alignment.topCenter,
+          child: activity.isExpanded
+              ? Padding(
+                  padding: EdgeInsets.only(
+                    left: widget.isCompact ? 32 : 54,
+                    right: widget.isCompact ? 8 : 20,
+                    bottom: 8,
+                  ),
+                  child: Column(
+                    children: [
+                      _buildModalityOption(Icons.play_circle_outline_rounded, 'Watch Video', activity),
+                      _buildModalityOption(Icons.article_outlined, 'Read Article', activity),
+                      _buildModalityOption(Icons.code_rounded, 'Practice Lab', activity),
+                      _buildModalityOption(Icons.quiz_outlined, 'Take Quiz', activity),
+                      _buildFlashcardOption(Icons.style_outlined, 'Generate Flashcards', activity),
+                    ],
+                  ),
+                )
+              : const SizedBox.shrink(),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFlashcardOption(IconData icon, String title, RoadmapNode activity) {
+    return InkWell(
+      onTap: () {
+        widget.onGenerateFlashcards?.call(activity.title);
+      },
+      borderRadius: BorderRadius.circular(6),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+        child: Row(
+          children: [
+            Icon(icon, size: 16, color: AppColors.accentEmerald),
+            const SizedBox(width: 10),
+            Text(
+              title,
+              style: const TextStyle(fontSize: 13, color: AppColors.fgPrimary, fontWeight: FontWeight.w600),
+            ),
+            const Spacer(),
+            const Icon(Icons.bolt_rounded, size: 14, color: AppColors.accentEmerald),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildModalityOption(IconData icon, String title, RoadmapNode activity) {
+    return InkWell(
+      onTap: () {
+        widget.onSelectNode(activity.title);
+        widget.onLaunchInLab?.call(activity.title);
+      },
+      borderRadius: BorderRadius.circular(6),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+        child: Row(
+          children: [
+            Icon(icon, size: 16, color: AppColors.fgAccent),
+            const SizedBox(width: 10),
+            Text(
+              title,
+              style: const TextStyle(fontSize: 13, color: AppColors.fgPrimary),
+            ),
+            const Spacer(),
+            const Icon(Icons.arrow_forward_ios_rounded, size: 10, color: AppColors.fgSecondary),
+          ],
         ),
       ),
     );

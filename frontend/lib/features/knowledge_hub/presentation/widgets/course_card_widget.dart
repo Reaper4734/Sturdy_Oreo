@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../app/theme/app_theme.dart';
-import '../../data/mock_course_catalog.dart';
+import '../../data/course_catalog_model.dart';
 
 class CourseCardWidget extends StatefulWidget {
   final CourseCatalogEntry course;
@@ -63,7 +63,7 @@ class _CourseCardWidgetState extends State<CourseCardWidget> {
               ),
               const Spacer(),
               Text(
-                widget.course.keywords.join(' · '),
+                widget.course.tags.join(' · '),
                 style: const TextStyle(
                   fontSize: 14,
                   color: AppColors.fgSecondary,
@@ -78,7 +78,7 @@ class _CourseCardWidgetState extends State<CourseCardWidget> {
                   const Icon(Icons.schedule, size: 16, color: AppColors.fgAccent),
                   const SizedBox(width: 8),
                   Text(
-                    '${widget.course.durationHours} Hours',
+                    '${widget.course.estimatedHours} Hours',
                     style: const TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w500,

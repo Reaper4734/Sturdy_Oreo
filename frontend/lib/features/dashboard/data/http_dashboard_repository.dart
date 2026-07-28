@@ -1,18 +1,18 @@
 import 'dart:convert';
 import 'package:frontend/core/api_client.dart';
-import 'package:frontend/features/dashboard/data/mock_dashboard_data.dart';
+import 'dashboard_model.dart';
 
 class HttpDashboardRepository {
   final ApiClient _apiClient = ApiClient();
 
-  Future<DashboardMockProfile> fetchDashboardProfile() async {
+  Future<DashboardProfile> fetchDashboardProfile() async {
     try {
       final response = await _apiClient.get('/dashboard/profile');
       
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         
-        return DashboardMockProfile(
+        return DashboardProfile(
           learnerName: data['learnerName'] ?? 'Learner',
           greetingInsight: data['greetingInsight'] ?? 'Welcome back!',
           recommendation: data['recommendation'] ?? 'Keep learning!',
@@ -24,16 +24,26 @@ class HttpDashboardRepository {
           workspaceSummary: _parseWorkspaceSummary(data['workspaceSummary']),
           heatmapScores: List<int>.from(data['heatmapScores'] ?? List.filled(365, 0)),
         );
+      } else {
+        throw Exception('Failed to load profile');
       }
     } catch (e) {
-      print('Ponytail Backend Integration: /dashboard/profile failed ($e). Falling back to mock.');
+      throw Exception('Failed to load profile: $e');
     }
-    
-    return _fallbackProfile;
   }
 
   ContinueLearningData _parseContinueLearning(Map<String, dynamic>? data) {
-    if (data == null) return _fallbackProfile.continueLearning;
+    if (data == null) {
+      return const ContinueLearningData(
+        workspaceName: 'No active workspace',
+        currentCourse: '',
+        difficulty: '',
+        currentTopic: '',
+        nextAction: 'Start a new journey',
+        estimatedTime: '',
+        progressPercent: 0.0,
+      );
+    }
     return ContinueLearningData(
       workspaceName: data['workspaceName'] ?? '',
       currentCourse: data['currentCourse'] ?? '',
@@ -46,7 +56,7 @@ class HttpDashboardRepository {
   }
 
   LearningJourneyData _parseJourney(Map<String, dynamic>? data) {
-    if (data == null) return _fallbackProfile.journey;
+    if (data == null) throw Exception('journey missing');
     return LearningJourneyData(
       overallProgress: (data['overallProgress'] ?? 0).toDouble(),
       level: data['level'] ?? 1,
@@ -58,7 +68,7 @@ class HttpDashboardRepository {
   }
 
   List<RoadmapPreviewNode> _parseRoadmapNodes(List<dynamic>? data) {
-    if (data == null) return _fallbackProfile.roadmapNodes;
+    if (data == null) return [];
     return data.map((n) {
       final statusStr = n['status'] as String? ?? 'locked';
       RoadmapNodeStatus status = RoadmapNodeStatus.locked;
@@ -73,7 +83,7 @@ class HttpDashboardRepository {
   }
 
   List<AttentionItem> _parseAttentionItems(List<dynamic>? data) {
-    if (data == null) return _fallbackProfile.attentionItems;
+    if (data == null) return [];
     return data.map((a) {
       final typeStr = a['type'] as String? ?? 'resumeProject';
       AttentionType type = AttentionType.resumeProject;
@@ -90,7 +100,7 @@ class HttpDashboardRepository {
   }
 
   List<TimelineEvent> _parseTimelineEvents(List<dynamic>? data) {
-    if (data == null) return _fallbackProfile.timelineEvents;
+    if (data == null) return [];
     return data.map((e) => TimelineEvent(
       title: e['title'] ?? '',
       relativeTime: e['relativeTime'] ?? '',
@@ -99,7 +109,15 @@ class HttpDashboardRepository {
   }
 
   WorkspaceSummaryData _parseWorkspaceSummary(Map<String, dynamic>? data) {
-    if (data == null) return _fallbackProfile.workspaceSummary;
+    if (data == null) {
+      return const WorkspaceSummaryData(
+        workspaceName: '',
+        createdDate: '',
+        lastActive: '',
+        completionPercent: 0.0,
+        estimatedFinishDays: 0,
+      );
+    }
     return WorkspaceSummaryData(
       workspaceName: data['workspaceName'] ?? '',
       createdDate: data['createdDate'] ?? '',
@@ -109,46 +127,37 @@ class HttpDashboardRepository {
     );
   }
 
-  static final DashboardMockProfile _fallbackProfile = DashboardMockProfile(
-    learnerName: 'Priyaj',
-    greetingInsight: 'Backend integration initialized! The UI is now powered by HttpDashboardRepository.',
-    recommendation: 'Connect the Spring Boot endpoints to see live data.',
-    continueLearning: const ContinueLearningData(
-      workspaceName: 'Python Backend Engineering',
-      currentCourse: 'Python Fundamentals',
-      difficulty: 'Beginner',
-      currentTopic: 'Functions & Scope',
-      nextAction: 'Complete Quiz 3',
-      estimatedTime: '18 minutes',
-      progressPercent: 0.12,
-    ),
-    journey: const LearningJourneyData(
-      overallProgress: 0.12,
-      level: 2,
-      xp: 180,
-      streakDays: 3,
-      hoursLearned: 8,
-      hoursRemaining: 86,
-    ),
-    roadmapNodes: const [
-      RoadmapPreviewNode(title: 'Variables', status: RoadmapNodeStatus.completed),
-      RoadmapPreviewNode(title: 'Control Flow', status: RoadmapNodeStatus.completed),
-      RoadmapPreviewNode(title: 'Functions', status: RoadmapNodeStatus.active),
-      RoadmapPreviewNode(title: 'Data Structures', status: RoadmapNodeStatus.locked),
-    ],
-    attentionItems: const [
-      AttentionItem(title: 'Complete Intro Quiz', subtitle: 'Variables & Data Types', type: AttentionType.pendingQuiz),
-    ],
-    timelineEvents: const [
-      TimelineEvent(title: 'Swapped to HTTP Repository', relativeTime: 'Just now', optionalXp: 50),
-    ],
-    workspaceSummary: const WorkspaceSummaryData(
-      workspaceName: 'Python Backend Engineering',
-      createdDate: '3 days ago',
-      lastActive: 'Today',
-      completionPercent: 0.12,
-      estimatedFinishDays: 14,
-    ),
-    heatmapScores: List.generate(365, (i) => i % 5 == 0 ? 40 : 0),
-  );
+  static String getTimeGreeting() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) return 'Good Morning';
+    if (hour < 17) return 'Good Afternoon';
+    return 'Good Evening';
+  }
+
+  static HeatmapSummary computeHeatmapSummary(List<int> scores) {
+    int totalSessions = 0;
+    double totalHours = 0;
+    int currentStreak = 0;
+    int longestStreak = 0;
+    
+    for (int score in scores) {
+      if (score > 0) {
+        totalSessions++;
+        totalHours += (score / 100.0) * 2; // rough approx
+        currentStreak++;
+        if (currentStreak > longestStreak) {
+          longestStreak = currentStreak;
+        }
+      } else {
+        currentStreak = 0;
+      }
+    }
+    
+    return HeatmapSummary(
+      totalSessions: totalSessions,
+      totalHours: totalHours,
+      longestStreak: longestStreak,
+      weeklyConsistency: totalSessions > 0 ? ((totalSessions / (scores.length / 7)) * 100).clamp(0, 100).toInt() : 0,
+    );
+  }
 }

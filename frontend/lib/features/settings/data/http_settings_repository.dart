@@ -1,0 +1,43 @@
+import 'dart:convert';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:frontend/core/api_client.dart';
+import 'settings_model.dart';
+
+class HttpSettingsRepository {
+  final ApiClient _apiClient = ApiClient();
+
+  Future<Map<String, dynamic>> fetchSettingsProfile() async {
+    final response = await _apiClient.get('/settings/profile');
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      
+      final user = UserProfile(
+        displayName: data['user']?['displayName'] ?? 'User',
+        email: data['user']?['email'] ?? '',
+        bio: data['user']?['bio'] ?? '',
+        country: data['user']?['country'] ?? '',
+        avatarInitials: data['user']?['avatarInitials'] ?? 'US',
+      );
+
+      final settings = AppThemeSettings(
+        themeMode: data['settings']?['themeMode'] ?? 'Dark',
+        language: data['settings']?['language'] ?? 'English',
+      );
+
+      final notifications = NotificationPreferences(
+        courseUpdates: data['notifications']?['courseUpdates'] ?? true,
+        communityAnnouncements: data['notifications']?['communityAnnouncements'] ?? false,
+        productUpdates: data['notifications']?['productUpdates'] ?? true,
+      );
+      
+      return {
+        'user': user,
+        'settings': settings,
+        'notifications': notifications,
+      };
+    }
+    throw Exception('Failed to fetch settings');
+  }
+}
+
+final httpSettingsRepositoryProvider = Provider((ref) => HttpSettingsRepository());

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../app/theme/app_theme.dart';
+import '../../../workspace/data/http_workspace_repository.dart';
 import '../../../../shared/models/flashcard_model.dart';
 import '../../../../shared/providers/workspace_providers.dart';
 import '../../../onboarding/presentation/micro_interview_screen.dart';
@@ -77,8 +78,25 @@ class _LearningLabSidebarState extends ConsumerState<LearningLabSidebar> {
                     }
                     widget.onSelectNode?.call(nodeTitle);
                   },
-                  onLaunchInLab: () {
-                    // Confirm switch inside the learning lab
+                  onLaunchInLab: (nodeTitle) {
+                    if (activeWs != null) {
+                      ref.read(workspaceListProvider.notifier).updateActiveTab(activeWs.id, 'lab');
+                    }
+                  },
+                  onGenerateFlashcards: (subtopic) async {
+                    if (activeWs != null) {
+                      final messenger = ScaffoldMessenger.of(context);
+                      messenger.showSnackBar(SnackBar(content: Text('Generating flashcards for $subtopic...')));
+                      final newCards = await ref.read(httpWorkspaceRepositoryProvider).generateFlashcardsForTopic(subtopic);
+                      if (newCards.isNotEmpty && mounted) {
+                        setState(() {
+                          activeWs.flashcards.addAll(newCards);
+                          activeWs.flashcardCount = activeWs.flashcards.length;
+                        });
+                        await ref.read(workspaceListProvider.notifier).updateWorkspace(activeWs);
+                        messenger.showSnackBar(const SnackBar(content: Text('Flashcards generated!')));
+                      }
+                    }
                   },
                 ),
               ],

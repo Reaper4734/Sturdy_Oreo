@@ -1,6 +1,8 @@
 package com.oreo.engine.orchestration.controller;
 
-
+import com.oreo.engine.orchestration.pipelines.WorkspaceChatPipeline;
+import com.oreo.engine.orchestration.schemas.WorkspaceChatOutputSchema;
+import com.oreo.engine.orchestration.pipelines.FlashcardGeneratorPipeline;
 import com.oreo.engine.orchestration.pipelines.DynamicProfilerPipeline;
 import com.oreo.engine.orchestration.pipelines.SandboxExplainerPipeline;
 import com.oreo.engine.orchestration.schemas.ProfilerOutputSchema;
@@ -9,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 import java.util.UUID;
+import java.util.List;
 
 import com.oreo.auth.User;
 import com.oreo.auth.UserRepository;
@@ -20,15 +23,35 @@ public class OrchestrationController {
 
     private final DynamicProfilerPipeline dynamicProfilerPipeline;
     private final SandboxExplainerPipeline sandboxExplainerPipeline;
+    private final FlashcardGeneratorPipeline flashcardGeneratorPipeline;
+    private final WorkspaceChatPipeline workspaceChatPipeline;
     private final UserRepository userRepository;
 
     public OrchestrationController(
             DynamicProfilerPipeline dynamicProfilerPipeline,
             SandboxExplainerPipeline sandboxExplainerPipeline,
+            FlashcardGeneratorPipeline flashcardGeneratorPipeline,
+            WorkspaceChatPipeline workspaceChatPipeline,
             UserRepository userRepository) {
         this.dynamicProfilerPipeline = dynamicProfilerPipeline;
         this.sandboxExplainerPipeline = sandboxExplainerPipeline;
+        this.flashcardGeneratorPipeline = flashcardGeneratorPipeline;
+        this.workspaceChatPipeline = workspaceChatPipeline;
         this.userRepository = userRepository;
+    }
+
+    @PostMapping("/workspace-chat")
+    public ResponseEntity<WorkspaceChatOutputSchema> triggerWorkspaceChat(@RequestBody Map<String, String> payload) {
+        String userInput = payload.getOrDefault("message", "");
+        String history = payload.getOrDefault("history", "No prior history.");
+        String roadmapJson = payload.getOrDefault("roadmap", "[]");
+        return ResponseEntity.ok(workspaceChatPipeline.run(history, roadmapJson, userInput));
+    }
+
+    @PostMapping("/generate-flashcards")
+    public ResponseEntity<List<FlashcardGeneratorPipeline.ExtractedCard>> generateFlashcards(@RequestBody Map<String, String> payload) {
+        String topic = payload.getOrDefault("topic", "Programming");
+        return ResponseEntity.ok(flashcardGeneratorPipeline.generateInitialFlashcards(topic));
     }
 
     @PostMapping("/interview")

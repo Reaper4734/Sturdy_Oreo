@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:animated_text_kit/animated_text_kit.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 import '../../../app/theme/app_theme.dart';
 import '../../../shared/models/micro_interview_model.dart';
 import '../../../shared/models/workspace_model.dart';
@@ -11,7 +12,7 @@ import '../../../shared/providers/workspace_providers.dart';
 import '../../../shared/repositories/http_interview_repository.dart';
 import '../../../shared/services/file_picker_service.dart';
 import '../../../shared/services/voice_assistant_service.dart';
-import '../../dashboard/data/mock_dashboard_data.dart';
+import 'dart:convert';
 import '../../workspace/data/http_workspace_repository.dart';
 import 'widgets/workspace_generation_interstitial.dart';
 
@@ -42,6 +43,7 @@ class _MicroInterviewScreenState extends ConsumerState<MicroInterviewScreen> {
   bool _isSending = false;
   bool _showVoiceModal = false;
   bool _isGeneratingWorkspace = false;
+  bool _lastMessageFinishedAnim = false;
 
   @override
   void initState() {
@@ -65,7 +67,8 @@ class _MicroInterviewScreenState extends ConsumerState<MicroInterviewScreen> {
 
   Future<void> _loadInitialMessages() async {
     final activeWs = ref.read(activeWorkspaceProvider);
-    if (activeWs != null && activeWs.chatHistory.isNotEmpty) {
+    // Only restore cached history if there's actual conversation (not just the pre-seeded init message)
+    if (activeWs != null && activeWs.chatHistory.length > 1) {
       if (mounted) {
         setState(() {
           _messages = List.from(activeWs.chatHistory);
@@ -142,50 +145,24 @@ class _MicroInterviewScreenState extends ConsumerState<MicroInterviewScreen> {
     _inputController.clear();
     _scrollToBottom();
 
-    // Check if we are in the temporary Knowledge Hub -> Workspace flow
-    bool isKnowledgeHubFlow = activeWs != null && 
-        _messages.isNotEmpty &&
-        _messages.first.text.contains("I've prepared your");
-        
-    ChatMessage? mockReply;
-
-    if (isKnowledgeHubFlow && _messages.length == 2) {
-      await Future.delayed(const Duration(milliseconds: 1500));
-      final lowerText = text.toLowerCase();
-      if (lowerText.contains('continue')) {
-        mockReply = ChatMessage(
-          id: 'ai_kh_${DateTime.now().millisecondsSinceEpoch}',
-          sender: 'AI',
-          text: "Loading course...\n\nBackend Search Engine...\nCourse Loaded...\n\nWorkspace Ready.",
-        );
-      } else {
-        try {
-          final repo = ref.read(httpWorkspaceRepositoryProvider);
-          final updatedWs = await repo.updateRoadmap(activeWs, text);
-          
-          ref.read(workspaceListProvider.notifier).updateWorkspace(updatedWs);
-          
-          mockReply = ChatMessage(
-            id: 'ai_kh_${DateTime.now().millisecondsSinceEpoch}',
-            sender: 'AI',
-            text: "Done. I've updated your learning path. Check out the updated roadmap!",
-          );
-        } catch (e) {
-          mockReply = ChatMessage(
-            id: 'ai_kh_${DateTime.now().millisecondsSinceEpoch}',
-            sender: 'AI',
-            text: "Sorry, I failed to update the roadmap: $e",
-          );
-        }
-      }
-    }
-
     final repo = ref.read(httpInterviewRepositoryProvider);
     final historyStr = _messages.map((m) => "${m.sender}: ${m.text}").join("\n");
-    final aiReply = mockReply ?? await repo.sendUserResponse(text, historyStr, files: sentFiles);
+    
+    String? roadmapJson;
+    if (activeWs != null && activeWs.isCourseConfirmed) {
+      roadmapJson = jsonEncode(activeWs.roadmap.map((e) => e.toJson()).toList());
+    }
+
+    final aiReply = await repo.sendUserResponse(
+      text, 
+      historyStr, 
+      files: sentFiles,
+      workspaceRoadmapJson: roadmapJson,
+    );
 
     if (mounted) {
       setState(() {
+        _lastMessageFinishedAnim = false;
         _messages.add(aiReply);
         _isSending = false;
       });
@@ -248,39 +225,33 @@ class _MicroInterviewScreenState extends ConsumerState<MicroInterviewScreen> {
       return WorkspaceGenerationInterstitial(
         topicName: 'Personalized Learning Curriculum',
         onCompleted: () async {
-          WorkspaceModel? newWs;
+          final messenger = ScaffoldMessenger.of(context);
+          WorkspaceModel newWs;
           try {
              final repo = ref.read(httpWorkspaceRepositoryProvider);
              final lastAiMsg = _messages.reversed.firstWhere((m) => m.sender == 'AI', orElse: () => _messages.last);
              final metadata = lastAiMsg.metadata ?? {};
-             final personaStr = "Domain: ${metadata['domain_identified']}, Score: ${metadata['confidence_score']}";
+             final persona = metadata['current_inferred_persona'] as Map<String, dynamic>? ?? {};
+             final subject = persona['subject'] ?? 'General Knowledge';
+             final domain = persona['domain'] ?? 'Unknown';
+             final personaStr = "Domain: $domain, Subject: $subject, Score: ${metadata['confidence_score']}";
              
-             newWs = await repo.createWorkspaceFromCourse("Custom AI Curriculum", persona: personaStr);
+             newWs = await repo.createWorkspaceFromCourse(subject, persona: personaStr);
              newWs.chatHistory = List.from(_messages);
-          } catch(e) {
-             print("Failed to generate real workspace, falling back: $e");
-             final newId = 'ws_custom_${DateTime.now().millisecondsSinceEpoch}';
-             newWs = WorkspaceModel(
-               id: newId,
-               userId: 'user_priyaj',
-               title: 'Custom Learning Project',
-               subject: 'Tailored Curriculum',
-               difficulty: 'Intermediate',
-               createdAt: DateTime.now(),
-               lastOpened: DateTime.now(),
-               progressPercent: 0.10,
-               activeLearningContext: 'Core Fundamentals',
-               flashcardCount: 45,
-               roadmapNodeCount: 12,
-               accentColor: const Color(0xFF67E8F9),
-               chatHistory: List.from(_messages),
-             );
+          } catch (e) {
+             debugPrint('Workspace generation failed: $e');
+             // Rethrow — don't silently create mock data
+             if (mounted) {
+               setState(() { _isGeneratingWorkspace = false; });
+               messenger.showSnackBar(
+                 SnackBar(content: Text('Failed to generate curriculum: $e'), backgroundColor: Colors.red),
+               );
+             }
+             return;
           }
           
-          if (newWs != null) {
-            ref.read(workspaceListProvider.notifier).createWorkspace(newWs);
-            ref.read(activeWorkspaceIdProvider.notifier).state = newWs.id;
-          }
+          await ref.read(workspaceListProvider.notifier).createWorkspace(newWs);
+          ref.read(activeWorkspaceIdProvider.notifier).state = newWs.id;
 
           if (mounted) {
             setState(() {
@@ -347,22 +318,6 @@ class _MicroInterviewScreenState extends ConsumerState<MicroInterviewScreen> {
           const SizedBox(width: 4),
           const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.fgSecondary, size: 18),
           const Spacer(),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: AppColors.accentEmerald.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.accentEmerald.withValues(alpha: 0.3)),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: const [
-                CircleAvatar(radius: 3, backgroundColor: AppColors.accentEmerald),
-                SizedBox(width: 4),
-                Text('Standalone Mock Active', style: TextStyle(fontSize: 10, color: AppColors.accentEmerald, fontWeight: FontWeight.w600)),
-              ],
-            ),
-          ),
         ],
       ),
     );
@@ -463,19 +418,33 @@ class _MicroInterviewScreenState extends ConsumerState<MicroInterviewScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         // Unboxed AI Response Text
-                        if (index == _messages.length - 1)
+                        if (index == _messages.length - 1 && !_lastMessageFinishedAnim)
                           AnimatedTextKit(
                             animatedTexts: [
                               TypewriterAnimatedText(
                                 msg.text,
                                 textStyle: Theme.of(context).textTheme.bodyLarge!,
-                                speed: const Duration(milliseconds: 20),
+                                speed: const Duration(milliseconds: 10),
                               ),
                             ],
                             totalRepeatCount: 1,
+                            onFinished: () {
+                              if (mounted) {
+                                setState(() {
+                                  _lastMessageFinishedAnim = true;
+                                });
+                              }
+                            },
                           )
                         else
-                          Text(msg.text, style: Theme.of(context).textTheme.bodyLarge),
+                          MarkdownBody(
+                            data: msg.text,
+                            styleSheet: MarkdownStyleSheet(
+                              p: Theme.of(context).textTheme.bodyLarge,
+                              strong: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold),
+                              listBullet: Theme.of(context).textTheme.bodyLarge,
+                            ),
+                          ),
 
                         const SizedBox(height: 12),
 

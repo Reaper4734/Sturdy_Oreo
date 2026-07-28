@@ -5,7 +5,6 @@ import '../domain/models/graph_state.dart';
 import '../domain/models/layout_result.dart';
 import '../domain/layout/layout_manager.dart';
 import '../domain/layout/viewport_manager.dart';
-import '../data/datasources/mock_knowledge_graph_data.dart';
 import '../data/serializers/mermaid_serializer.dart';
 import 'renderers/graph_edges_painter.dart';
 import 'renderers/graph_group_painter.dart';
@@ -16,12 +15,14 @@ import 'widgets/graph_node_widget.dart';
 /// Strictly paints LayoutResult coordinates and applies viewport virtualization for high scalability.
 class KnowledgeGraphScreen extends StatefulWidget {
   final String initialWorkspaceId;
+  final KnowledgeGraph? graph;
   final Function(String) onNodeSelected;
   final Function(String) onLaunchLearningLab;
 
   const KnowledgeGraphScreen({
     super.key,
-    this.initialWorkspaceId = 'python_backend',
+    this.initialWorkspaceId = '',
+    this.graph,
     required this.onNodeSelected,
     required this.onLaunchLearningLab,
   });
@@ -54,10 +55,18 @@ class _KnowledgeGraphScreenState extends State<KnowledgeGraphScreen> {
     super.dispose();
   }
 
+  @override
+  void didUpdateWidget(covariant KnowledgeGraphScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.graph != widget.graph || oldWidget.initialWorkspaceId != widget.initialWorkspaceId) {
+      _loadGraph(widget.initialWorkspaceId);
+    }
+  }
+
   void _loadGraph(String workspaceId) {
     setState(() {
       _currentWorkspaceId = workspaceId;
-      _graph = MockKnowledgeGraphData.getWorkspaceGraph(workspaceId);
+      _graph = widget.graph ?? KnowledgeGraph(graphId: workspaceId, title: 'Empty', description: '', nodes: [], edges: []);
       final initialSelectedId = _graph.nodes.isNotEmpty ? _graph.nodes.first.id : null;
       _graphState = GraphState(
         activeWorkspaceId: workspaceId,
@@ -263,7 +272,7 @@ class _KnowledgeGraphScreenState extends State<KnowledgeGraphScreen> {
               InteractiveViewer(
                 transformationController: _transformController,
                 constrained: false,
-                boundaryMargin: const EdgeInsets.all(800.0),
+                boundaryMargin: const EdgeInsets.all(double.infinity),
                 minScale: _graph.viewportDefaults.minZoom,
                 maxScale: _graph.viewportDefaults.maxZoom,
                 child: Center(

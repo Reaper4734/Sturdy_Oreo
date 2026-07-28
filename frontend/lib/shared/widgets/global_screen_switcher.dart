@@ -25,9 +25,9 @@ class _GlobalScreenSwitcherState extends State<GlobalScreenSwitcher> {
     {'id': '0', 'title': 'Screen 01: Command Center Dashboard'},
     {'id': '1', 'title': 'Screen 02: Micro-Interview (Assessment)'},
     {'id': '2', 'title': 'Screen 03: Learning Studio'},
-    {'id': '4', 'title': 'Screen 05: Mastery Survey & Quizzes'},
-    {'id': '5', 'title': 'Screen 06: Knowledge Hub'},
-    {'id': '6', 'title': 'Screen 07: Profile & Settings'},
+    {'id': '3', 'title': 'Screen 05: Mastery Survey & Quizzes'},
+    {'id': '4', 'title': 'Screen 06: Knowledge Hub'},
+    {'id': '5', 'title': 'Screen 07: Profile & Settings'},
   ];
 
   @override

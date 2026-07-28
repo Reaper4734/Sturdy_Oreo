@@ -88,15 +88,18 @@ public class AuthService {
                 name = (String) payload.get("name");
                 googleId = payload.getSubject();
             } else {
-                // Testing/Dev fallback for mock tokens in development mode
-                log.warn("Google token verification failed. Using dev fallback for token: {}", req.idToken());
-                email = "google_user_" + UUID.randomUUID().toString().substring(0, 6) + "@gmail.com";
-                name = "Google Learner";
-                googleId = "g_id_" + UUID.randomUUID().toString().substring(0, 8);
+                // If it fails, manually parse it so we can see what's wrong!
+                GoogleIdToken unverified = GoogleIdToken.parse(new GsonFactory(), req.idToken());
+                String aud = unverified.getPayload().getAudienceAsList().toString();
+                String iss = unverified.getPayload().getIssuer();
+                throw new IllegalArgumentException("Google token verification returned null. Backend expected Client ID: [" + googleClientId + "]. Token contained Audience: " + aud + ", Issuer: " + iss);
             }
-        } catch (Exception e) {
+        } catch (IllegalArgumentException e) {
             log.error("Google Auth error: ", e);
-            throw new IllegalArgumentException("Invalid Google ID token");
+            throw e;
+        } catch (Exception e) {
+            log.error("Google Auth error. Client ID used: [" + googleClientId + "]", e);
+            throw new IllegalArgumentException("Invalid Google ID token: " + e.getMessage());
         }
 
         Optional<User> existingUserOpt = userRepository.findByGoogleId(googleId);

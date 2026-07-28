@@ -1,25 +1,29 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/workspace_model.dart';
-import '../repositories/mock_workspace_repository.dart';
-import '../repositories/workspace_repository.dart';
+import '../../features/workspace/data/http_workspace_repository.dart';
 
 /// Provides the workspace repository instance
-final workspaceRepositoryProvider = Provider<IWorkspaceRepository>((ref) {
-  return MockWorkspaceRepository();
+final workspaceRepositoryProvider = Provider<HttpWorkspaceRepository>((ref) {
+  return HttpWorkspaceRepository();
 });
 
-/// Manages the list of Learning Spaces and handles CRUD lifecycle mutations.
 class WorkspaceListNotifier extends StateNotifier<List<WorkspaceModel>> {
-  final IWorkspaceRepository _repository;
+  final HttpWorkspaceRepository _repository;
 
   WorkspaceListNotifier(this._repository) : super([]) {
     loadWorkspaces();
   }
 
   Future<void> loadWorkspaces() async {
-    final list = await _repository.getAll();
-    state = list;
+    try {
+      final list = await _repository.getAll();
+      state = list;
+    } catch (e) {
+      debugPrint("Failed to load workspaces: $e");
+      state = [];
+    }
   }
 
   Future<WorkspaceModel> createWorkspace(WorkspaceModel ws) async {

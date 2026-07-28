@@ -278,8 +278,8 @@ class ViewportDefaults {
 
   const ViewportDefaults({
     this.initialZoom = 0.85,
-    this.minZoom = 0.15,
-    this.maxZoom = 3.0,
+    this.minZoom = 0.05,
+    this.maxZoom = 5.0,
     this.defaultCenterX = 600.0,
     this.defaultCenterY = 150.0,
   });

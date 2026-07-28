@@ -3,9 +3,19 @@ import 'package:http/http.dart' as http;
 
 class ApiClient {
   static const String baseUrl = 'http://localhost:8080/api';
-  static const String devToken = 'eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJmYjM4MDFjYy1iZTZhLTQyZjItOWVmYS1hOGQ2MzYzYTY3NWUiLCJlbWFpbCI6InRlc3RAb3Jlby5jb20iLCJpYXQiOjE3ODUxNjcxMTksImV4cCI6MTc4NTI1MzUxOX0.lr8cwxPgtBtPWOjvCV-a8csZJ8CmQZAMbfWYzsTh5Vtsep2k6Wg3U5uFAxzvKaCbR7U-VbhW6Mex7Q_dhKjp7w';
+  
+  // Singleton pattern so token is shared across instances
+  static final ApiClient _instance = ApiClient._internal();
+  factory ApiClient() => _instance;
+  ApiClient._internal();
+
+  String? _token;
 
   final http.Client _client = http.Client();
+
+  void setToken(String? token) {
+    _token = token;
+  }
 
   Future<http.Response> get(String endpoint) async {
     return _client.get(
@@ -31,9 +41,12 @@ class ApiClient {
   }
 
   Map<String, String> _headers() {
-    return {
+    final headers = {
       'Content-Type': 'application/json',
-      'Authorization': 'Bearer $devToken',
     };
+    if (_token != null) {
+      headers['Authorization'] = 'Bearer $_token';
+    }
+    return headers;
   }
 }

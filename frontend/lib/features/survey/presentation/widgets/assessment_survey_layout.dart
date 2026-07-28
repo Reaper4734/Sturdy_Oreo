@@ -198,8 +198,11 @@ class _AssessmentSurveyLayoutState extends ConsumerState<AssessmentSurveyLayout>
         
         Color borderColor = AppColors.borderSubtle;
         if (showAnswer) {
-          if (opt.isCorrect) borderColor = AppColors.accentEmerald;
-          else if (isSelected && !opt.isCorrect) borderColor = AppColors.accentRose;
+          if (opt.isCorrect) {
+            borderColor = AppColors.accentEmerald;
+          } else if (isSelected && !opt.isCorrect) {
+            borderColor = AppColors.accentRose;
+          }
         } else if (isSelected) {
           borderColor = AppColors.accentPrimary;
         }

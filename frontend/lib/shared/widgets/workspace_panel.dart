@@ -9,8 +9,13 @@ import '../providers/workspace_providers.dart';
 /// Upgrade path: Re-introduce search and virtualization when user exceeds 15+ workspaces.
 class WorkspacePanel extends ConsumerStatefulWidget {
   final VoidCallback onNewWorkspaceClicked;
+  final VoidCallback onWorkspaceSelected;
 
-  const WorkspacePanel({super.key, required this.onNewWorkspaceClicked});
+  const WorkspacePanel({
+    super.key, 
+    required this.onNewWorkspaceClicked,
+    required this.onWorkspaceSelected,
+  });
 
   @override
   ConsumerState<WorkspacePanel> createState() => _WorkspacePanelState();
@@ -32,6 +37,7 @@ class _WorkspacePanelState extends ConsumerState<WorkspacePanel> {
     ref.read(activeWorkspaceIdProvider.notifier).state = ws.id;
     ref.read(workspaceListProvider.notifier).touchWorkspace(ws.id);
     ref.read(workspacePanelOpenProvider.notifier).state = false;
+    widget.onWorkspaceSelected();
   }
 
   @override

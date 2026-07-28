@@ -19,8 +19,6 @@ class MasterySurveyScreen extends ConsumerStatefulWidget {
 }
 
 class _MasterySurveyScreenState extends ConsumerState<MasterySurveyScreen> {
-  int _activeLayoutIndex = 0; // 0: Dynamic Assessment, 1: Code Challenge
-  
   List<QuestionItem> _dynamicQuestions = [];
   bool _isLoading = true;
 

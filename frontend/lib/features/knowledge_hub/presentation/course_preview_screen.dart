@@ -1,16 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../app/theme/app_theme.dart';
-import '../data/mock_course_catalog.dart';
+import '../data/course_catalog_model.dart';
 import '../../knowledge_graph/presentation/knowledge_graph_screen.dart';
 import '../../roadmap/presentation/roadmap_explorer_widget.dart';
-import '../../knowledge_graph/domain/models/knowledge_graph_model.dart' as kg;
 import '../../../shared/models/roadmap_model.dart';
-import '../../../shared/models/workspace_model.dart';
-import '../../../shared/models/micro_interview_model.dart';
-import '../../../shared/providers/workspace_providers.dart';
-import '../../knowledge_graph/data/datasources/mock_knowledge_graph_data.dart';
 import '../../workspace/data/http_workspace_repository.dart';
+import '../../../shared/providers/workspace_providers.dart';
+
 
 class CoursePreviewScreen extends ConsumerStatefulWidget {
   final CourseCatalogEntry course;
@@ -43,7 +40,9 @@ class _CoursePreviewScreenState extends ConsumerState<CoursePreviewScreen> {
       ref.read(activeWorkspaceIdProvider.notifier).state = newWs.id;
       widget.onNavigateToWorkspace();
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to generate workspace: $e')));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to generate workspace: $e')));
+      }
     } finally {
       if (mounted) {
         setState(() {
@@ -185,27 +184,20 @@ class _CoursePreviewScreenState extends ConsumerState<CoursePreviewScreen> {
   Widget _buildMindMap() {
     // Reuse the existing KnowledgeGraphScreen with read-only callbacks
     return KnowledgeGraphScreen(
-      initialWorkspaceId: widget.course.knowledgeGraphWorkspaceId,
+      initialWorkspaceId: widget.course.id,
       onNodeSelected: (_) {}, // Read-only
       onLaunchLearningLab: (_) {}, // Read-only
     );
   }
 
   Widget _buildRoadmap() {
-    // Get the graph to extract its nodes, converting them to RoadmapNodes
-    // This is a naive conversion just to make the roadmap widget render something related to the course.
-    final graph = MockKnowledgeGraphData.getWorkspaceGraph(widget.course.knowledgeGraphWorkspaceId);
-    
-    // We'll just build a flat roadmap list from the top-level sections for the preview
-    final roadmapNodes = graph.nodes
-        .where((n) => n.type == kg.NodeType.section)
-        .map((n) => RoadmapNode(
-              id: n.id,
-              title: n.label,
-              subtitle: 'Module',
-              status: 'Not Started',
-            ))
-        .toList();
+    // Generate a naive preview roadmap from course tags
+    final roadmapNodes = widget.course.tags.map((tag) => RoadmapNode(
+          id: tag.replaceAll(' ', '_'),
+          title: tag,
+          subtitle: 'Module',
+          status: 'Not Started',
+        )).toList();
 
     return RoadmapExplorerWidget(
       roadmap: roadmapNodes,

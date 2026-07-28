@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../app/theme/app_theme.dart';
-import '../data/mock_dashboard_data.dart';
+import '../data/dashboard_model.dart';
+import '../data/http_dashboard_repository.dart';
 import 'widgets/greeting_hero_card.dart';
 import 'widgets/continue_learning_card.dart';
 import 'widgets/learning_journey_card.dart';
@@ -10,9 +11,7 @@ import 'widgets/needs_attention_card.dart';
 import 'widgets/activity_feed_card.dart';
 import 'widgets/learning_consistency_widget.dart';
 import 'widgets/workspace_summary_card.dart';
-import 'package:frontend/features/dashboard/data/mock_dashboard_data.dart';
-import 'package:frontend/features/dashboard/data/http_dashboard_repository.dart';
-import 'package:frontend/features/dashboard/presentation/providers/mascot_provider.dart';
+import '../../../shared/providers/workspace_providers.dart';
 
 class CommandCenterScreen extends ConsumerStatefulWidget {
   final VoidCallback onNavigateToStudio;
@@ -27,8 +26,8 @@ class CommandCenterScreen extends ConsumerStatefulWidget {
 }
 
 class _CommandCenterScreenState extends ConsumerState<CommandCenterScreen> {
-  final _repository = HttpDashboardRepository();
-  DashboardMockProfile? _profile;
+  final HttpDashboardRepository _dashboardRepo = HttpDashboardRepository();
+  DashboardProfile? _profile;
   HeatmapSummary? _heatmapSummary;
   bool _isLoading = true;
 
@@ -39,13 +38,24 @@ class _CommandCenterScreenState extends ConsumerState<CommandCenterScreen> {
   }
 
   Future<void> _loadData() async {
-    final profile = await _repository.fetchDashboardProfile();
-    if (mounted) {
-      setState(() {
-        _profile = profile;
-        _heatmapSummary = MockDashboardRepository.computeHeatmapSummary(profile.heatmapScores);
-        _isLoading = false;
-      });
+    try {
+      final profile = await _dashboardRepo.fetchDashboardProfile();
+      if (mounted) {
+        setState(() {
+          _profile = profile;
+          _heatmapSummary = HttpDashboardRepository.computeHeatmapSummary(profile.heatmapScores);
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to load dashboard: $e')),
+        );
+      }
     }
   }
 
@@ -57,9 +67,47 @@ class _CommandCenterScreenState extends ConsumerState<CommandCenterScreen> {
         body: Center(child: CircularProgressIndicator(color: AppColors.accentPrimary)),
       );
     }
+    
+    if (_profile == null) {
+      return Scaffold(
+        backgroundColor: AppColors.bgCanvas,
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.error_outline, color: Colors.redAccent, size: 48),
+              const SizedBox(height: 16),
+              const Text('Failed to load dashboard data.', style: TextStyle(color: AppColors.fgPrimary, fontSize: 16)),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: () {
+                  setState(() => _isLoading = true);
+                  _loadData();
+                },
+                child: const Text('Retry'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
 
     final profile = _profile!;
-    final greeting = MockDashboardRepository.getTimeGreeting();
+    final greeting = HttpDashboardRepository.getTimeGreeting();
+
+    final activeWs = ref.watch(activeWorkspaceProvider);
+    ContinueLearningData clData = profile.continueLearning;
+    if (activeWs != null) {
+      clData = ContinueLearningData(
+        workspaceName: activeWs.title,
+        currentCourse: activeWs.activeLearningContext,
+        difficulty: activeWs.difficulty,
+        currentTopic: activeWs.activeLearningContext,
+        nextAction: 'Continue',
+        estimatedTime: '30m',
+        progressPercent: activeWs.roadmap.isNotEmpty ? 0.3 : 0.0,
+      );
+    }
 
     return Scaffold(
       backgroundColor: AppColors.bgCanvas,
@@ -72,9 +120,9 @@ class _CommandCenterScreenState extends ConsumerState<CommandCenterScreen> {
               builder: (context, constraints) {
                 final isDesktop = constraints.maxWidth >= 900;
                 if (isDesktop) {
-                  return _buildDesktopLayout(profile, greeting);
+                  return _buildDesktopLayout(profile, greeting, clData);
                 }
-                return _buildMobileLayout(profile, greeting);
+                return _buildMobileLayout(profile, greeting, clData);
               },
             ),
           ),
@@ -83,7 +131,7 @@ class _CommandCenterScreenState extends ConsumerState<CommandCenterScreen> {
     );
   }
 
-  Widget _buildDesktopLayout(DashboardMockProfile profile, String greeting) {
+  Widget _buildDesktopLayout(DashboardProfile profile, String greeting, ContinueLearningData clData) {
     const gap = 20.0;
 
     return Column(
@@ -104,7 +152,7 @@ class _CommandCenterScreenState extends ConsumerState<CommandCenterScreen> {
               Expanded(
                 flex: 6,
                 child: ContinueLearningCard(
-                  data: profile.continueLearning,
+                  data: clData,
                   onContinue: widget.onNavigateToStudio,
                 ),
               ),
@@ -168,7 +216,7 @@ class _CommandCenterScreenState extends ConsumerState<CommandCenterScreen> {
     );
   }
 
-  Widget _buildMobileLayout(DashboardMockProfile profile, String greeting) {
+  Widget _buildMobileLayout(DashboardProfile profile, String greeting, ContinueLearningData clData) {
     const gap = 16.0;
 
     return Column(
@@ -180,7 +228,7 @@ class _CommandCenterScreenState extends ConsumerState<CommandCenterScreen> {
         ),
         const SizedBox(height: gap),
         ContinueLearningCard(
-          data: profile.continueLearning,
+          data: clData,
           onContinue: widget.onNavigateToStudio,
         ),
         const SizedBox(height: gap),
