@@ -42,6 +42,20 @@ public class DynamicProfilerPipeline {
 
     public ProfilerOutputSchema run(String history, String userInput) {
         // 2. Call LLM Pipeline with structured output mapping
+<<<<<<< HEAD
         return profilerAiService.chat(history, userInput);
+=======
+        ProfilerOutputSchema output = profilerAiService.chat(history, request.getUserInput());
+
+        // 3. Convert InternalState to Map for the generic OrchestrationResponse
+        Map<String, Object> stateMap = objectMapper.convertValue(output.getInternalState(), Map.class);
+
+        // 4. Return formatted response
+        return OrchestrationResponse.builder()
+                .replyToUser(output.getReplyToUser())
+                .options(output.getOptions())
+                .internalState(stateMap)
+                .build();
+>>>>>>> origin/master
     }
 }

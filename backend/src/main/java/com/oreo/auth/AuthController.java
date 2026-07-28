@@ -12,9 +12,11 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final AuthService authService;
+    private final UserRepository userRepository;
 
-    public AuthController(AuthService authService) {
+    public AuthController(AuthService authService, UserRepository userRepository) {
         this.authService = authService;
+        this.userRepository = userRepository;
     }
 
     @PostMapping("/register")
@@ -33,5 +35,23 @@ public class AuthController {
     @Operation(summary = "Authenticate with Google ID Token")
     public ResponseEntity<AuthDto.AuthResponse> googleAuth(@Valid @RequestBody AuthDto.GoogleAuthRequest req) {
         return ResponseEntity.ok(authService.authenticateGoogle(req));
+    }
+
+    @GetMapping("/profile")
+    @Operation(summary = "Get current user profile stats")
+    @io.swagger.v3.oas.annotations.security.SecurityRequirement(name = "bearerAuth")
+    public ResponseEntity<AuthDto.UserProfileResponse> getProfile(org.springframework.security.core.Authentication authentication) {
+        java.util.UUID userId = (java.util.UUID) authentication.getPrincipal();
+        User user = userRepository.findById(userId).orElseThrow();
+        // Ponytail Mode: Fetch user from DB, hardcode missing gamification fields for now
+        return ResponseEntity.ok(new AuthDto.UserProfileResponse(
+                userId,
+                user.getDisplayName(),
+                user.getEmail(),
+                "Your Java backend is now connected to Flutter! Welcome " + user.getDisplayName() + ".",
+                2,
+                180,
+                3
+        ));
     }
 }

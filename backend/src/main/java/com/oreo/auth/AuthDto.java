@@ -36,4 +36,14 @@ public class AuthDto {
             boolean trackAccepted,
             String currentNodeId
     ) {}
+
+    public record UserProfileResponse(
+            UUID userId,
+            String displayName,
+            String email,
+            String greetingInsight,
+            int level,
+            int xp,
+            int streakDays
+    ) {}
 }

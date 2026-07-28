@@ -40,6 +40,7 @@ oreo:
   auth:
     google-client-id: ${GOOGLE_CLIENT_ID:535291260400-mufpocj4te32evfusavcb5e7ee6250rq.apps.googleusercontent.com}
   llm:
+<<<<<<< HEAD
     gemini-api-key: ${GEMINI_API_KEY:AQ.Ab8RN6KoeKf1dQ4MbRZpRySorbKKwbs9j2xGX2soNZHpTjyrHg}
   search:
     google-api-key: ${GOOGLE_SEARCH_API_KEY:dummy-key}
@@ -48,6 +49,11 @@ oreo:
   youtube:
     api:
       key: ${YOUTUBE_API_KEY:mock-key}
+=======
+    gemini-api-key: ${GEMINI_API_KEY:dummy-gemini-key}
+    openai-api-key: ${OPENAI_API_KEY:dummy-openai-key}
+
+>>>>>>> origin/master
 
 logging:
   level:
