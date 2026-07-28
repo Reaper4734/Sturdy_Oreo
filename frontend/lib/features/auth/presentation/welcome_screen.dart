@@ -91,39 +91,45 @@ class WelcomeScreen extends StatelessWidget {
 
   Widget _buildMascotCard() {
     return AspectRatio(
-      aspectRatio: 1.6, // Rectangular card
+      aspectRatio: 1.4, // Rectangular card, slightly taller
       child: Container(
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(32),
+          borderRadius: BorderRadius.circular(24),
           border: Border.all(
-            color: Colors.white.withValues(alpha: 0.08),
+            color: Colors.white.withValues(alpha: 0.12),
             width: 1,
           ),
           gradient: RadialGradient(
             colors: [
-              const Color(0xFF9C27B0).withValues(alpha: 0.15), // Soft purple glow
-              Colors.white.withValues(alpha: 0.02),
+              const Color(0xFF9C27B0).withValues(alpha: 0.2), // Soft purple glow
+              Colors.white.withValues(alpha: 0.05),
             ],
             center: Alignment.center,
-            radius: 0.8,
+            radius: 1.0,
           ),
           color: Colors.white.withValues(alpha: 0.03), // Subtle glass surface
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF9C27B0).withValues(alpha: 0.05),
-              blurRadius: 40,
-              spreadRadius: 0,
+              color: const Color(0xFF9C27B0).withValues(alpha: 0.08),
+              blurRadius: 48,
+              spreadRadius: -8,
             ),
           ],
         ),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(32),
-          child: SvgPicture.asset(
-            'assets/mascots/oreo_mascot.svg',
-            fit: BoxFit.cover,
-            alignment: Alignment.center,
-          ).animate(onPlay: (controller) => controller.repeat(reverse: true))
-           .moveY(begin: -6, end: 6, duration: 2000.ms, curve: Curves.easeInOut),
+          borderRadius: BorderRadius.circular(24),
+          child: Transform.scale(
+            scale: 1.15, // Scale up to crop effectively
+            child: Transform.translate(
+              offset: const Offset(0, 10), // Push it slightly down
+              child: SvgPicture.asset(
+                'assets/mascots/oreo_mascot.svg',
+                fit: BoxFit.cover,
+                alignment: Alignment.topCenter,
+              ).animate(onPlay: (controller) => controller.repeat(reverse: true))
+               .moveY(begin: -4, end: 4, duration: 2500.ms, curve: Curves.easeInOut),
+            ),
+          ),
         ),
       ),
     );
