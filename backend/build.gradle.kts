@@ -95,3 +95,8 @@ tasks.jacocoTestReport {
         html.required.set(true)
     }
 }
+
+tasks.named<org.springframework.boot.gradle.tasks.run.BootRun>("bootRun") {
+    jvmArgs("-Xmx512m", "-XX:MaxMetaspaceSize=256m")
+}
+

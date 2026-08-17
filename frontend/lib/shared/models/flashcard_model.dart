@@ -38,6 +38,47 @@ class FlashcardItem {
     this.position = const Offset(100, 100),
   });
 
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'front': front,
+      'back': back,
+      'topicTag': topicTag,
+      'type': type.index,
+      'tags': tags,
+      'userAnnotation': userAnnotation,
+      'nextReviewDate': nextReviewDate?.toIso8601String(),
+      'intervalDays': intervalDays,
+      'easeFactor': easeFactor,
+      'consecutiveCorrect': consecutiveCorrect,
+      'totalReviews': totalReviews,
+      'isFlipped': isFlipped,
+      'isBookmarked': isBookmarked,
+      'positionX': position.dx,
+      'positionY': position.dy,
+    };
+  }
+
+  static FlashcardItem fromJson(Map<String, dynamic> json) {
+    return FlashcardItem(
+      id: json['id'],
+      front: json['front'] ?? '',
+      back: json['back'] ?? '',
+      topicTag: json['topicTag'] ?? '',
+      type: json['type'] != null ? FlashcardType.values[json['type']] : FlashcardType.basic,
+      tags: (json['tags'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [],
+      userAnnotation: json['userAnnotation'],
+      nextReviewDate: json['nextReviewDate'] != null ? DateTime.parse(json['nextReviewDate']) : null,
+      intervalDays: json['intervalDays'] ?? 1,
+      easeFactor: (json['easeFactor'] ?? 2.5).toDouble(),
+      consecutiveCorrect: json['consecutiveCorrect'] ?? 0,
+      totalReviews: json['totalReviews'] ?? 0,
+      isFlipped: json['isFlipped'] ?? false,
+      isBookmarked: json['isBookmarked'] ?? false,
+      position: Offset((json['positionX'] ?? 100.0).toDouble(), (json['positionY'] ?? 100.0).toDouble()),
+    );
+  }
+
   Color get confidenceColor {
     if (easeFactor < 2.0) {
       return const Color(0xFFEF4444); // Red - struggling

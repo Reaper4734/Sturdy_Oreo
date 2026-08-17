@@ -40,8 +40,7 @@ oreo:
   auth:
     google-client-id: 591562728024-n2v4rgro07374dm04cn5dj79e2t8gnv7.apps.googleusercontent.com
   llm:
-    gemini-api-key: ${GEMINI_API_KEY:dummy-gemini-key}
-    openai-api-key: ${OPENAI_API_KEY:dummy-openai-key}
+    gemini-api-keys: ${GEMINI_API_KEYS:mock-key}
   search:
     google-api-key: ${GOOGLE_SEARCH_API_KEY:dummy-key}
     google-csx-id: ${GOOGLE_CSX_ID:dummy-csx}

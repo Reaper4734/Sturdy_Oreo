@@ -24,4 +24,5 @@ if ($connections) {
 }
 
 Write-Host "Starting Flutter frontend on port $port..."
+Set-Location "$PSScriptRoot\frontend"
 flutter run -d web-server --web-port=$port

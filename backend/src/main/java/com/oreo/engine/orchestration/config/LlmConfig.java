@@ -1,27 +1,29 @@
 package com.oreo.engine.orchestration.config;
 
 import dev.langchain4j.model.chat.ChatLanguageModel;
+import dev.langchain4j.model.chat.StreamingChatLanguageModel;
+import dev.langchain4j.model.googleai.GoogleAiGeminiStreamingChatModel;
+import dev.langchain4j.model.googleai.GoogleAiGeminiChatModel;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
-
-
-
-import dev.langchain4j.model.chat.StreamingChatLanguageModel;
-import dev.langchain4j.model.googleai.GoogleAiGeminiStreamingChatModel;
-import dev.langchain4j.model.googleai.GoogleAiGeminiChatModel;
-
 import com.oreo.engine.orchestration.pipelines.PlannerAssistant;
 import com.oreo.engine.orchestration.pipelines.ChatSummarizer;
 import com.oreo.engine.orchestration.tools.YouTubeSearchTool;
 import dev.langchain4j.service.AiServices;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Proxy;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
+
 @Configuration
 public class LlmConfig {
 
-    @Value("${oreo.llm.gemini-api-key:dummy-gemini-key}")
-    private String apiKey;
+    @Value("${oreo.llm.gemini-api-keys}")
+    private List<String> apiKeys;
 
     @Value("${oreo.search.google-api-key:dummy-key}")
     private String googleSearchApiKey;
@@ -40,22 +42,54 @@ public class LlmConfig {
     @Bean
     @Primary
     public ChatLanguageModel geminiModel() {
-        return GoogleAiGeminiChatModel.builder()
-                .apiKey(apiKey)
-                .modelName("gemini-3.5-flash-lite")
-                .temperature(0.7)
-                .maxRetries(3) // Increased retries for rate limits
-                .maxOutputTokens(2048)
-                .build();
+        List<ChatLanguageModel> models = apiKeys.stream()
+                .map(key -> GoogleAiGeminiChatModel.builder()
+                        .apiKey(key)
+                        .modelName("gemini-3.5-flash-lite")
+                        .temperature(0.7)
+                        .maxRetries(3) // Increased retries for rate limits
+                        .maxOutputTokens(2048)
+                        .build())
+                .collect(Collectors.toList());
+
+        AtomicInteger index = new AtomicInteger(0);
+        return (ChatLanguageModel) Proxy.newProxyInstance(
+                ChatLanguageModel.class.getClassLoader(),
+                new Class<?>[]{ChatLanguageModel.class},
+                (proxy, method, args) -> {
+                    int currentIndex = Math.abs(index.getAndIncrement() % models.size());
+                    try {
+                        return method.invoke(models.get(currentIndex), args);
+                    } catch (InvocationTargetException e) {
+                        throw e.getTargetException();
+                    }
+                }
+        );
     }
 
     @Bean
     public StreamingChatLanguageModel geminiStreamingModel() {
-        return GoogleAiGeminiStreamingChatModel.builder()
-                .apiKey(apiKey)
-                .modelName("gemini-3.5-flash-lite")
-                .temperature(0.7)
-                .build();
+        List<StreamingChatLanguageModel> models = apiKeys.stream()
+                .map(key -> GoogleAiGeminiStreamingChatModel.builder()
+                        .apiKey(key)
+                        .modelName("gemini-3.5-flash-lite")
+                        .temperature(0.7)
+                        .build())
+                .collect(Collectors.toList());
+
+        AtomicInteger index = new AtomicInteger(0);
+        return (StreamingChatLanguageModel) Proxy.newProxyInstance(
+                StreamingChatLanguageModel.class.getClassLoader(),
+                new Class<?>[]{StreamingChatLanguageModel.class},
+                (proxy, method, args) -> {
+                    int currentIndex = Math.abs(index.getAndIncrement() % models.size());
+                    try {
+                        return method.invoke(models.get(currentIndex), args);
+                    } catch (InvocationTargetException e) {
+                        throw e.getTargetException();
+                    }
+                }
+        );
     }
 
     @Bean

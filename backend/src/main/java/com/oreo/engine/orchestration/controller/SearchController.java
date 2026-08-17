@@ -59,6 +59,8 @@ public class SearchController {
                 }
             }
         } catch (Exception e) {
+            System.err.println("SearchController YouTube API Exception:");
+            e.printStackTrace();
             // Silently fallback to empty list
         }
         

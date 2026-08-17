@@ -78,16 +78,20 @@ class _LearningLabWorkspaceScreenState extends ConsumerState<LearningLabWorkspac
     }
 
     // 1. Flashcards: use cached if available, else generate
-    List<FlashcardItem> cards = activeWs.flashcards;
-    if (cards.isEmpty) {
+    List<FlashcardItem> workspaceCards = activeWs.flashcards;
+    List<FlashcardItem> topicCards = workspaceCards.where((c) => c.topicTag == activeWs.activeLearningContext).toList();
+    
+    if (topicCards.isEmpty) {
       try {
         final flashRepo = ref.read(httpFlashcardRepositoryProvider);
-        cards = await flashRepo.generateFlashcards(activeWs.activeLearningContext);
-        activeWs.flashcards = cards;
+        final newCards = await flashRepo.generateFlashcards(activeWs.activeLearningContext);
+        workspaceCards.addAll(newCards);
+        activeWs.flashcards = workspaceCards;
         await ref.read(workspaceListProvider.notifier).updateWorkspace(activeWs);
+        topicCards = newCards;
       } catch (e) {
         debugPrint('Flashcard generation failed: $e');
-        cards = [];
+        topicCards = [];
       }
     }
 
@@ -111,7 +115,9 @@ class _LearningLabWorkspaceScreenState extends ConsumerState<LearningLabWorkspac
             debugPrint('Ingestion failed: $e');
           }
         }
+        activeWs.videoTimestampSeconds = 0;
       }
+      debugPrint('Loaded videos count: ${videos.length} for context: $enhancedContext');
     } catch (e) {
       debugPrint('Video search failed: $e');
     }
@@ -132,7 +138,7 @@ class _LearningLabWorkspaceScreenState extends ConsumerState<LearningLabWorkspac
 
     if (mounted) {
       setState(() {
-        _topicFlashcards = cards;
+        _topicFlashcards = topicCards;
         _topicVideos = videos;
         if (assessments != null) _topicAssessments = assessments;
         _isLoading = false;
@@ -195,7 +201,7 @@ class _LearningLabWorkspaceScreenState extends ConsumerState<LearningLabWorkspac
         ? _topicVideos.first['id'] as String 
         : '';
     final topicTag = currentContext;
-    final currentCards = activeWs?.flashcards ?? _topicFlashcards;
+    final currentCards = (activeWs?.flashcards ?? _topicFlashcards).where((c) => c.topicTag == topicTag).toList();
     final currentCells = activeWs?.canvasCells ?? widget.sharedCanvasCells;
     final currentObjects = activeWs?.canvasObjects ?? widget.sharedCanvasObjects;
 
