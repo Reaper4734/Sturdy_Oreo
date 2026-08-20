@@ -1,0 +1,46 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: oreo-backend
+  datasource:
+    url: jdbc:postgresql://localhost:5432/oreo_db
+    username: postgres
+    password: postgres
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+    show-sql: false
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    locations: classpath:db/migration
+
+oreo:
+  jwt:
+    secret: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
+    expiration-ms: 86400000 # 24 hours
+  auth:
+    google-client-id: ${GOOGLE_CLIENT_ID:your-google-client-id}
+  llm:
+    gemini-api-keys: ${GEMINI_API_KEYS:your-gemini-api-key}
+  search:
+    google-api-key: ${GOOGLE_SEARCH_API_KEY:your-search-api-key}
+    google-csx-id: ${GOOGLE_CSX_ID:your-csx-id}
+  
+  youtube:
+    api:
+      key: ${YOUTUBE_API_KEY:your-youtube-api-key}
+
+logging:
+  level:
+    root: INFO
+    com.oreo: DEBUG
+    org.springframework.security: INFO
+    org.springframework.web.socket: INFO

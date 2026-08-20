@@ -7,31 +7,9 @@ import '../services/file_picker_service.dart';
 class HttpInterviewRepository {
   final ApiClient _apiClient = ApiClient();
 
-  Future<ChatMessage> sendUserResponse(String text, String history, {List<AttachedFileModel>? files, String? workspaceRoadmapJson}) async {
-    // If files/diagrams are attached, use the canvas-explain endpoint
+  Future<ChatMessage> sendInterviewMessage(String text, String history, {List<AttachedFileModel>? files}) async {
     if (files != null && files.isNotEmpty) {
       return explain(text, files.first);
-    }
-
-    if (workspaceRoadmapJson != null) {
-      final response = await _apiClient.post('/orchestration/workspace-chat', body: {
-        'message': text,
-        'history': history,
-        'roadmap': workspaceRoadmapJson,
-      });
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final aiResponse = data['aiResponse'] ?? "I didn't understand that.";
-        final updatedRoadmap = data['updatedRoadmap'];
-        return ChatMessage(
-          id: 'ai_${DateTime.now().millisecondsSinceEpoch}',
-          sender: 'AI',
-          text: aiResponse,
-          metadata: updatedRoadmap != null ? {'updatedRoadmap': updatedRoadmap} : null,
-        );
-      } else {
-        throw Exception('Failed to send workspace chat: ${response.statusCode}');
-      }
     }
 
     final response = await _apiClient.post('/orchestration/interview', body: {
@@ -53,12 +31,45 @@ class HttpInterviewRepository {
         sender: 'AI',
         text: replyToUser,
         options: options.isNotEmpty ? options : null,
-        attachments: [], // Backend doesn't return files yet
-        metadata: internalState, // Store persona details for DAG generation
+        attachments: [],
+        metadata: internalState,
       );
     } else {
       throw Exception('Failed to send interview message: ${response.statusCode}');
     }
+  }
+
+  Future<ChatMessage> sendWorkspaceChatMessage(String text, String history, String roadmapJson, {List<AttachedFileModel>? files}) async {
+    if (files != null && files.isNotEmpty) {
+      return explain(text, files.first);
+    }
+
+    final response = await _apiClient.post('/orchestration/workspace-chat', body: {
+      'message': text,
+      'history': history,
+      'roadmap': roadmapJson,
+    });
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      final aiResponse = data['aiResponse'] ?? "I didn't understand that.";
+      final updatedRoadmap = data['updatedRoadmap'];
+      return ChatMessage(
+        id: 'ai_${DateTime.now().millisecondsSinceEpoch}',
+        sender: 'AI',
+        text: aiResponse,
+        metadata: updatedRoadmap != null ? {'updatedRoadmap': updatedRoadmap} : null,
+      );
+    } else {
+      throw Exception('Failed to send workspace chat: ${response.statusCode}');
+    }
+  }
+
+  Future<ChatMessage> sendUserResponse(String text, String history, {List<AttachedFileModel>? files, String? workspaceRoadmapJson}) async {
+    if (workspaceRoadmapJson != null) {
+      return sendWorkspaceChatMessage(text, history, workspaceRoadmapJson, files: files);
+    }
+    return sendInterviewMessage(text, history, files: files);
   }
   Future<ChatMessage> explain(String doubt, AttachedFileModel file) async {
     final response = await _apiClient.post('/orchestration/canvas-explain', body: {

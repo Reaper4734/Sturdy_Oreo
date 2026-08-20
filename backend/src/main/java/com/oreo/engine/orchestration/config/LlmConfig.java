@@ -48,7 +48,7 @@ public class LlmConfig {
                         .modelName("gemini-3.5-flash-lite")
                         .temperature(0.7)
                         .maxRetries(3) // Increased retries for rate limits
-                        .maxOutputTokens(2048)
+                        .maxOutputTokens(8192)
                         .build())
                 .collect(Collectors.toList());
 

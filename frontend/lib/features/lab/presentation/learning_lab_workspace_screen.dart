@@ -68,7 +68,7 @@ class _LearningLabWorkspaceScreenState extends ConsumerState<LearningLabWorkspac
   Future<void> _loadData() async {
     final activeWs = ref.read(activeWorkspaceProvider);
 
-    if (activeWs == null || !activeWs.isCourseConfirmed) {
+    if (activeWs == null) {
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -77,14 +77,20 @@ class _LearningLabWorkspaceScreenState extends ConsumerState<LearningLabWorkspac
       return;
     }
 
+    final contextTopic = (widget.activeNodeTitle != null && widget.activeNodeTitle!.isNotEmpty)
+        ? widget.activeNodeTitle!
+        : (activeWs.activeLearningContext.isNotEmpty 
+            ? activeWs.activeLearningContext 
+            : (activeWs.subject.isNotEmpty ? activeWs.subject : activeWs.title));
+
     // 1. Flashcards: use cached if available, else generate
     List<FlashcardItem> workspaceCards = activeWs.flashcards;
-    List<FlashcardItem> topicCards = workspaceCards.where((c) => c.topicTag == activeWs.activeLearningContext).toList();
+    List<FlashcardItem> topicCards = workspaceCards.where((c) => c.topicTag == contextTopic).toList();
     
     if (topicCards.isEmpty) {
       try {
         final flashRepo = ref.read(httpFlashcardRepositoryProvider);
-        final newCards = await flashRepo.generateFlashcards(activeWs.activeLearningContext);
+        final newCards = await flashRepo.generateFlashcards(contextTopic);
         workspaceCards.addAll(newCards);
         activeWs.flashcards = workspaceCards;
         await ref.read(workspaceListProvider.notifier).updateWorkspace(activeWs);
@@ -95,7 +101,7 @@ class _LearningLabWorkspaceScreenState extends ConsumerState<LearningLabWorkspac
       }
     }
 
-    final activeNode = _findNodeByTitle(activeWs.roadmap, activeWs.activeLearningContext);
+    final activeNode = _findNodeByTitle(activeWs.roadmap, contextTopic);
     final String subtopicsContext = activeNode != null 
         ? activeNode.children.map((c) => c.title).join(", ") 
         : "";
@@ -103,9 +109,10 @@ class _LearningLabWorkspaceScreenState extends ConsumerState<LearningLabWorkspac
     List<Map<String, dynamic>> videos = [];
     try {
       final repo = ref.read(httpWorkspaceRepositoryProvider);
-      // Use subject and 'tutorial' to get specific videos, avoiding broad workspace titles that confuse the algorithm
-      final enhancedContext = "${activeWs.subject} tutorial".trim();
-      videos = await repo.searchVideos(activeWs.id, activeWs.activeLearningContext, context: enhancedContext);
+      final enhancedContext = activeWs.subject.isNotEmpty && activeWs.subject != contextTopic
+          ? "${activeWs.subject} tutorial".trim()
+          : "tutorial";
+      videos = await repo.searchVideos(activeWs.id, contextTopic, context: enhancedContext);
       if (videos.isNotEmpty) {
         final videoId = videos.first['id'] as String?;
         if (videoId != null && videoId.isNotEmpty) {
@@ -115,9 +122,8 @@ class _LearningLabWorkspaceScreenState extends ConsumerState<LearningLabWorkspac
             debugPrint('Ingestion failed: $e');
           }
         }
-        activeWs.videoTimestampSeconds = 0;
       }
-      debugPrint('Loaded videos count: ${videos.length} for context: $enhancedContext');
+      debugPrint('Loaded videos count: ${videos.length} for context: $contextTopic');
     } catch (e) {
       debugPrint('Video search failed: $e');
     }

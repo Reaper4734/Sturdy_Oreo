@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:animated_text_kit/animated_text_kit.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import '../../../app/theme/app_theme.dart';
@@ -19,11 +18,13 @@ import 'widgets/workspace_generation_interstitial.dart';
 class MicroInterviewScreen extends ConsumerStatefulWidget {
   final VoidCallback onInterviewComplete;
   final bool showHeader;
+  final bool isWorkspaceMode;
 
   const MicroInterviewScreen({
     super.key,
     required this.onInterviewComplete,
     this.showHeader = true,
+    this.isWorkspaceMode = false,
   });
 
   @override
@@ -35,6 +36,7 @@ class _MicroInterviewScreenState extends ConsumerState<MicroInterviewScreen> {
   final VoiceAssistantService _voiceService = VoiceAssistantService();
 
   final TextEditingController _inputController = TextEditingController();
+  final FocusNode _inputFocusNode = FocusNode();
   final ScrollController _scrollController = ScrollController();
 
   List<ChatMessage> _messages = [];
@@ -49,7 +51,31 @@ class _MicroInterviewScreenState extends ConsumerState<MicroInterviewScreen> {
   void initState() {
     super.initState();
     _inputController.addListener(_onTextChanged);
+    _setupKeyboardShortcuts();
     _loadInitialMessages();
+  }
+
+  void _setupKeyboardShortcuts() {
+    _inputFocusNode.onKeyEvent = (node, event) {
+      if (event is KeyDownEvent) {
+        final isEnter = event.logicalKey == LogicalKeyboardKey.enter ||
+            event.logicalKey == LogicalKeyboardKey.numpadEnter;
+        if (isEnter) {
+          if (HardwareKeyboard.instance.isShiftPressed) {
+            // Shift + Enter -> Allow multiline newline insertion & move cursor down
+            return KeyEventResult.ignored;
+          } else {
+            // Enter alone -> Send message
+            final text = _inputController.text;
+            if (text.trim().isNotEmpty || _attachedFiles.isNotEmpty) {
+              _handleUserMessage(text);
+            }
+            return KeyEventResult.handled;
+          }
+        }
+      }
+      return KeyEventResult.ignored;
+    };
   }
 
   void _onTextChanged() {
@@ -59,6 +85,7 @@ class _MicroInterviewScreenState extends ConsumerState<MicroInterviewScreen> {
   @override
   void dispose() {
     _inputController.removeListener(_onTextChanged);
+    _inputFocusNode.dispose();
     _voiceService.dispose();
     _inputController.dispose();
     _scrollController.dispose();
@@ -67,20 +94,37 @@ class _MicroInterviewScreenState extends ConsumerState<MicroInterviewScreen> {
 
   Future<void> _loadInitialMessages() async {
     final activeWs = ref.read(activeWorkspaceProvider);
-    // Only restore cached history if there's actual conversation (not just the pre-seeded init message)
-    if (activeWs != null && activeWs.chatHistory.length > 1) {
+
+    if (widget.isWorkspaceMode) {
+      if (activeWs != null && activeWs.chatHistory.isNotEmpty) {
+        if (mounted) {
+          setState(() {
+            _messages = List.from(activeWs.chatHistory);
+            _isLoading = false;
+          });
+        }
+        return;
+      }
+
       if (mounted) {
         setState(() {
-          _messages = List.from(activeWs.chatHistory);
+          _messages = [
+            ChatMessage(
+              id: 'ws_welcome',
+              sender: 'AI',
+              text: "Hello! I'm Oreo AI, your learning assistant for **${activeWs?.title ?? 'this workspace'}**. Ask me questions about your modules, concepts, or request curriculum changes!",
+            )
+          ];
           _isLoading = false;
         });
       }
       return;
     }
 
+    // Onboarding Interview Mode
     try {
       final repo = ref.read(httpInterviewRepositoryProvider);
-      final initialMsg = await repo.sendUserResponse("Start the interview", "");
+      final initialMsg = await repo.sendInterviewMessage("Start the interview", "");
       if (mounted) {
         setState(() {
           _messages = [initialMsg];
@@ -131,7 +175,7 @@ class _MicroInterviewScreenState extends ConsumerState<MicroInterviewScreen> {
     });
 
     final activeWs = ref.read(activeWorkspaceProvider);
-    if (activeWs != null) {
+    if (widget.isWorkspaceMode && activeWs != null) {
       activeWs.chatHistory = List.from(_messages);
       ref.read(workspaceListProvider.notifier).touchWorkspace(activeWs.id);
 
@@ -147,29 +191,51 @@ class _MicroInterviewScreenState extends ConsumerState<MicroInterviewScreen> {
 
     final repo = ref.read(httpInterviewRepositoryProvider);
     final historyStr = _messages.map((m) => "${m.sender}: ${m.text}").join("\n");
-    
-    String? roadmapJson;
-    if (activeWs != null && activeWs.isCourseConfirmed) {
-      roadmapJson = jsonEncode(activeWs.roadmap.map((e) => e.toJson()).toList());
-    }
 
-    final aiReply = await repo.sendUserResponse(
-      text, 
-      historyStr, 
-      files: sentFiles,
-      workspaceRoadmapJson: roadmapJson,
-    );
-
-    if (mounted) {
-      setState(() {
-        _lastMessageFinishedAnim = false;
-        _messages.add(aiReply);
-        _isSending = false;
-      });
-      if (activeWs != null) {
-        activeWs.chatHistory = List.from(_messages);
+    try {
+      ChatMessage aiReply;
+      if (widget.isWorkspaceMode) {
+        String roadmapJson = "[]";
+        if (activeWs != null) {
+          roadmapJson = jsonEncode(activeWs.roadmap.map((e) => e.toJson()).toList());
+        }
+        aiReply = await repo.sendWorkspaceChatMessage(
+          text,
+          historyStr,
+          roadmapJson,
+          files: sentFiles,
+        );
+      } else {
+        aiReply = await repo.sendInterviewMessage(
+          text,
+          historyStr,
+          files: sentFiles,
+        );
       }
-      _scrollToBottom();
+
+      if (mounted) {
+        setState(() {
+          _lastMessageFinishedAnim = false;
+          _messages.add(aiReply);
+          _isSending = false;
+        });
+        if (widget.isWorkspaceMode && activeWs != null) {
+          activeWs.chatHistory = List.from(_messages);
+        }
+        _scrollToBottom();
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _messages.add(ChatMessage(
+            id: 'err_${DateTime.now().millisecondsSinceEpoch}',
+            sender: 'AI',
+            text: "Sorry, I ran into an issue processing that: $e",
+          ));
+          _isSending = false;
+        });
+        _scrollToBottom();
+      }
     }
   }
 
@@ -417,17 +483,16 @@ class _MicroInterviewScreenState extends ConsumerState<MicroInterviewScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Unboxed AI Response Text
+                        // Unboxed AI Response Text with on-the-fly Markdown formatting & fast streaming
                         if (index == _messages.length - 1 && !_lastMessageFinishedAnim)
-                          AnimatedTextKit(
-                            animatedTexts: [
-                              TypewriterAnimatedText(
-                                msg.text,
-                                textStyle: Theme.of(context).textTheme.bodyLarge!,
-                                speed: const Duration(milliseconds: 10),
-                              ),
-                            ],
-                            totalRepeatCount: 1,
+                          StreamingMarkdownBody(
+                            text: msg.text,
+                            styleSheet: MarkdownStyleSheet(
+                              p: Theme.of(context).textTheme.bodyLarge,
+                              strong: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold),
+                              listBullet: Theme.of(context).textTheme.bodyLarge,
+                            ),
+                            onTick: _scrollToBottom,
                             onFinished: () {
                               if (mounted) {
                                 setState(() {
@@ -589,10 +654,13 @@ class _MicroInterviewScreenState extends ConsumerState<MicroInterviewScreen> {
                   ],
                 ),
 
-                // Middle Text Field
+                // Middle Text Field with Enter to send & Shift+Enter for multiline
                 Expanded(
                   child: TextField(
                     controller: _inputController,
+                    focusNode: _inputFocusNode,
+                    keyboardType: TextInputType.multiline,
+                    textInputAction: TextInputAction.newline,
                     style: Theme.of(context).textTheme.bodyLarge,
                     maxLines: 5,
                     minLines: 1,
@@ -606,7 +674,6 @@ class _MicroInterviewScreenState extends ConsumerState<MicroInterviewScreen> {
                       enabledBorder: InputBorder.none,
                       contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
                     ),
-                    onSubmitted: _handleUserMessage,
                   ),
                 ),
 
@@ -804,3 +871,90 @@ class _MicroInterviewScreenState extends ConsumerState<MicroInterviewScreen> {
     );
   }
 }
+
+/// High-performance on-the-go streaming Markdown renderer.
+/// Incrementally renders formatted Markdown text with snappy typing speed.
+class StreamingMarkdownBody extends StatefulWidget {
+  final String text;
+  final MarkdownStyleSheet styleSheet;
+  final VoidCallback? onFinished;
+  final VoidCallback? onTick;
+
+  const StreamingMarkdownBody({
+    super.key,
+    required this.text,
+    required this.styleSheet,
+    this.onFinished,
+    this.onTick,
+  });
+
+  @override
+  State<StreamingMarkdownBody> createState() => _StreamingMarkdownBodyState();
+}
+
+class _StreamingMarkdownBodyState extends State<StreamingMarkdownBody> {
+  Timer? _timer;
+  int _charIndex = 0;
+  late int _chunkSize;
+
+  @override
+  void initState() {
+    super.initState();
+    // Dynamically scale chunk size so the entire reply loads quickly (0.8s - 1.4s max)
+    // while feeling like a natural, rapid AI stream.
+    _chunkSize = (widget.text.length / 50).ceil().clamp(3, 16);
+    _startStreaming();
+  }
+
+  void _startStreaming() {
+    _timer?.cancel();
+    _timer = Timer.periodic(const Duration(milliseconds: 12), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+
+      setState(() {
+        _charIndex += _chunkSize;
+        if (_charIndex >= widget.text.length) {
+          _charIndex = widget.text.length;
+          timer.cancel();
+          widget.onFinished?.call();
+        }
+      });
+      widget.onTick?.call();
+    });
+  }
+
+  void _skipToEnd() {
+    if (_charIndex < widget.text.length) {
+      _timer?.cancel();
+      if (mounted) {
+        setState(() {
+          _charIndex = widget.text.length;
+        });
+        widget.onFinished?.call();
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final currentText = widget.text.substring(0, _charIndex);
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: _skipToEnd,
+      child: MarkdownBody(
+        data: currentText,
+        styleSheet: widget.styleSheet,
+      ),
+    );
+  }
+}
+

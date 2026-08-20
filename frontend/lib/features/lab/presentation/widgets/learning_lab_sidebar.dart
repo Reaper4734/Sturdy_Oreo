@@ -63,6 +63,7 @@ class _LearningLabSidebarState extends ConsumerState<LearningLabSidebar> {
                     return MicroInterviewScreen(
                       onInterviewComplete: widget.onInterviewComplete ?? () {},
                       showHeader: false,
+                      isWorkspaceMode: true,
                     );
                   },
                 ),

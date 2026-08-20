@@ -1,17 +1,28 @@
-# Today's Changes - Backend & Frontend Stability & Fixes
+# Summary of Today's Changes
 
-## 1. Security & Configuration
-- **API Keys Remediation**: Audited the repository and completely removed hardcoded API keys for Gemini (`AQ.Ab8RN6...`) and YouTube (`AIza...`) from `application-dev.yml`. They have been replaced with standard environment variable placeholders (e.g., `${GEMINI_API_KEYS:mock-key}`) to ensure no monetary API costs leak into version control.
-- **Backend Environment Settings**: Safely updated `LlmConfig.java` to support these secure configuration injection methods.
+## 1. LLM Orchestration & Structured Output Fixes
+- **LangChain4j POJO Reflection**: Resolved `ClassCastException: ParameterizedTypeImpl cannot be cast to Class` in `WorkspaceChatOutputSchema.java` by replacing generic `List<Map<String, Object>>` with a strongly-typed `RoadmapNodeDto` POJO.
+- **Token Truncation Prevention**: Increased `maxOutputTokens` from `2048` to `8192` in `LlmConfig.java` and refined `WorkspaceChatPipeline.java` prompt to only return `updatedRoadmap` on explicit modification requests.
+- **Gemini Model Alignment**: Standardized model references on `gemini-3.5-flash-lite`.
 
-## 2. Flashcard Persistence (Data Model Serialization)
-- **Serialization Added**: Fixed the critical bug where generated flashcards would disappear upon workspace reload.
-- Modified `FlashcardItem` (in `flashcard_model.dart`) to include `toJson()` and `fromJson()` functionality.
-- Modified `WorkspaceModelSerialization` (in `workspace_model_ext.dart`) to ensure `flashcards` lists are correctly serialized and deserialized from JSON to and from the PostgreSQL backend database.
+## 2. Decoupled Onboarding Interview vs. Learning Lab Workspace Chat
+- **Explicit API Methods**: Added `sendInterviewMessage()` and `sendWorkspaceChatMessage()` in `HttpInterviewRepository.dart`.
+- **Context Separation**: Added `isWorkspaceMode` flag to `MicroInterviewScreen.dart`. The Onboarding Interview exclusively routes to `/api/orchestration/interview`, while the Learning Lab sidebar routes to `/api/orchestration/workspace-chat`.
 
-## 3. Video Rendering & Error Handling
-- **API Resilience**: Added extensive debug and error logging within `SearchController.java` for the backend's `/search/videos` endpoint to prevent silent failures.
-- **Frontend Video Filtering**: Fixed a filtering defect in `learning_lab_workspace_screen.dart` ensuring that the UI properly evaluates context (`topicTag`) when assigning `_topicFlashcards`, and corrected variables logic guaranteeing videos and generated flashcards dynamically sync to the `activeLearningContext`.
+## 3. Real-Time Progressive Streaming Markdown & Typing Speed
+- **On-The-Go Formatting**: Implemented `StreamingMarkdownBody` to replace `AnimatedTextKit`. Formatted Markdown elements (bold text, bulleted lists, numbered items, code blocks) now render live in real-time as words stream in, eliminating post-generation layout pops.
+- **Optimized Typing Speed**: Scaled chunk streaming (3–16 characters every 12ms) to allow AI responses to stream naturally and finish within ~1 second.
+- **Instant Skip**: Tapping any streaming message instantly completes the text.
 
-## 4. Automation Scripts
-- **Frontend Startup Fixes**: Improved port clearing and process killing in `start_frontend.ps1` to prevent `Web server failed to start. Port 3000 was already in use` crashes.
+## 4. Keyboard Shortcuts for Chatbot
+- **Enter**: Sends the chat message immediately without inserting redundant newlines.
+- **Shift + Enter**: Inserts a newline and moves the cursor downward for multiline typing.
+
+## 5. Backend Startup & Database Resilience
+- **PostgreSQL TCP Polling**: Enhanced `start_all.ps1` and `start_backend.ps1` to poll TCP port `5432` until PostgreSQL is actively accepting connections before Spring Boot boots up.
+- **Docker Auto-Launch**: Automatically detects if the Docker daemon is stopped, launches Docker Desktop, and waits for initialization.
+- **JVM Heap Allocation**: Configured `-Xmx2g` heap sizing for JAR execution to handle local embeddings.
+
+## 6. YouTube Player & Workspace Video Loading
+- **Unblocked Initialization**: Removed blocking condition `!activeWs.isCourseConfirmed` in `learning_lab_workspace_screen.dart` to allow instant video search and streaming.
+- **Dynamic Controller Lifecycle**: Updated `youtube_player_widget.dart` with dynamic video loading and graceful placeholders.

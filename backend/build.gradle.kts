@@ -97,6 +97,6 @@ tasks.jacocoTestReport {
 }
 
 tasks.named<org.springframework.boot.gradle.tasks.run.BootRun>("bootRun") {
-    jvmArgs("-Xmx512m", "-XX:MaxMetaspaceSize=256m")
+    jvmArgs("-Xmx2g", "-XX:MaxMetaspaceSize=512m")
 }
 
