@@ -27,7 +27,9 @@ public class DashboardController {
     }
 
     @GetMapping("/profile")
-    public ResponseEntity<Map<String, Object>> getDashboardProfile(org.springframework.security.core.Authentication authentication) {
+    public ResponseEntity<Map<String, Object>> getDashboardProfile(
+            org.springframework.security.core.Authentication authentication,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) String workspaceId) {
         if (authentication == null || authentication.getPrincipal() == null) {
             return ResponseEntity.status(401).build();
         }
@@ -60,11 +62,22 @@ public class DashboardController {
         responseMap.put("timelineEvents", List.of());
         responseMap.put("heatmapScores", generateHeatmap());
         
-        // Populate continueLearning and workspaceSummary from the most recent workspace
+        // Populate continueLearning and workspaceSummary from the selected workspace
         List<Workspace> workspaces = workspaceRepository.findByUserId(userId);
         if (!workspaces.isEmpty()) {
-            Workspace latest = workspaces.get(0);
-            Map<String, Object> wsData = latest.getData();
+            Workspace selected = null;
+            if (workspaceId != null && !workspaceId.isEmpty()) {
+                selected = workspaces.stream().filter(w -> w.getId().equals(workspaceId)).findFirst().orElse(null);
+            }
+            if (selected == null) {
+                // fallback to most recently active or created
+                selected = workspaces.stream().max(java.util.Comparator.comparing(w -> {
+                    String lastOpened = (String) w.getData().getOrDefault("lastOpened", "");
+                    return lastOpened.isEmpty() ? w.getCreatedAt().toString() : lastOpened;
+                })).orElse(workspaces.get(0));
+            }
+
+            Map<String, Object> wsData = selected.getData();
             responseMap.put("continueLearning", Map.of(
                     "workspaceName", wsData.getOrDefault("title", ""),
                     "currentCourse", wsData.getOrDefault("activeLearningContext", ""),
@@ -81,7 +94,7 @@ public class DashboardController {
                     "completionPercent", wsData.getOrDefault("progressPercent", 0.0),
                     "estimatedFinishDays", 14
             ));
-            responseMap.put("roadmapNodes", List.of());
+            responseMap.put("roadmapNodes", wsData.getOrDefault("roadmap", List.of()));
             responseMap.put("attentionItems", List.of());
         }
         

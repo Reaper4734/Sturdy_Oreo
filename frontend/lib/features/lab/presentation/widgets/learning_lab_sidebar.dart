@@ -37,14 +37,15 @@ class _LearningLabSidebarState extends ConsumerState<LearningLabSidebar> {
     final activeWs = ref.watch(activeWorkspaceProvider);
     final currentContext = activeWs?.activeLearningContext ?? 'Heap Memory';
     final currentRoadmap = activeWs?.roadmap ?? [];
+    final colors = context.colors;
 
     return Container(
-      color: AppColors.bgSidebar,
+      color: colors.bgSidebar,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           // Sidebar Header (Oreo AI | Roadmap)
-          _buildSidebarHeader(currentContext),
+          _buildSidebarHeader(context, currentContext),
 
           // Sidebar Body (Selected View with IndexedStack to preserve state & scroll)
           Expanded(
@@ -56,7 +57,6 @@ class _LearningLabSidebarState extends ConsumerState<LearningLabSidebar> {
                   onAcceptWithDetails: (details) {
                     if (widget.onAcceptCard != null) {
                       widget.onAcceptCard!(details.data);
-                    } else {
                     }
                   },
                   builder: (context, candidateData, rejectedData) {
@@ -108,24 +108,26 @@ class _LearningLabSidebarState extends ConsumerState<LearningLabSidebar> {
     );
   }
 
-  Widget _buildSidebarHeader(String activeContext) {
+  Widget _buildSidebarHeader(BuildContext context, String activeContext) {
+    final colors = context.colors;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: const BoxDecoration(
-        color: AppColors.bgActivityBar,
-        border: Border(bottom: BorderSide(color: AppColors.borderSubtle, width: 0.8)),
+      decoration: BoxDecoration(
+        color: colors.bgActivityBar,
+        border: Border(bottom: BorderSide(color: colors.borderSubtle, width: 0.8)),
       ),
       child: Row(
         children: [
-          _buildTabButton(0, 'Oreo AI', Icons.auto_awesome_rounded),
+          _buildTabButton(context, 0, 'Oreo AI', Icons.auto_awesome_rounded),
           const SizedBox(width: 8),
-          _buildTabButton(1, 'Roadmap', Icons.account_tree_outlined),
+          _buildTabButton(context, 1, 'Roadmap', Icons.account_tree_outlined),
         ],
       ),
     );
   }
 
-  Widget _buildTabButton(int index, String label, IconData icon) {
+  Widget _buildTabButton(BuildContext context, int index, String label, IconData icon) {
+    final colors = context.colors;
     final isSelected = _selectedTabIndex == index;
     return Expanded(
       child: Material(
@@ -141,10 +143,10 @@ class _LearningLabSidebarState extends ConsumerState<LearningLabSidebar> {
             duration: const Duration(milliseconds: 150),
             padding: const EdgeInsets.symmetric(vertical: 8),
             decoration: BoxDecoration(
-              color: isSelected ? AppColors.bgSurface : Colors.transparent,
+              color: isSelected ? colors.bgSurface : Colors.transparent,
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
-                color: isSelected ? AppColors.fgAccent : Colors.transparent,
+                color: isSelected ? colors.fgAccent : Colors.transparent,
                 width: 1.2,
               ),
             ),
@@ -154,7 +156,7 @@ class _LearningLabSidebarState extends ConsumerState<LearningLabSidebar> {
                 Icon(
                   icon,
                   size: 15,
-                  color: isSelected ? AppColors.fgAccent : AppColors.fgSecondary,
+                  color: isSelected ? colors.fgAccent : colors.fgSecondary,
                 ),
                 const SizedBox(width: 6),
                 Text(
@@ -162,7 +164,7 @@ class _LearningLabSidebarState extends ConsumerState<LearningLabSidebar> {
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                    color: isSelected ? AppColors.fgPrimary : AppColors.fgSecondary,
+                    color: isSelected ? colors.fgPrimary : colors.fgSecondary,
                   ),
                 ),
               ],

@@ -9,12 +9,13 @@ import '../../../shared/models/persona_model.dart';
 import '../../../shared/providers/workspace_providers.dart';
 import '../../../shared/widgets/top_tab_bar_widget.dart';
 import '../../lab/presentation/learning_lab_workspace_screen.dart';
-import '../../lab/presentation/widgets/bounded_grid_canvas_widget.dart';
 import '../../lab/presentation/widgets/flashcard_canvas_widget.dart';
 import '../../lab/presentation/widgets/learning_lab_sidebar.dart';
 import '../../roadmap/presentation/roadmap_explorer_widget.dart';
 import '../../knowledge_graph/presentation/knowledge_graph_screen.dart';
 import '../../knowledge_graph/domain/models/knowledge_graph_model.dart';
+import '../../notes/presentation/notes_screen.dart';
+import '../../workspace/presentation/widgets/more_workspace_hub_widget.dart';
 import 'widgets/progress_timeline_widget.dart';
 
 class PersonaRevealScreen extends ConsumerStatefulWidget {
@@ -39,12 +40,12 @@ class _PersonaRevealScreenState extends ConsumerState<PersonaRevealScreen> {
   double _chatPanelWidth = 360.0;
 
   final List<WorkspaceTabItem> _tabs = [
-    WorkspaceTabItem(id: 'roadmap', title: 'Learning Roadmap', icon: Icons.account_tree_outlined, isClosable: false),
-    WorkspaceTabItem(id: 'mind_map', title: 'Subject Mind Map', icon: Icons.hub_outlined, isClosable: false),
-    WorkspaceTabItem(id: 'persona', title: 'Persona Profile', icon: Icons.badge_outlined, isClosable: false),
-    WorkspaceTabItem(id: 'canvas', title: 'Infinite Canvas', icon: Icons.grid_4x4_rounded, isClosable: false),
-    WorkspaceTabItem(id: 'flashcard_canvas', title: 'Flashcard Canvas', icon: Icons.style_outlined, isClosable: false),
-    WorkspaceTabItem(id: 'lab', title: 'Learning Lab Workspace', icon: Icons.science_outlined, isClosable: false),
+    WorkspaceTabItem(id: 'roadmap', title: 'Roadmap', icon: Icons.account_tree_outlined, isClosable: false),
+    WorkspaceTabItem(id: 'mind_map', title: 'Mind Map', icon: Icons.hub_outlined, isClosable: false),
+    WorkspaceTabItem(id: 'notes', title: 'Notes', icon: Icons.menu_book_rounded, isClosable: false),
+    WorkspaceTabItem(id: 'flashcards', title: 'Flashcards', icon: Icons.style_outlined, isClosable: false),
+    WorkspaceTabItem(id: 'lab', title: 'Learning Lab', icon: Icons.science_outlined, isClosable: false),
+    WorkspaceTabItem(id: 'more', title: 'More', icon: Icons.more_horiz_rounded, isClosable: false),
   ];
 
   @override
@@ -141,8 +142,10 @@ class _PersonaRevealScreenState extends ConsumerState<PersonaRevealScreen> {
       }
     });
 
+    final colors = context.colors;
+
     return Scaffold(
-      backgroundColor: AppColors.bgCanvas,
+      backgroundColor: colors.bgCanvas,
       body: Column(
         children: [
           // Chrome / Antigravity Top Workspace Tab Bar
@@ -164,7 +167,7 @@ class _PersonaRevealScreenState extends ConsumerState<PersonaRevealScreen> {
           // Active Workspace Tab Content (Dynamic Resizable Split-Screen)
           Expanded(
             child: _isLoading || _profile == null || _cluster == null
-                ? const Center(child: CircularProgressIndicator(color: AppColors.accentPrimary))
+                ? Center(child: CircularProgressIndicator(color: colors.accentPrimary))
                 : _buildTabWorkspaceContent(context),
           ),
         ],
@@ -173,6 +176,7 @@ class _PersonaRevealScreenState extends ConsumerState<PersonaRevealScreen> {
   }
 
   Widget _buildTabWorkspaceContent(BuildContext context) {
+    final colors = context.colors;
     // Resizable Split Screen Layout with Draggable Splitter
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -183,7 +187,7 @@ class _PersonaRevealScreenState extends ConsumerState<PersonaRevealScreen> {
               // Left Viewport (Flexible Canvas/Tab Area)
               Expanded(
                 child: Container(
-                  color: AppColors.bgCanvas,
+                  color: colors.bgCanvas,
                   child: _buildLeftPaneContent(context),
                 ),
               ),
@@ -200,10 +204,10 @@ class _PersonaRevealScreenState extends ConsumerState<PersonaRevealScreen> {
                   cursor: SystemMouseCursors.resizeColumn,
                   child: Container(
                     width: 6,
-                    color: AppColors.bgActivityBar,
-                    child: const Center(
+                    color: colors.bgActivityBar,
+                    child: Center(
                       child: VerticalDivider(
-                        color: AppColors.borderSubtle,
+                        color: colors.borderSubtle,
                         thickness: 1,
                         width: 2,
                       ),
@@ -233,6 +237,7 @@ class _PersonaRevealScreenState extends ConsumerState<PersonaRevealScreen> {
     final activeWs = ref.watch(activeWorkspaceProvider);
     final currentContext = activeWs?.activeLearningContext ?? 'Heap Memory';
     final currentRoadmap = activeWs?.roadmap ?? [];
+    final colors = context.colors;
 
     Widget content;
     switch (_activeTabId) {
@@ -244,33 +249,11 @@ class _PersonaRevealScreenState extends ConsumerState<PersonaRevealScreen> {
           onLaunchInLab: (title) => _openLearningLab(title),
         );
         break;
-      case 'persona':
-        content = SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            children: [
-              _buildRadarChartCard(context),
-              const SizedBox(height: 20),
-              _buildPersonaBadgeCard(context),
-            ],
-          ),
-        );
-        break;
-      case 'progress': // Legacy progress timeline view
-        content = ProgressTimelineWidget(
-          nodes: _profile!.blueprintNodes,
-          onSelectModule: _openLearningLab,
-        );
-        break;
+      case 'notes':
       case 'canvas':
-        content = BoundedGridCanvasWidget(
-          gridCells: _canvasCells,
-          customObjects: _sharedCanvasObjects,
-          drawingPaths: _sharedDrawingPaths,
-          onAttachDiagramToChat: (cell) {
-          },
-        );
+        content = const NotesScreen();
         break;
+      case 'flashcards':
       case 'flashcard_canvas':
         content = FlashcardCanvasWidget(
           cards: _allFlashcards,
@@ -286,6 +269,33 @@ class _PersonaRevealScreenState extends ConsumerState<PersonaRevealScreen> {
           sharedCanvasObjects: _sharedCanvasObjects,
           sharedDrawingPaths: _sharedDrawingPaths,
           isEmbedded: true,
+        );
+        break;
+      case 'more':
+      case 'persona':
+        if (activeWs != null) {
+          content = MoreWorkspaceHubWidget(
+            workspace: activeWs,
+            profile: _profile,
+            onOpenLabTopic: (topic) => _openLearningLab(topic),
+          );
+        } else {
+          content = SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              children: [
+                _buildRadarChartCard(context),
+                const SizedBox(height: 20),
+                _buildPersonaBadgeCard(context),
+              ],
+            ),
+          );
+        }
+        break;
+      case 'progress': // Legacy progress timeline view
+        content = ProgressTimelineWidget(
+          nodes: _profile!.blueprintNodes,
+          onSelectModule: _openLearningLab,
         );
         break;
       case 'mind_map':
@@ -307,24 +317,24 @@ class _PersonaRevealScreenState extends ConsumerState<PersonaRevealScreen> {
         children: [
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-            decoration: const BoxDecoration(
-              color: AppColors.bgActivityBar,
-              border: Border(bottom: BorderSide(color: AppColors.borderSubtle)),
+            decoration: BoxDecoration(
+              color: colors.bgActivityBar,
+              border: Border(bottom: BorderSide(color: colors.borderSubtle)),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.info_outline, color: AppColors.accentPrimary),
+                Icon(Icons.info_outline, color: colors.accentPrimary),
                 const SizedBox(width: 8),
-                const Text(
+                Text(
                   'Customize your curriculum in the chat, or confirm to generate content.',
-                  style: TextStyle(color: AppColors.fgPrimary, fontWeight: FontWeight.bold),
+                  style: TextStyle(color: colors.fgPrimary, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(width: 24),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.accentPrimary,
-                    foregroundColor: Colors.black,
+                    backgroundColor: colors.accentPrimary,
+                    foregroundColor: colors.fgInverse,
                   ),
                   onPressed: () {
                     ref.read(workspaceListProvider.notifier).confirmCourse(activeWs.id);
@@ -344,21 +354,24 @@ class _PersonaRevealScreenState extends ConsumerState<PersonaRevealScreen> {
   // 5-Axis Cognitive Radar Chart Component
   Widget _buildRadarChartCard(BuildContext context) {
     final m = _profile!.metrics;
+    final colors = context.colors;
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.bgSurface,
+        color: colors.bgSurface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.borderSubtle),
+        border: Border.all(color: colors.borderSubtle),
+        boxShadow: AppElevation.low,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            children: const [
-              Icon(Icons.radar_outlined, color: AppColors.fgAccent, size: 20),
-              SizedBox(width: 8),
-              Text('Cognitive Radar Matrix', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.fgPrimary)),
+            children: [
+              Icon(Icons.radar_outlined, color: colors.fgAccent, size: 20),
+              const SizedBox(width: 8),
+              Text('Cognitive Radar Matrix', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: colors.fgPrimary)),
             ],
           ),
           const SizedBox(height: 16),
@@ -368,8 +381,8 @@ class _PersonaRevealScreenState extends ConsumerState<PersonaRevealScreen> {
               RadarChartData(
                 dataSets: [
                   RadarDataSet(
-                    fillColor: AppColors.accentPrimary.withValues(alpha: 0.2),
-                    borderColor: AppColors.accentPrimary,
+                    fillColor: colors.accentPrimary.withValues(alpha: 0.2),
+                    borderColor: colors.accentPrimary,
                     entryRadius: 3,
                     borderWidth: 2,
                     dataEntries: [
@@ -382,8 +395,8 @@ class _PersonaRevealScreenState extends ConsumerState<PersonaRevealScreen> {
                   ),
                 ],
                 radarShape: RadarShape.polygon,
-                radarBorderData: const BorderSide(color: AppColors.borderSubtle, width: 1),
-                gridBorderData: const BorderSide(color: AppColors.borderSubtle, width: 0.6),
+                radarBorderData: BorderSide(color: colors.borderSubtle, width: 1),
+                gridBorderData: BorderSide(color: colors.borderSubtle, width: 0.6),
                 tickBorderData: const BorderSide(color: Colors.transparent),
                 ticksTextStyle: const TextStyle(color: Colors.transparent),
                 getTitle: (index, angle) {
@@ -412,12 +425,15 @@ class _PersonaRevealScreenState extends ConsumerState<PersonaRevealScreen> {
 
   // Persona Trait Badge Card Component
   Widget _buildPersonaBadgeCard(BuildContext context) {
+    final colors = context.colors;
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.bgSurface,
+        color: colors.bgSurface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.borderSubtle),
+        border: Border.all(color: colors.borderSubtle),
+        boxShadow: AppElevation.low,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -427,28 +443,28 @@ class _PersonaRevealScreenState extends ConsumerState<PersonaRevealScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: AppColors.accentEmerald.withValues(alpha: 0.15),
+                  color: colors.accentEmerald.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.accentEmerald.withValues(alpha: 0.3)),
+                  border: Border.all(color: colors.accentEmerald.withValues(alpha: 0.3)),
                 ),
-                child: const Text('IDENTIFIED COGNITIVE PERSONA', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.accentEmerald)),
+                child: Text('IDENTIFIED COGNITIVE PERSONA', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: colors.accentEmerald)),
               ),
             ],
           ),
           const SizedBox(height: 12),
           Text(
             _profile!.title,
-            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.fgPrimary),
+            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: colors.fgPrimary),
           ),
           const SizedBox(height: 4),
           Text(
             _profile!.subtitle,
-            style: const TextStyle(fontSize: 13, color: AppColors.fgAccent, fontWeight: FontWeight.w500),
+            style: TextStyle(fontSize: 13, color: colors.fgAccent, fontWeight: FontWeight.w500),
           ),
           const SizedBox(height: 14),
           Text(
             _profile!.summary,
-            style: Theme.of(context).textTheme.bodyMedium,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: colors.fgSecondary),
           ),
           const SizedBox(height: 18),
           Wrap(
@@ -458,16 +474,16 @@ class _PersonaRevealScreenState extends ConsumerState<PersonaRevealScreen> {
               return Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: AppColors.bgElevated,
+                  color: colors.bgSecondary,
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: AppColors.borderSubtle),
+                  border: Border.all(color: colors.borderSubtle),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.check_circle_outline_rounded, size: 14, color: AppColors.accentEmerald),
+                    Icon(Icons.check_circle_outline_rounded, size: 14, color: colors.accentEmerald),
                     const SizedBox(width: 6),
-                    Text(trait, style: const TextStyle(fontSize: 12, color: AppColors.fgPrimary, fontWeight: FontWeight.w500)),
+                    Text(trait, style: TextStyle(fontSize: 12, color: colors.fgPrimary, fontWeight: FontWeight.w500)),
                   ],
                 ),
               );

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'app/theme/app_theme.dart';
 import 'features/auth/providers/auth_provider.dart';
 import 'features/auth/presentation/auth_screen.dart';
@@ -12,6 +11,7 @@ import 'features/knowledge_hub/presentation/knowledge_hub_screen.dart';
 import 'features/settings/presentation/profile_settings_screen.dart';
 // Removed LearningLabScreen
 import 'shared/providers/workspace_providers.dart';
+import 'shared/providers/theme_provider.dart';
 import 'shared/widgets/responsive_scaffold.dart';
 
 void main() {
@@ -82,12 +82,18 @@ class _OreoAppState extends ConsumerState<OreoApp> {
       );
     }
 
+    final themeMode = switch (ref.watch(themeModeProvider)) {
+      'Light' => ThemeMode.light,
+      'System' => ThemeMode.system,
+      _ => ThemeMode.dark,
+    };
+
     return MaterialApp(
       title: 'Oreo Platform',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.darkTheme.copyWith(
-        textTheme: GoogleFonts.interTextTheme(AppTheme.darkTheme.textTheme),
-      ),
+      themeMode: themeMode,
+      theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
       home: homeWidget,
     );
   }

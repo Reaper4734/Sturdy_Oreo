@@ -10,17 +10,20 @@ class LearningJourneyCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final progressPct = (data.overallProgress * 100).round();
+    final colors = context.colors;
 
     return Container(
-      padding: const EdgeInsets.all(32),
+      padding: AppSpacing.pXl,
       decoration: BoxDecoration(
-        color: AppColors.bgSurface,
-        borderRadius: BorderRadius.circular(16),
+        color: colors.bgSurface,
+        borderRadius: AppRadius.rXl,
+        border: Border.all(color: colors.borderSubtle, width: 1),
+        boxShadow: AppElevation.low,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Learning Journey', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.fgPrimary)),
+          Text('Learning Journey', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: colors.fgPrimary)),
           const SizedBox(height: 32),
           
           Row(
@@ -60,18 +63,20 @@ class JourneyMetricCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
       decoration: BoxDecoration(
-        color: AppColors.bgSecondary,
+        color: colors.bgSecondary,
         borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: colors.borderSubtle, width: 0.5),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Text(value, style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: AppColors.fgPrimary)),
+          Text(value, style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: colors.fgPrimary)),
           const SizedBox(height: 8),
-          Text(label, style: const TextStyle(fontSize: 13, color: AppColors.fgSecondary)),
+          Text(label, style: TextStyle(fontSize: 13, color: colors.fgSecondary)),
         ],
       ),
     );

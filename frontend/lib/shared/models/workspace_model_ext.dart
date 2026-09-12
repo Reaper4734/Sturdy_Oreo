@@ -4,6 +4,7 @@ import 'mind_map_model.dart';
 import 'roadmap_model.dart';
 import 'persona_model.dart';
 import 'flashcard_model.dart';
+import 'micro_interview_model.dart';
 
 extension WorkspaceModelSerialization on WorkspaceModel {
   Map<String, dynamic> toJson() {
@@ -29,6 +30,7 @@ extension WorkspaceModelSerialization on WorkspaceModel {
       'subjectCluster': subjectCluster?.toJson(),
       'roadmap': roadmap.map((e) => e.toJson()).toList(),
       'flashcards': flashcards.map((e) => e.toJson()).toList(),
+      'chatHistory': chatHistory.map((e) => e.toJson()).toList(),
     };
   }
 
@@ -55,6 +57,10 @@ extension WorkspaceModelSerialization on WorkspaceModel {
       subjectCluster: json['subjectCluster'] != null ? SubjectCluster.fromJson(json['subjectCluster']) : null,
       roadmap: (json['roadmap'] as List<dynamic>?)?.map<RoadmapNode>((e) => RoadmapNode.fromJson(e as Map<String, dynamic>)).toList() ?? [],
       flashcards: (json['flashcards'] as List<dynamic>?)?.map<FlashcardItem>((e) => FlashcardItem.fromJson(e as Map<String, dynamic>)).toList() ?? [],
+      chatHistory: (json['chatHistory'] as List<dynamic>?)
+              ?.map<ChatMessage>((e) => ChatMessage.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          [],
     );
   }
 }

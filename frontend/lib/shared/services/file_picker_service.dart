@@ -17,6 +17,26 @@ class AttachedFileModel {
     this.bytes,
   });
 
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'extension': extension,
+      'sizeBytes': sizeBytes,
+      'path': path,
+    };
+  }
+
+  factory AttachedFileModel.fromJson(Map<String, dynamic> json) {
+    return AttachedFileModel(
+      id: json['id'] ?? '',
+      name: json['name'] ?? '',
+      extension: json['extension'] ?? '',
+      sizeBytes: json['sizeBytes'] ?? 0,
+      path: json['path'],
+    );
+  }
+
   String get formattedSize {
     if (sizeBytes < 1024) return '$sizeBytes B';
     if (sizeBytes < 1024 * 1024) return '${(sizeBytes / 1024).toStringAsFixed(1)} KB';

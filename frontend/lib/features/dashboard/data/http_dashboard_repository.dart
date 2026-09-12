@@ -5,9 +5,12 @@ import 'dashboard_model.dart';
 class HttpDashboardRepository {
   final ApiClient _apiClient = ApiClient();
 
-  Future<DashboardProfile> fetchDashboardProfile() async {
+  Future<DashboardProfile> fetchDashboardProfile({String? workspaceId}) async {
     try {
-      final response = await _apiClient.get('/dashboard/profile');
+      final path = workspaceId != null && workspaceId.isNotEmpty
+          ? '/dashboard/profile?workspaceId=$workspaceId'
+          : '/dashboard/profile';
+      final response = await _apiClient.get(path);
       
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);

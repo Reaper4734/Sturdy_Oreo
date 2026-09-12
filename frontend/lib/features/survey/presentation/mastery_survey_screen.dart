@@ -65,24 +65,26 @@ class _MasterySurveyScreenState extends ConsumerState<MasterySurveyScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
+
     return Container(
-      color: AppColors.bgCanvas,
+      color: colors.bgCanvas,
       child: Column(
         children: [
           // --- Screen 05 Top Command Header & Layout Switcher ---
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            decoration: const BoxDecoration(
-              color: AppColors.bgActivityBar,
-              border: Border(bottom: BorderSide(color: AppColors.borderSubtle, width: 0.8)),
+            decoration: BoxDecoration(
+              color: colors.bgActivityBar,
+              border: Border(bottom: BorderSide(color: colors.borderSubtle, width: 0.8)),
             ),
             child: Row(
               children: [
-                const Icon(Icons.assignment_turned_in_outlined, size: 18, color: AppColors.accentEmerald),
+                Icon(Icons.assignment_turned_in_outlined, size: 18, color: colors.accentEmerald),
                 const SizedBox(width: 8),
-                const Text(
+                Text(
                   'Post-Tutorial Mastery Test',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.fgPrimary),
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: colors.fgPrimary),
                 ),
                 const Spacer(),
               ],
@@ -92,7 +94,7 @@ class _MasterySurveyScreenState extends ConsumerState<MasterySurveyScreen> {
           // --- Main Question Viewport ---
           Expanded(
             child: _isLoading 
-                ? const Center(child: CircularProgressIndicator())
+                ? Center(child: CircularProgressIndicator(color: colors.accentPrimary))
                 : AssessmentSurveyLayout(
                     questions: _dynamicQuestions,
                     onCompleteTest: _handleCompleteTest,

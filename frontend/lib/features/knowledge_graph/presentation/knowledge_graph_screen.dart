@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../../../app/theme/app_theme.dart';
 import '../domain/models/knowledge_graph_model.dart';
 import '../domain/models/graph_state.dart';
 import '../domain/models/layout_result.dart';
@@ -140,35 +141,40 @@ class _KnowledgeGraphScreenState extends State<KnowledgeGraphScreen> {
   }
 
   void _exportToMermaid() {
+    final colors = context.colors;
     final mmd = MermaidSerializer.exportToMermaid(_graph);
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1E1E1E),
-        title: const Text('Export Graph to Mermaid', style: TextStyle(color: Color(0xFFECECEC))),
+        backgroundColor: colors.bgSurface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(color: colors.borderSubtle),
+        ),
+        title: Text('Export Graph to Mermaid', style: TextStyle(color: colors.fgPrimary, fontWeight: FontWeight.bold)),
         content: SizedBox(
           width: 500,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
+              Text(
                 'Copy this markdown snippet into Obsidian, GitHub, or any Mermaid renderer:',
-                style: TextStyle(color: Color(0xFF878787), fontSize: 13),
+                style: TextStyle(color: colors.fgSecondary, fontSize: 13),
               ),
               const SizedBox(height: 12),
               Container(
                 height: 240,
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF141414),
+                  color: colors.bgElevated,
                   borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: const Color(0xFF333333)),
+                  border: Border.all(color: colors.borderSubtle),
                 ),
                 child: SingleChildScrollView(
                   child: SelectableText(
                     mmd,
-                    style: const TextStyle(color: Color(0xFF67E8F9), fontFamily: 'monospace', fontSize: 11),
+                    style: TextStyle(color: colors.accentCyan, fontFamily: 'monospace', fontSize: 11),
                   ),
                 ),
               ),
@@ -178,12 +184,12 @@ class _KnowledgeGraphScreenState extends State<KnowledgeGraphScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Close', style: TextStyle(color: Color(0xFF878787))),
+            child: Text('Close', style: TextStyle(color: colors.fgSecondary)),
           ),
           ElevatedButton.icon(
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF67E8F9)),
-            icon: const Icon(Icons.copy, color: Colors.black, size: 16),
-            label: const Text('Copy to Clipboard', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+            style: ElevatedButton.styleFrom(backgroundColor: colors.accentCyan),
+            icon: const Icon(Icons.copy, color: Colors.white, size: 16),
+            label: const Text('Copy to Clipboard', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
             onPressed: () {
               Clipboard.setData(ClipboardData(text: mmd));
               Navigator.pop(context);
@@ -195,9 +201,10 @@ class _KnowledgeGraphScreenState extends State<KnowledgeGraphScreen> {
   }
 
   void _showExportOptions() {
+    final colors = context.colors;
     showModalBottomSheet(
       context: context,
-      backgroundColor: const Color(0xFF1E1E1E),
+      backgroundColor: colors.bgSurface,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
       builder: (context) => SafeArea(
         child: Padding(
@@ -206,37 +213,37 @@ class _KnowledgeGraphScreenState extends State<KnowledgeGraphScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Export Knowledge Graph', style: TextStyle(color: Color(0xFFECECEC), fontSize: 16, fontWeight: FontWeight.bold)),
+              Text('Export Knowledge Graph', style: TextStyle(color: colors.fgPrimary, fontSize: 16, fontWeight: FontWeight.bold)),
               const SizedBox(height: 16),
               ListTile(
-                leading: const Icon(Icons.code, color: Color(0xFF67E8F9)),
-                title: const Text('Mermaid Markdown (.mmd)', style: TextStyle(color: Color(0xFFECECEC))),
-                subtitle: const Text('Text-based export for docs and wikis', style: TextStyle(color: Color(0xFF878787))),
+                leading: Icon(Icons.code, color: colors.accentCyan),
+                title: Text('Mermaid Markdown (.mmd)', style: TextStyle(color: colors.fgPrimary)),
+                subtitle: Text('Text-based export for docs and wikis', style: TextStyle(color: colors.fgSecondary)),
                 onTap: () {
                   Navigator.pop(context);
                   _exportToMermaid();
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.image, color: Color(0xFF10B981)),
-                title: const Text('Scalable Vector Graphics (.svg)', style: TextStyle(color: Color(0xFFECECEC))),
-                subtitle: const Text('Standalone vector diagram', style: TextStyle(color: Color(0xFF878787))),
+                leading: Icon(Icons.image, color: colors.accentEmerald),
+                title: Text('Scalable Vector Graphics (.svg)', style: TextStyle(color: colors.fgPrimary)),
+                subtitle: Text('Standalone vector diagram', style: TextStyle(color: colors.fgSecondary)),
                 onTap: () {
                   Navigator.pop(context);
                 },
               ),
               ListTile(
                 leading: const Icon(Icons.photo_size_select_actual, color: Color(0xFFF59E0B)),
-                title: const Text('High-Resolution PNG (.png)', style: TextStyle(color: Color(0xFFECECEC))),
-                subtitle: const Text('Raster image for slides and reports', style: TextStyle(color: Color(0xFF878787))),
+                title: Text('High-Resolution PNG (.png)', style: TextStyle(color: colors.fgPrimary)),
+                subtitle: Text('Raster image for slides and reports', style: TextStyle(color: colors.fgSecondary)),
                 onTap: () {
                   Navigator.pop(context);
                 },
               ),
               ListTile(
                 leading: const Icon(Icons.picture_as_pdf, color: Color(0xFFEF4444)),
-                title: const Text('PDF Document (.pdf)', style: TextStyle(color: Color(0xFFECECEC))),
-                subtitle: const Text('Printable multi-page document', style: TextStyle(color: Color(0xFF878787))),
+                title: Text('PDF Document (.pdf)', style: TextStyle(color: colors.fgPrimary)),
+                subtitle: Text('Printable multi-page document', style: TextStyle(color: colors.fgSecondary)),
                 onTap: () {
                   Navigator.pop(context);
                 },
@@ -250,10 +257,12 @@ class _KnowledgeGraphScreenState extends State<KnowledgeGraphScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
+
     if (_layoutResult == null) {
-      return const Scaffold(
-        backgroundColor: Color(0xFF0D0D0D),
-        body: Center(child: CircularProgressIndicator(color: Color(0xFF67E8F9))),
+      return Scaffold(
+        backgroundColor: colors.bgCanvas,
+        body: Center(child: CircularProgressIndicator(color: colors.accentCyan)),
       );
     }
 
@@ -262,7 +271,7 @@ class _KnowledgeGraphScreenState extends State<KnowledgeGraphScreen> {
     final double totalH = layout.totalBounds.height;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0D0D0D),
+      backgroundColor: colors.bgCanvas,
       body: LayoutBuilder(
         builder: (context, constraints) {
           _viewportSize = Size(constraints.maxWidth, constraints.maxHeight);
@@ -284,7 +293,11 @@ class _KnowledgeGraphScreenState extends State<KnowledgeGraphScreen> {
                         // Layer 5a: Auto-sized container boxes
                         CustomPaint(
                           size: Size(totalW, totalH),
-                          painter: GraphGroupPainter(containerBoxes: layout.containerBoxes),
+                          painter: GraphGroupPainter(
+                            containerBoxes: layout.containerBoxes,
+                            fillColor: colors.bgElevated.withValues(alpha: 0.6),
+                            borderColor: colors.borderSubtle,
+                          ),
                         ),
                         // Layer 5b: Routed connecting edges
                         CustomPaint(
@@ -292,6 +305,8 @@ class _KnowledgeGraphScreenState extends State<KnowledgeGraphScreen> {
                           painter: GraphEdgesPainter(
                             edges: layout.routedEdges,
                             activeNodeIds: _graphState.selectedNodeId != null ? {_graphState.selectedNodeId!} : {},
+                            activeColor: colors.accentCyan,
+                            inactiveColor: colors.borderActive,
                           ),
                         ),
                         // Layer 5c: Permanently visible nodes
@@ -322,24 +337,31 @@ class _KnowledgeGraphScreenState extends State<KnowledgeGraphScreen> {
                     // Zoom Controls (+, -, Fit)
                     Container(
                       decoration: BoxDecoration(
-                        color: const Color(0xFF212121),
+                        color: colors.bgSurface,
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: const Color(0xFF333333)),
+                        border: Border.all(color: colors.borderSubtle),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.08),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
                       ),
                       child: Row(
                         children: [
                           IconButton(
-                            icon: const Icon(Icons.zoom_in, color: Color(0xFFECECEC), size: 18),
+                            icon: Icon(Icons.zoom_in, color: colors.fgPrimary, size: 18),
                             tooltip: 'Zoom In',
                             onPressed: _zoomIn,
                           ),
                           IconButton(
-                            icon: const Icon(Icons.zoom_out, color: Color(0xFFECECEC), size: 18),
+                            icon: Icon(Icons.zoom_out, color: colors.fgPrimary, size: 18),
                             tooltip: 'Zoom Out',
                             onPressed: _zoomOut,
                           ),
                           IconButton(
-                            icon: const Icon(Icons.fit_screen, color: Color(0xFF67E8F9), size: 18),
+                            icon: Icon(Icons.fit_screen, color: colors.accentCyan, size: 18),
                             tooltip: 'Fit to Screen',
                             onPressed: _fitToScreen,
                           ),
@@ -350,13 +372,14 @@ class _KnowledgeGraphScreenState extends State<KnowledgeGraphScreen> {
                     // Export Button
                     ElevatedButton.icon(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF212121),
-                        foregroundColor: const Color(0xFFECECEC),
-                        side: const BorderSide(color: Color(0xFF333333)),
+                        backgroundColor: colors.bgSurface,
+                        foregroundColor: colors.fgPrimary,
+                        side: BorderSide(color: colors.borderSubtle),
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        elevation: 2,
                       ),
-                      icon: const Icon(Icons.download, size: 16, color: Color(0xFF67E8F9)),
+                      icon: Icon(Icons.download, size: 16, color: colors.accentCyan),
                       label: const Text('Export'),
                       onPressed: _showExportOptions,
                     ),

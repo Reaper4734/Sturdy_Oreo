@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../app/theme/app_theme.dart';
+import '../../../shared/providers/theme_provider.dart';
 import '../data/settings_model.dart';
 import '../data/http_settings_repository.dart';
 import 'widgets/inline_edit_field.dart';
@@ -54,41 +55,49 @@ class _ProfileSettingsScreenState extends ConsumerState<ProfileSettingsScreen> {
     }
   }
 
-  void _showSaveSnackbar(String message) {}
-
-
+  void _showSaveSnackbar(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
+
     return Scaffold(
-      backgroundColor: AppColors.bgCanvas,
+      backgroundColor: colors.bgCanvas,
       body: Row(
         children: [
           // Left Navigation Sidebar
           Container(
             width: 220,
-            decoration: const BoxDecoration(
-              color: AppColors.bgActivityBar,
-              border: Border(right: BorderSide(color: AppColors.borderSubtle, width: 0.8)),
+            decoration: BoxDecoration(
+              color: colors.bgActivityBar,
+              border: Border(right: BorderSide(color: colors.borderSubtle, width: 0.8)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Padding(
-                  padding: EdgeInsets.fromLTRB(24, 32, 24, 24),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
                   child: Text(
                     'Settings',
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
-                      color: AppColors.fgPrimary,
+                      color: colors.fgPrimary,
                     ),
                   ),
                 ),
                 ...List.generate(_navItems.length, (index) {
                   final item = _navItems[index];
                   final isActive = _activeSectionIndex == index;
-                  return _buildNavItem(item, isActive, () {
+                  return _buildNavItem(context, item, isActive, () {
                     setState(() => _activeSectionIndex = index);
                   });
                 }),
@@ -99,12 +108,12 @@ class _ProfileSettingsScreenState extends ConsumerState<ProfileSettingsScreen> {
           // Content Area
           Expanded(
             child: _isLoading 
-                ? const Center(child: CircularProgressIndicator(color: AppColors.accentPrimary))
+                ? Center(child: CircularProgressIndicator(color: colors.accentPrimary))
                 : SingleChildScrollView(
               padding: const EdgeInsets.all(48),
               child: Container(
                 constraints: const BoxConstraints(maxWidth: 640),
-                child: _buildActiveSection(),
+                child: _buildActiveSection(context),
               ),
             ),
           ),
@@ -113,17 +122,18 @@ class _ProfileSettingsScreenState extends ConsumerState<ProfileSettingsScreen> {
     );
   }
 
-  Widget _buildNavItem(_NavItem item, bool isActive, VoidCallback onTap) {
+  Widget _buildNavItem(BuildContext context, _NavItem item, bool isActive, VoidCallback onTap) {
+    final colors = context.colors;
     return InkWell(
       onTap: onTap,
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
         decoration: BoxDecoration(
-          color: isActive ? AppColors.bgSurface : Colors.transparent,
+          color: isActive ? colors.bgSurface : Colors.transparent,
           border: Border(
             left: BorderSide(
-              color: isActive ? AppColors.accentPrimary : Colors.transparent,
+              color: isActive ? colors.accentPrimary : Colors.transparent,
               width: 2,
             ),
           ),
@@ -133,7 +143,7 @@ class _ProfileSettingsScreenState extends ConsumerState<ProfileSettingsScreen> {
             Icon(
               item.icon,
               size: 18,
-              color: isActive ? AppColors.fgPrimary : AppColors.fgSecondary,
+              color: isActive ? colors.fgPrimary : colors.fgSecondary,
             ),
             const SizedBox(width: 12),
             Text(
@@ -141,7 +151,7 @@ class _ProfileSettingsScreenState extends ConsumerState<ProfileSettingsScreen> {
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
-                color: isActive ? AppColors.fgPrimary : AppColors.fgSecondary,
+                color: isActive ? colors.fgPrimary : colors.fgSecondary,
               ),
             ),
           ],
@@ -150,18 +160,18 @@ class _ProfileSettingsScreenState extends ConsumerState<ProfileSettingsScreen> {
     );
   }
 
-  Widget _buildActiveSection() {
+  Widget _buildActiveSection(BuildContext context) {
     switch (_activeSectionIndex) {
       case 0:
-        return _buildAccountSection();
+        return _buildAccountSection(context);
       case 1:
-        return _buildGeneralSection();
+        return _buildGeneralSection(context);
       case 2:
-        return _buildNotificationsSection();
+        return _buildNotificationsSection(context);
       case 3:
-        return _buildDataPrivacySection();
+        return _buildDataPrivacySection(context);
       case 4:
-        return _buildAboutSection();
+        return _buildAboutSection(context);
       default:
         return const SizedBox.shrink();
     }
@@ -169,13 +179,15 @@ class _ProfileSettingsScreenState extends ConsumerState<ProfileSettingsScreen> {
 
   // ─── Section 1: Account ───────────────────────────────────────────────────
 
-  Widget _buildAccountSection() {
+  Widget _buildAccountSection(BuildContext context) {
+    final colors = context.colors;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Account', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.fgPrimary)),
+        Text('Account', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: colors.fgPrimary)),
         const SizedBox(height: 8),
-        const Text('Manage your profile information.', style: TextStyle(color: AppColors.fgSecondary)),
+        Text('Manage your profile information.', style: TextStyle(color: colors.fgSecondary)),
         const SizedBox(height: 32),
 
         // Avatar
@@ -191,14 +203,13 @@ class _ProfileSettingsScreenState extends ConsumerState<ProfileSettingsScreen> {
             ),
             const SizedBox(width: 20),
             TextButton(
-              onPressed: () {
-              },
+              onPressed: () {},
               style: TextButton.styleFrom(
-                foregroundColor: AppColors.fgSecondary,
+                foregroundColor: colors.fgSecondary,
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
-                  side: const BorderSide(color: AppColors.borderSubtle),
+                  side: BorderSide(color: colors.borderSubtle),
                 ),
               ),
               child: const Text('Change Photo'),
@@ -206,7 +217,7 @@ class _ProfileSettingsScreenState extends ConsumerState<ProfileSettingsScreen> {
           ],
         ),
         const SizedBox(height: 32),
-        const Divider(color: AppColors.borderSubtle),
+        Divider(color: colors.borderSubtle),
         const SizedBox(height: 24),
 
         InlineEditField(
@@ -223,22 +234,23 @@ class _ProfileSettingsScreenState extends ConsumerState<ProfileSettingsScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
+              Text(
                 'EMAIL',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.fgSecondary, letterSpacing: 0.5),
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: colors.fgSecondary, letterSpacing: 0.5),
               ),
               const SizedBox(height: 8),
               Row(
                 children: [
-                  Text(_user.email, style: const TextStyle(color: AppColors.fgPrimary, fontSize: 15)),
+                  Text(_user.email, style: TextStyle(color: colors.fgPrimary, fontSize: 15)),
                   const SizedBox(width: 12),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
-                      color: AppColors.bgElevated,
+                      color: colors.bgElevated,
                       borderRadius: BorderRadius.circular(4),
+                      border: Border.all(color: colors.borderSubtle, width: 0.5),
                     ),
-                    child: const Text('Google', style: TextStyle(fontSize: 11, color: AppColors.fgSecondary)),
+                    child: Text('Google', style: TextStyle(fontSize: 11, color: colors.fgSecondary)),
                   ),
                 ],
               ),
@@ -267,32 +279,38 @@ class _ProfileSettingsScreenState extends ConsumerState<ProfileSettingsScreen> {
 
   // ─── Section 2: General ───────────────────────────────────────────────────
 
-  Widget _buildGeneralSection() {
+  Widget _buildGeneralSection(BuildContext context) {
+    final colors = context.colors;
+    final activeTheme = ref.watch(themeModeProvider);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('General', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.fgPrimary)),
+        Text('General', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: colors.fgPrimary)),
         const SizedBox(height: 8),
-        const Text('Application preferences.', style: TextStyle(color: AppColors.fgSecondary)),
+        Text('Application preferences.', style: TextStyle(color: colors.fgSecondary)),
         const SizedBox(height: 32),
 
-        const Text('THEME', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.fgSecondary, letterSpacing: 0.5)),
+        Text('THEME', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: colors.fgSecondary, letterSpacing: 0.5)),
         const SizedBox(height: 12),
         _buildRadioGroup(
+          context: context,
           options: ['Dark', 'Light', 'System'],
-          selected: _settings.themeMode,
+          selected: activeTheme,
           onChanged: (v) {
+            ref.read(themeModeProvider.notifier).setThemeMode(v);
             setState(() => _settings.themeMode = v);
             _showSaveSnackbar('Theme updated to $v');
           },
         ),
         const SizedBox(height: 32),
-        const Divider(color: AppColors.borderSubtle),
+        Divider(color: colors.borderSubtle),
         const SizedBox(height: 24),
 
-        const Text('LANGUAGE', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.fgSecondary, letterSpacing: 0.5)),
+        Text('LANGUAGE', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: colors.fgSecondary, letterSpacing: 0.5)),
         const SizedBox(height: 12),
         _buildRadioGroup(
+          context: context,
           options: ['English', 'Auto Detect'],
           selected: _settings.language,
           onChanged: (v) {
@@ -305,10 +323,12 @@ class _ProfileSettingsScreenState extends ConsumerState<ProfileSettingsScreen> {
   }
 
   Widget _buildRadioGroup({
+    required BuildContext context,
     required List<String> options,
     required String selected,
     required ValueChanged<String> onChanged,
   }) {
+    final colors = context.colors;
     return Column(
       children: options.map((opt) {
         final isSelected = selected == opt;
@@ -325,7 +345,7 @@ class _ProfileSettingsScreenState extends ConsumerState<ProfileSettingsScreen> {
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: isSelected ? AppColors.accentPrimary : AppColors.fgSecondary,
+                      color: isSelected ? colors.accentPrimary : colors.fgSecondary,
                       width: 1.5,
                     ),
                   ),
@@ -334,9 +354,9 @@ class _ProfileSettingsScreenState extends ConsumerState<ProfileSettingsScreen> {
                           child: Container(
                             width: 8,
                             height: 8,
-                            decoration: const BoxDecoration(
+                            decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              color: AppColors.accentPrimary,
+                              color: colors.accentPrimary,
                             ),
                           ),
                         )
@@ -347,7 +367,7 @@ class _ProfileSettingsScreenState extends ConsumerState<ProfileSettingsScreen> {
                   opt,
                   style: TextStyle(
                     fontSize: 15,
-                    color: isSelected ? AppColors.fgPrimary : AppColors.fgSecondary,
+                    color: isSelected ? colors.fgPrimary : colors.fgSecondary,
                   ),
                 ),
               ],
@@ -360,26 +380,31 @@ class _ProfileSettingsScreenState extends ConsumerState<ProfileSettingsScreen> {
 
   // ─── Section 3: Notifications ─────────────────────────────────────────────
 
-  Widget _buildNotificationsSection() {
+  Widget _buildNotificationsSection(BuildContext context) {
+    final colors = context.colors;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Notifications', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.fgPrimary)),
+        Text('Notifications', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: colors.fgPrimary)),
         const SizedBox(height: 8),
-        const Text('Choose what notifications you receive.', style: TextStyle(color: AppColors.fgSecondary)),
+        Text('Choose what notifications you receive.', style: TextStyle(color: colors.fgSecondary)),
         const SizedBox(height: 32),
 
         _buildSwitchRow(
+          context: context,
           label: 'Course Updates',
           value: _notifications.courseUpdates,
           onChanged: (v) => setState(() => _notifications.courseUpdates = v),
         ),
         _buildSwitchRow(
+          context: context,
           label: 'Community Announcements',
           value: _notifications.communityAnnouncements,
           onChanged: (v) => setState(() => _notifications.communityAnnouncements = v),
         ),
         _buildSwitchRow(
+          context: context,
           label: 'Product Updates',
           value: _notifications.productUpdates,
           onChanged: (v) => setState(() => _notifications.productUpdates = v),
@@ -389,21 +414,23 @@ class _ProfileSettingsScreenState extends ConsumerState<ProfileSettingsScreen> {
   }
 
   Widget _buildSwitchRow({
+    required BuildContext context,
     required String label,
     required bool value,
     required ValueChanged<bool> onChanged,
   }) {
+    final colors = context.colors;
     return Padding(
       padding: const EdgeInsets.only(bottom: 20),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(fontSize: 15, color: AppColors.fgPrimary)),
+          Text(label, style: TextStyle(fontSize: 15, color: colors.fgPrimary)),
           Switch(
             value: value,
             onChanged: onChanged,
-            activeThumbColor: AppColors.accentEmerald,
-            inactiveTrackColor: AppColors.bgElevated,
+            activeThumbColor: colors.accentEmerald,
+            inactiveTrackColor: colors.bgElevated,
           ),
         ],
       ),
@@ -412,33 +439,37 @@ class _ProfileSettingsScreenState extends ConsumerState<ProfileSettingsScreen> {
 
   // ─── Section 4: Data & Privacy ────────────────────────────────────────────
 
-  Widget _buildDataPrivacySection() {
+  Widget _buildDataPrivacySection(BuildContext context) {
+    final colors = context.colors;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Data & Privacy', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.fgPrimary)),
+        Text('Data & Privacy', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: colors.fgPrimary)),
         const SizedBox(height: 8),
-        const Text('Manage your personal learning data.', style: TextStyle(color: AppColors.fgSecondary)),
+        Text('Manage your personal learning data.', style: TextStyle(color: colors.fgSecondary)),
         const SizedBox(height: 32),
 
-        const Text('DATA', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.fgSecondary, letterSpacing: 0.5)),
+        Text('DATA', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: colors.fgSecondary, letterSpacing: 0.5)),
         const SizedBox(height: 12),
         Container(
           decoration: BoxDecoration(
-            color: AppColors.bgSurface,
+            color: colors.bgSurface,
             borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: AppColors.borderSubtle),
+            border: Border.all(color: colors.borderSubtle),
           ),
           child: Column(
             children: [
               _buildActionRow(
+                context: context,
                 icon: Icons.download_outlined,
                 title: 'Export Learning Data',
                 description: 'Download your learning progress, completed topics and workspace data.',
                 onTap: () {},
               ),
-              const Divider(color: AppColors.borderSubtle, height: 1),
+              Divider(color: colors.borderSubtle, height: 1),
               _buildActionRow(
+                context: context,
                 icon: Icons.note_alt_outlined,
                 title: 'Download Notes',
                 description: 'Export all personal notes created inside Oreo.',
@@ -449,35 +480,36 @@ class _ProfileSettingsScreenState extends ConsumerState<ProfileSettingsScreen> {
         ),
         
         const SizedBox(height: 32),
-        const Text('PRIVACY', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.fgSecondary, letterSpacing: 0.5)),
+        Text('PRIVACY', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: colors.fgSecondary, letterSpacing: 0.5)),
         const SizedBox(height: 12),
         Container(
           decoration: BoxDecoration(
-            color: AppColors.bgSurface,
+            color: colors.bgSurface,
             borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: AppColors.borderSubtle),
+            border: Border.all(color: colors.borderSubtle),
           ),
           child: Column(
             children: [
-              _buildPrivacyLinkRow('Privacy Policy', Icons.policy_outlined),
-              const Divider(color: AppColors.borderSubtle, height: 1),
-              _buildPrivacyLinkRow('Terms of Service', Icons.description_outlined),
+              _buildPrivacyLinkRow(context, 'Privacy Policy', Icons.policy_outlined),
+              Divider(color: colors.borderSubtle, height: 1),
+              _buildPrivacyLinkRow(context, 'Terms of Service', Icons.description_outlined),
             ],
           ),
         ),
 
         const SizedBox(height: 48),
-        const Text('ACCOUNT ACTIONS', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.fgSecondary, letterSpacing: 0.5)),
+        Text('ACCOUNT ACTIONS', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: colors.fgSecondary, letterSpacing: 0.5)),
         const SizedBox(height: 12),
         Container(
           decoration: BoxDecoration(
-            color: AppColors.bgSurface,
+            color: colors.bgSurface,
             borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: AppColors.borderSubtle),
+            border: Border.all(color: colors.borderSubtle),
           ),
           child: Column(
             children: [
               _buildActionRow(
+                context: context,
                 icon: Icons.logout_outlined,
                 title: 'Log Out',
                 description: 'Sign out of your current session securely.',
@@ -490,13 +522,15 @@ class _ProfileSettingsScreenState extends ConsumerState<ProfileSettingsScreen> {
         ),
 
         const SizedBox(height: 48),
-        const Text('DANGER ZONE', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.accentRose, letterSpacing: 0.5)),
+        Text('DANGER ZONE', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: colors.accentRose, letterSpacing: 0.5)),
         const SizedBox(height: 12),
         _buildDangerCard(
+          context: context,
           title: 'Delete Workspace',
           description: 'Delete only the current workspace. Other workspaces remain unaffected.',
           buttonLabel: 'Delete',
           onTap: () => _showDeleteConfirmation(
+            context: context,
             title: 'Delete this workspace?',
             content: 'Are you sure you want to delete this workspace?',
             confirmText: 'Delete',
@@ -504,10 +538,12 @@ class _ProfileSettingsScreenState extends ConsumerState<ProfileSettingsScreen> {
         ),
         const SizedBox(height: 16),
         _buildDangerCard(
+          context: context,
           title: 'Delete Account',
           description: 'Permanently remove your account and all associated data.\nThis action cannot be undone.',
           buttonLabel: 'Delete Account',
           onTap: () => _showDeleteConfirmation(
+            context: context,
             title: 'Delete your account?',
             content: 'This action cannot be undone.',
             confirmText: 'Delete Account',
@@ -518,50 +554,53 @@ class _ProfileSettingsScreenState extends ConsumerState<ProfileSettingsScreen> {
   }
 
   Widget _buildActionRow({
+    required BuildContext context,
     required IconData icon,
     required String title,
     required String description,
     required VoidCallback onTap,
   }) {
+    final colors = context.colors;
     return InkWell(
       onTap: onTap,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Row(
           children: [
-            Icon(icon, size: 20, color: AppColors.fgPrimary),
+            Icon(icon, size: 20, color: colors.fgPrimary),
             const SizedBox(width: 16),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: AppColors.fgPrimary)),
+                  Text(title, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: colors.fgPrimary)),
                   const SizedBox(height: 2),
-                  Text(description, style: const TextStyle(fontSize: 13, color: AppColors.fgSecondary)),
+                  Text(description, style: TextStyle(fontSize: 13, color: colors.fgSecondary)),
                 ],
               ),
             ),
             const SizedBox(width: 16),
-            const Icon(Icons.chevron_right, size: 20, color: AppColors.fgSecondary),
+            Icon(Icons.chevron_right, size: 20, color: colors.fgSecondary),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildPrivacyLinkRow(String label, IconData icon) {
+  Widget _buildPrivacyLinkRow(BuildContext context, String label, IconData icon) {
+    final colors = context.colors;
     return InkWell(
       onTap: () {},
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Row(
           children: [
-            Icon(icon, size: 20, color: AppColors.fgPrimary),
+            Icon(icon, size: 20, color: colors.fgPrimary),
             const SizedBox(width: 16),
             Expanded(
-              child: Text(label, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: AppColors.fgPrimary)),
+              child: Text(label, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: colors.fgPrimary)),
             ),
-            const Icon(Icons.open_in_new, size: 16, color: AppColors.fgSecondary),
+            Icon(Icons.open_in_new, size: 16, color: colors.fgSecondary),
           ],
         ),
       ),
@@ -569,17 +608,19 @@ class _ProfileSettingsScreenState extends ConsumerState<ProfileSettingsScreen> {
   }
 
   Widget _buildDangerCard({
+    required BuildContext context,
     required String title,
     required String description,
     required String buttonLabel,
     required VoidCallback onTap,
   }) {
+    final colors = context.colors;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.bgSurface,
+        color: colors.bgSurface,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.borderSubtle),
+        border: Border.all(color: colors.borderSubtle),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -588,9 +629,9 @@ class _ProfileSettingsScreenState extends ConsumerState<ProfileSettingsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.fgPrimary)),
+                Text(title, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: colors.fgPrimary)),
                 const SizedBox(height: 4),
-                Text(description, style: const TextStyle(fontSize: 13, color: AppColors.fgSecondary)),
+                Text(description, style: TextStyle(fontSize: 13, color: colors.fgSecondary)),
               ],
             ),
           ),
@@ -598,8 +639,8 @@ class _ProfileSettingsScreenState extends ConsumerState<ProfileSettingsScreen> {
           OutlinedButton(
             onPressed: onTap,
             style: OutlinedButton.styleFrom(
-              foregroundColor: AppColors.accentRose,
-              side: BorderSide(color: AppColors.accentRose.withValues(alpha: 0.5)),
+              foregroundColor: colors.accentRose,
+              side: BorderSide(color: colors.accentRose.withValues(alpha: 0.5)),
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
               minimumSize: const Size(0, 36),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
@@ -612,29 +653,34 @@ class _ProfileSettingsScreenState extends ConsumerState<ProfileSettingsScreen> {
   }
 
   void _showDeleteConfirmation({
+    required BuildContext context,
     required String title,
     required String content,
     required String confirmText,
   }) {
+    final colors = context.colors;
     showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
-          backgroundColor: AppColors.bgSurface,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          title: Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.fgPrimary)),
-          content: Text(content, style: const TextStyle(fontSize: 14, color: AppColors.fgSecondary)),
+          backgroundColor: colors.bgSurface,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(color: colors.borderSubtle),
+          ),
+          title: Text(title, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: colors.fgPrimary)),
+          content: Text(content, style: TextStyle(fontSize: 14, color: colors.fgSecondary)),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              style: TextButton.styleFrom(foregroundColor: AppColors.fgSecondary),
+              style: TextButton.styleFrom(foregroundColor: colors.fgSecondary),
               child: const Text('Cancel'),
             ),
             TextButton(
               onPressed: () {
                 Navigator.pop(context);
               },
-              style: TextButton.styleFrom(foregroundColor: AppColors.accentRose),
+              style: TextButton.styleFrom(foregroundColor: colors.accentRose),
               child: Text(confirmText, style: const TextStyle(fontWeight: FontWeight.bold)),
             ),
           ],
@@ -645,43 +691,47 @@ class _ProfileSettingsScreenState extends ConsumerState<ProfileSettingsScreen> {
 
   // ─── Section 5: About ─────────────────────────────────────────────────────
 
-  Widget _buildAboutSection() {
+  Widget _buildAboutSection(BuildContext context) {
+    final colors = context.colors;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('About', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.fgPrimary)),
+        Text('About', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: colors.fgPrimary)),
         const SizedBox(height: 8),
-        const Text('Application information.', style: TextStyle(color: AppColors.fgSecondary)),
+        Text('Application information.', style: TextStyle(color: colors.fgSecondary)),
         const SizedBox(height: 32),
 
-        _buildInfoRow('Version', _about.appVersion),
-        _buildInfoRow('Release Date', 'July 2026'),
+        _buildInfoRow(context, 'Version', _about.appVersion),
+        _buildInfoRow(context, 'Release Date', 'July 2026'),
         const SizedBox(height: 16),
-        const Divider(color: AppColors.borderSubtle),
+        Divider(color: colors.borderSubtle),
         const SizedBox(height: 16),
 
-        _buildLinkButton('Release Notes', Icons.new_releases_outlined),
-        _buildLinkButton('Open Source Licenses', Icons.gavel_outlined),
-        _buildLinkButton('GitHub Repository', Icons.code),
-        _buildLinkButton('Contact Support', Icons.support_agent_outlined),
+        _buildLinkButton(context, 'Release Notes', Icons.new_releases_outlined),
+        _buildLinkButton(context, 'Open Source Licenses', Icons.gavel_outlined),
+        _buildLinkButton(context, 'GitHub Repository', Icons.code),
+        _buildLinkButton(context, 'Contact Support', Icons.support_agent_outlined),
       ],
     );
   }
 
-  Widget _buildInfoRow(String label, String value) {
+  Widget _buildInfoRow(BuildContext context, String label, String value) {
+    final colors = context.colors;
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(fontSize: 14, color: AppColors.fgSecondary)),
-          Text(value, style: const TextStyle(fontSize: 14, color: AppColors.fgPrimary, fontWeight: FontWeight.w500)),
+          Text(label, style: TextStyle(fontSize: 14, color: colors.fgSecondary)),
+          Text(value, style: TextStyle(fontSize: 14, color: colors.fgPrimary, fontWeight: FontWeight.w500)),
         ],
       ),
     );
   }
 
-  Widget _buildLinkButton(String label, IconData icon) {
+  Widget _buildLinkButton(BuildContext context, String label, IconData icon) {
+    final colors = context.colors;
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: InkWell(
@@ -691,11 +741,11 @@ class _ProfileSettingsScreenState extends ConsumerState<ProfileSettingsScreen> {
           padding: const EdgeInsets.symmetric(vertical: 10),
           child: Row(
             children: [
-              Icon(icon, size: 18, color: AppColors.fgSecondary),
+              Icon(icon, size: 18, color: colors.fgSecondary),
               const SizedBox(width: 12),
-              Text(label, style: const TextStyle(fontSize: 15, color: AppColors.fgAccent)),
+              Text(label, style: TextStyle(fontSize: 15, color: colors.fgAccent)),
               const Spacer(),
-              const Icon(Icons.open_in_new, size: 14, color: AppColors.fgSecondary),
+              Icon(Icons.open_in_new, size: 14, color: colors.fgSecondary),
             ],
           ),
         ),

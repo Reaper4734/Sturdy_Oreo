@@ -8,10 +8,14 @@ import '../../domain/models/knowledge_graph_model.dart';
 class GraphEdgesPainter extends CustomPainter {
   final List<GraphEdge> edges;
   final Set<String> activeNodeIds;
+  final Color activeColor;
+  final Color inactiveColor;
 
   const GraphEdgesPainter({
     required this.edges,
     this.activeNodeIds = const {},
+    this.activeColor = const Color(0xFF0284C7),
+    this.inactiveColor = const Color(0xFF94A3B8),
   });
 
   @override
@@ -23,7 +27,7 @@ class GraphEdgesPainter extends CustomPainter {
                             activeNodeIds.contains(edge.targetNodeId);
 
       final Paint paint = Paint()
-        ..color = isActive ? const Color(0xFF67E8F9) : const Color(0xFF383838)
+        ..color = isActive ? activeColor : inactiveColor
         ..strokeWidth = isActive ? edge.style.strokeWidth + 0.5 : edge.style.strokeWidth
         ..style = PaintingStyle.stroke
         ..strokeCap = StrokeCap.round
@@ -135,6 +139,9 @@ class GraphEdgesPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant GraphEdgesPainter oldDelegate) {
-    return oldDelegate.edges != edges || oldDelegate.activeNodeIds != activeNodeIds;
+    return oldDelegate.edges != edges ||
+        oldDelegate.activeNodeIds != activeNodeIds ||
+        oldDelegate.activeColor != activeColor ||
+        oldDelegate.inactiveColor != inactiveColor;
   }
 }

@@ -115,10 +115,12 @@ class _FlashcardCanvasWidgetState extends State<FlashcardCanvasWidget> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
+
     return Column(
       children: [
-        _buildHeaderToolbar(),
-        _buildLeitnerDistributionBar(),
+        _buildHeaderToolbar(context),
+        _buildLeitnerDistributionBar(context),
         Expanded(
           child: Stack(
             children: [
@@ -132,10 +134,11 @@ class _FlashcardCanvasWidgetState extends State<FlashcardCanvasWidget> {
                   width: 3200,
                   height: 2400,
                   child: CustomPaint(
-                    painter: CanvasGridBackgroundPainter(),
+                    painter: CanvasGridBackgroundPainter(colors: colors),
                     foregroundPainter: FlashcardConnectionPainter(
                       connections: _connections,
                       cards: _canvasCards,
+                      color: colors.accentEmerald,
                     ),
                     child: Stack(
                       children: [
@@ -145,7 +148,7 @@ class _FlashcardCanvasWidgetState extends State<FlashcardCanvasWidget> {
                   ),
                 ),
               ),
-              _buildMinimap(),
+              _buildMinimap(context),
             ],
           ),
         ),
@@ -153,12 +156,14 @@ class _FlashcardCanvasWidgetState extends State<FlashcardCanvasWidget> {
     );
   }
 
-  Widget _buildHeaderToolbar() {
+  Widget _buildHeaderToolbar(BuildContext context) {
+    final colors = context.colors;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-      decoration: const BoxDecoration(
-        color: AppColors.bgActivityBar,
-        border: Border(bottom: BorderSide(color: AppColors.borderSubtle, width: 0.8)),
+      decoration: BoxDecoration(
+        color: colors.bgActivityBar,
+        border: Border(bottom: BorderSide(color: colors.borderSubtle, width: 0.8)),
       ),
       child: Row(
         children: [
@@ -169,15 +174,15 @@ class _FlashcardCanvasWidgetState extends State<FlashcardCanvasWidget> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: AppColors.bgCanvas,
+                  color: colors.bgCanvas,
                   borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: AppColors.borderSubtle),
+                  border: Border.all(color: colors.borderSubtle),
                 ),
                 child: Row(
-                  children: const [
-                    Icon(Icons.undo_rounded, size: 12, color: AppColors.fgPrimary),
-                    SizedBox(width: 4),
-                    Text('Back to Deck', style: TextStyle(fontSize: 11, color: AppColors.fgPrimary)),
+                  children: [
+                    Icon(Icons.undo_rounded, size: 12, color: colors.fgPrimary),
+                    const SizedBox(width: 4),
+                    Text('Back to Deck', style: TextStyle(fontSize: 11, color: colors.fgPrimary)),
                   ],
                 ),
               ),
@@ -185,16 +190,16 @@ class _FlashcardCanvasWidgetState extends State<FlashcardCanvasWidget> {
             const SizedBox(width: 10),
           ],
 
-          const Icon(Icons.grid_4x4_rounded, size: 15, color: AppColors.accentEmerald),
+          Icon(Icons.grid_4x4_rounded, size: 15, color: colors.accentEmerald),
           const SizedBox(width: 6),
-          const Text('Flashcard Canvas', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.fgPrimary)),
+          Text('Flashcard Canvas', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: colors.fgPrimary)),
           const SizedBox(width: 16),
 
-          _buildFilterChip('All', CanvasViewFilter.all),
+          _buildFilterChip(context, 'All', CanvasViewFilter.all),
           const SizedBox(width: 4),
-          _buildFilterChip('Due Review', CanvasViewFilter.due),
+          _buildFilterChip(context, 'Due Review', CanvasViewFilter.due),
           const SizedBox(width: 4),
-          _buildFilterChip('Mastered', CanvasViewFilter.mastered),
+          _buildFilterChip(context, 'Mastered', CanvasViewFilter.mastered),
 
           const Spacer(),
 
@@ -208,17 +213,17 @@ class _FlashcardCanvasWidgetState extends State<FlashcardCanvasWidget> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: _isConnectingMode ? AppColors.accentPrimary.withValues(alpha: 0.2) : AppColors.bgCanvas,
+                color: _isConnectingMode ? colors.accentPrimary.withValues(alpha: 0.2) : colors.bgCanvas,
                 borderRadius: BorderRadius.circular(6),
-                border: Border.all(color: _isConnectingMode ? AppColors.accentPrimary : AppColors.borderSubtle),
+                border: Border.all(color: _isConnectingMode ? colors.accentPrimary : colors.borderSubtle),
               ),
               child: Row(
                 children: [
-                  Icon(Icons.polyline_rounded, size: 12, color: _isConnectingMode ? AppColors.accentPrimary : AppColors.fgSecondary),
+                  Icon(Icons.polyline_rounded, size: 12, color: _isConnectingMode ? colors.accentPrimary : colors.fgSecondary),
                   const SizedBox(width: 4),
                   Text(
                     _isConnectingMode ? 'Click 2 cards...' : 'Connect Cards',
-                    style: TextStyle(fontSize: 11, color: _isConnectingMode ? AppColors.accentPrimary : AppColors.fgPrimary),
+                    style: TextStyle(fontSize: 11, color: _isConnectingMode ? colors.accentPrimary : colors.fgPrimary),
                   ),
                 ],
               ),
@@ -228,30 +233,30 @@ class _FlashcardCanvasWidgetState extends State<FlashcardCanvasWidget> {
 
           PopupMenuButton<AutoLayoutMode>(
             position: PopupMenuPosition.under,
-            color: AppColors.bgElevated,
+            color: colors.bgElevated,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(8),
-              side: const BorderSide(color: AppColors.borderSubtle),
+              side: BorderSide(color: colors.borderSubtle),
             ),
             onSelected: _applyAutoLayout,
-            itemBuilder: (context) => const [
-              PopupMenuItem(value: AutoLayoutMode.grid, child: Text('Grid Layout', style: TextStyle(fontSize: 11, color: AppColors.fgPrimary))),
-              PopupMenuItem(value: AutoLayoutMode.leitner, child: Text('Leitner Box Layout', style: TextStyle(fontSize: 11, color: AppColors.fgPrimary))),
-              PopupMenuItem(value: AutoLayoutMode.free, child: Text('Free Drag Layout', style: TextStyle(fontSize: 11, color: AppColors.fgPrimary))),
+            itemBuilder: (context) => [
+              PopupMenuItem(value: AutoLayoutMode.grid, child: Text('Grid Layout', style: TextStyle(fontSize: 11, color: colors.fgPrimary))),
+              PopupMenuItem(value: AutoLayoutMode.leitner, child: Text('Leitner Box Layout', style: TextStyle(fontSize: 11, color: colors.fgPrimary))),
+              PopupMenuItem(value: AutoLayoutMode.free, child: Text('Free Drag Layout', style: TextStyle(fontSize: 11, color: colors.fgPrimary))),
             ],
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: AppColors.bgCanvas,
+                color: colors.bgCanvas,
                 borderRadius: BorderRadius.circular(6),
-                border: Border.all(color: AppColors.borderSubtle),
+                border: Border.all(color: colors.borderSubtle),
               ),
               child: Row(
-                children: const [
-                  Icon(Icons.auto_awesome_mosaic_rounded, size: 12, color: AppColors.fgSecondary),
-                  SizedBox(width: 4),
-                  Text('Auto Layout', style: TextStyle(fontSize: 11, color: AppColors.fgPrimary)),
-                  Icon(Icons.arrow_drop_down, size: 14, color: AppColors.fgSecondary),
+                children: [
+                  Icon(Icons.auto_awesome_mosaic_rounded, size: 12, color: colors.fgSecondary),
+                  const SizedBox(width: 4),
+                  Text('Auto Layout', style: TextStyle(fontSize: 11, color: colors.fgPrimary)),
+                  Icon(Icons.arrow_drop_down, size: 14, color: colors.fgSecondary),
                 ],
               ),
             ),
@@ -261,7 +266,8 @@ class _FlashcardCanvasWidgetState extends State<FlashcardCanvasWidget> {
     );
   }
 
-  Widget _buildFilterChip(String label, CanvasViewFilter filter) {
+  Widget _buildFilterChip(BuildContext context, String label, CanvasViewFilter filter) {
+    final colors = context.colors;
     final isSelected = _filter == filter;
     return InkWell(
       onTap: () => setState(() => _filter = filter),
@@ -269,16 +275,16 @@ class _FlashcardCanvasWidgetState extends State<FlashcardCanvasWidget> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.accentEmerald.withValues(alpha: 0.15) : AppColors.bgCanvas,
+          color: isSelected ? colors.accentEmerald.withValues(alpha: 0.15) : colors.bgCanvas,
           borderRadius: BorderRadius.circular(6),
-          border: Border.all(color: isSelected ? AppColors.accentEmerald : AppColors.borderSubtle),
+          border: Border.all(color: isSelected ? colors.accentEmerald : colors.borderSubtle),
         ),
         child: Text(
           label,
           style: TextStyle(
             fontSize: 11,
             fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-            color: isSelected ? AppColors.accentEmerald : AppColors.fgSecondary,
+            color: isSelected ? colors.accentEmerald : colors.fgSecondary,
           ),
         ),
       ),
@@ -311,25 +317,27 @@ class _FlashcardCanvasWidgetState extends State<FlashcardCanvasWidget> {
     );
   }
 
-  Widget _buildLeitnerDistributionBar() {
+  Widget _buildLeitnerDistributionBar(BuildContext context) {
+    final colors = context.colors;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-      color: AppColors.bgCanvas.withValues(alpha: 0.5),
+      color: colors.bgCanvas.withValues(alpha: 0.6),
       child: Row(
         children: [
-          const Text('Leitner Box Distribution: ', style: TextStyle(fontSize: 10, color: AppColors.fgSecondary)),
+          Text('Leitner Box Distribution: ', style: TextStyle(fontSize: 10, color: colors.fgSecondary)),
           for (int box = 1; box <= 5; box++) ...[
             const SizedBox(width: 8),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(
-                color: AppColors.bgElevated,
+                color: colors.bgElevated,
                 borderRadius: BorderRadius.circular(4),
-                border: Border.all(color: AppColors.borderSubtle),
+                border: Border.all(color: colors.borderSubtle),
               ),
               child: Text(
                 'Box $box: ${_canvasCards.where((c) => c.leitnerBox == box).length}',
-                style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.accentEmerald),
+                style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: colors.accentEmerald),
               ),
             ),
           ],
@@ -338,7 +346,9 @@ class _FlashcardCanvasWidgetState extends State<FlashcardCanvasWidget> {
     );
   }
 
-  Widget _buildMinimap() {
+  Widget _buildMinimap(BuildContext context) {
+    final colors = context.colors;
+
     return Positioned(
       right: 16,
       bottom: 16,
@@ -346,13 +356,19 @@ class _FlashcardCanvasWidgetState extends State<FlashcardCanvasWidget> {
         width: 140,
         height: 100,
         decoration: BoxDecoration(
-          color: AppColors.bgElevated.withValues(alpha: 0.9),
+          color: colors.bgElevated.withValues(alpha: 0.95),
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: AppColors.borderSubtle),
-          boxShadow: const [BoxShadow(color: Colors.black38, blurRadius: 8)],
+          border: Border.all(color: colors.borderSubtle),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.1),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            )
+          ],
         ),
         child: CustomPaint(
-          painter: MinimapPainter(cards: _filteredCards),
+          painter: MinimapPainter(cards: _filteredCards, color: colors.accentEmerald),
         ),
       ),
     );
@@ -434,6 +450,8 @@ class _SpringCanvasFlipCardState extends State<SpringCanvasFlipCard> with Single
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
+
     return AnimatedBuilder(
       animation: _flipAnimation,
       builder: (context, child) {
@@ -455,20 +473,20 @@ class _SpringCanvasFlipCardState extends State<SpringCanvasFlipCard> with Single
             child: Container(
               decoration: BoxDecoration(
                 color: isBack
-                    ? AppColors.accentEmerald.withValues(alpha: 0.08)
-                    : AppColors.bgSurface,
+                    ? colors.accentEmerald.withValues(alpha: 0.08)
+                    : colors.bgSurface,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
                   color: widget.isSelectedForConnection
-                      ? AppColors.accentPrimary
+                      ? colors.accentPrimary
                       : isBack
-                          ? AppColors.accentEmerald
+                          ? colors.accentEmerald
                           : widget.card.confidenceColor,
                   width: widget.isSelectedForConnection ? 2.5 : 1.5,
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: (isBack ? AppColors.accentEmerald : widget.card.confidenceColor)
+                    color: (isBack ? colors.accentEmerald : widget.card.confidenceColor)
                         .withValues(alpha: 0.15 + (0.2 * liftFactor)),
                     blurRadius: shadowBlur,
                     offset: Offset(0, shadowOffsetY),
@@ -481,9 +499,9 @@ class _SpringCanvasFlipCardState extends State<SpringCanvasFlipCard> with Single
                     ? Transform(
                         transform: Matrix4.identity()..rotateY(math.pi),
                         alignment: Alignment.center,
-                        child: _buildBackContent(),
+                        child: _buildBackContent(context),
                       )
-                    : _buildFrontContent(),
+                    : _buildFrontContent(context),
               ),
             ),
           ),
@@ -492,7 +510,9 @@ class _SpringCanvasFlipCardState extends State<SpringCanvasFlipCard> with Single
     );
   }
 
-  Widget _buildFrontContent() {
+  Widget _buildFrontContent(BuildContext context) {
+    final colors = context.colors;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -507,16 +527,16 @@ class _SpringCanvasFlipCardState extends State<SpringCanvasFlipCard> with Single
               child: Text(widget.card.confidenceLabel, style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: widget.card.confidenceColor)),
             ),
             const SizedBox(width: 4),
-            Text(widget.card.topicTag, style: const TextStyle(fontSize: 9, color: AppColors.fgSecondary)),
+            Text(widget.card.topicTag, style: TextStyle(fontSize: 9, color: colors.fgSecondary)),
             const Spacer(),
             if (widget.onAttachCardToChat != null)
               InkWell(
                 onTap: () => widget.onAttachCardToChat!(widget.card),
-                child: const Icon(Icons.alternate_email_rounded, size: 13, color: AppColors.accentPrimary),
+                child: Icon(Icons.alternate_email_rounded, size: 13, color: colors.accentPrimary),
               ),
           ],
         ),
-        const Divider(color: AppColors.borderSubtle, height: 10),
+        Divider(color: colors.borderSubtle, height: 10),
         Expanded(
           child: Center(
             child: SingleChildScrollView(
@@ -526,7 +546,7 @@ class _SpringCanvasFlipCardState extends State<SpringCanvasFlipCard> with Single
                 maxLines: 4,
                 overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.fgPrimary),
+                style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: colors.fgPrimary),
               ),
             ),
           ),
@@ -534,15 +554,17 @@ class _SpringCanvasFlipCardState extends State<SpringCanvasFlipCard> with Single
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text('Interval: ${widget.card.intervalDays}d', style: const TextStyle(fontSize: 8, color: AppColors.fgSecondary)),
-            const Text('Tap to flip', style: TextStyle(fontSize: 8, color: AppColors.fgSecondary)),
+            Text('Interval: ${widget.card.intervalDays}d', style: TextStyle(fontSize: 8, color: colors.fgSecondary)),
+            Text('Tap to flip', style: TextStyle(fontSize: 8, color: colors.fgSecondary)),
           ],
         ),
       ],
     );
   }
 
-  Widget _buildBackContent() {
+  Widget _buildBackContent(BuildContext context) {
+    final colors = context.colors;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -551,16 +573,16 @@ class _SpringCanvasFlipCardState extends State<SpringCanvasFlipCard> with Single
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
               decoration: BoxDecoration(
-                color: AppColors.accentEmerald.withValues(alpha: 0.2),
+                color: colors.accentEmerald.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(4),
               ),
-              child: const Text('ANSWER', style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: AppColors.accentEmerald)),
+              child: Text('ANSWER', style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: colors.accentEmerald)),
             ),
             const SizedBox(width: 4),
-            Text(widget.card.topicTag, style: const TextStyle(fontSize: 9, color: AppColors.accentEmerald)),
+            Text(widget.card.topicTag, style: TextStyle(fontSize: 9, color: colors.accentEmerald)),
           ],
         ),
-        const Divider(color: AppColors.borderSubtle, height: 10),
+        Divider(color: colors.borderSubtle, height: 10),
         Expanded(
           child: Center(
             child: SingleChildScrollView(
@@ -570,7 +592,7 @@ class _SpringCanvasFlipCardState extends State<SpringCanvasFlipCard> with Single
                 maxLines: 4,
                 overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 11, color: AppColors.fgPrimary, height: 1.3),
+                style: TextStyle(fontSize: 11, color: colors.fgPrimary, height: 1.3),
               ),
             ),
           ),
@@ -578,8 +600,8 @@ class _SpringCanvasFlipCardState extends State<SpringCanvasFlipCard> with Single
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text('Interval: ${widget.card.intervalDays}d', style: const TextStyle(fontSize: 8, color: AppColors.fgSecondary)),
-            const Text('Tap to flip back', style: TextStyle(fontSize: 8, color: AppColors.accentEmerald)),
+            Text('Interval: ${widget.card.intervalDays}d', style: TextStyle(fontSize: 8, color: colors.fgSecondary)),
+            Text('Tap to flip back', style: TextStyle(fontSize: 8, color: colors.accentEmerald)),
           ],
         ),
       ],
@@ -602,21 +624,23 @@ class FlashcardConnection {
 class FlashcardConnectionPainter extends CustomPainter {
   final List<FlashcardConnection> connections;
   final List<FlashcardItem> cards;
+  final Color color;
 
   FlashcardConnectionPainter({
     required this.connections,
     required this.cards,
+    required this.color,
   });
 
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = AppColors.accentEmerald.withValues(alpha: 0.6)
+      ..color = color.withValues(alpha: 0.6)
       ..strokeWidth = 2.0
       ..style = PaintingStyle.stroke;
 
     final dotPaint = Paint()
-      ..color = AppColors.accentEmerald
+      ..color = color
       ..style = PaintingStyle.fill;
 
     for (final conn in connections) {
@@ -645,8 +669,9 @@ class FlashcardConnectionPainter extends CustomPainter {
 
 class MinimapPainter extends CustomPainter {
   final List<FlashcardItem> cards;
+  final Color color;
 
-  MinimapPainter({required this.cards});
+  MinimapPainter({required this.cards, required this.color});
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -656,7 +681,7 @@ class MinimapPainter extends CustomPainter {
     final scaleX = size.width / canvasW;
     final scaleY = size.height / canvasH;
 
-    final cardPaint = Paint()..color = AppColors.accentEmerald.withValues(alpha: 0.8);
+    final cardPaint = Paint()..color = color.withValues(alpha: 0.8);
 
     for (final card in cards) {
       final rect = Rect.fromLTWH(

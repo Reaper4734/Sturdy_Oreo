@@ -80,8 +80,10 @@ class _AssessmentSurveyLayoutState extends ConsumerState<AssessmentSurveyLayout>
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
+
     if (widget.questions.isEmpty) {
-      return const Center(child: Text("No questions generated.", style: TextStyle(color: Colors.white)));
+      return Center(child: Text("No questions generated.", style: TextStyle(color: colors.fgPrimary)));
     }
 
     final question = _currentQuestion;
@@ -90,38 +92,39 @@ class _AssessmentSurveyLayoutState extends ConsumerState<AssessmentSurveyLayout>
     return Container(
       margin: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppColors.bgSurface,
+        color: colors.bgSurface,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.borderSubtle),
+        border: Border.all(color: colors.borderSubtle),
+        boxShadow: AppElevation.low,
       ),
       child: Column(
         children: [
           // Header
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: const BoxDecoration(
-              color: AppColors.bgActivityBar,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(14)),
-              border: Border(bottom: BorderSide(color: AppColors.borderSubtle)),
+            decoration: BoxDecoration(
+              color: colors.bgActivityBar,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+              border: Border(bottom: BorderSide(color: colors.borderSubtle)),
             ),
             child: Row(
               children: [
-                Icon(isSubjective ? Icons.edit_note_rounded : Icons.fact_check_outlined, size: 16, color: AppColors.accentPrimary),
+                Icon(isSubjective ? Icons.edit_note_rounded : Icons.fact_check_outlined, size: 16, color: colors.accentPrimary),
                 const SizedBox(width: 8),
                 Text(
                   'Dynamic Assessment · Question ${_currentIndex + 1} of ${widget.questions.length}',
-                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.fgPrimary),
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: colors.fgPrimary),
                 ),
                 const Spacer(),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
-                    color: AppColors.accentPrimary.withValues(alpha: 0.15),
+                    color: colors.accentPrimary.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
                     question.topicTag,
-                    style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.accentPrimary),
+                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: colors.accentPrimary),
                   ),
                 ),
               ],
@@ -138,14 +141,14 @@ class _AssessmentSurveyLayoutState extends ConsumerState<AssessmentSurveyLayout>
                   children: [
                     Text(
                       question.questionText,
-                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.fgPrimary, height: 1.4),
+                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: colors.fgPrimary, height: 1.4),
                     ),
                     const SizedBox(height: 20),
 
                     if (isSubjective)
-                      _buildSubjectiveArea()
+                      _buildSubjectiveArea(context)
                     else
-                      _buildMcqArea(question),
+                      _buildMcqArea(context, question),
                       
                     const SizedBox(height: 30),
                   ],
@@ -157,24 +160,24 @@ class _AssessmentSurveyLayoutState extends ConsumerState<AssessmentSurveyLayout>
           // Footer
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
-            decoration: const BoxDecoration(
-              color: AppColors.bgActivityBar,
-              borderRadius: BorderRadius.vertical(bottom: Radius.circular(14)),
-              border: Border(top: BorderSide(color: AppColors.borderSubtle)),
+            decoration: BoxDecoration(
+              color: colors.bgActivityBar,
+              borderRadius: const BorderRadius.vertical(bottom: Radius.circular(14)),
+              border: Border(top: BorderSide(color: colors.borderSubtle)),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 TextButton(
                   onPressed: _currentIndex > 0 ? () => setState(() { _currentIndex--; _evaluationResult = null; }) : null,
-                  style: TextButton.styleFrom(foregroundColor: AppColors.fgSecondary),
+                  style: TextButton.styleFrom(foregroundColor: colors.fgSecondary),
                   child: const Text('Previous'),
                 ),
                 ElevatedButton(
                   onPressed: (_userAnswers.containsKey(_currentIndex) || _evaluationResult != null) ? _handleNext : null,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.accentPrimary,
-                    foregroundColor: Colors.white,
+                    backgroundColor: colors.accentPrimary,
+                    foregroundColor: colors.fgInverse,
                     padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                   ),
@@ -188,23 +191,24 @@ class _AssessmentSurveyLayoutState extends ConsumerState<AssessmentSurveyLayout>
     );
   }
 
-  Widget _buildMcqArea(QuestionItem question) {
+  Widget _buildMcqArea(BuildContext context, QuestionItem question) {
+    final colors = context.colors;
     final selectedOptionId = _userAnswers[_currentIndex];
     
     return Column(
       children: question.options.map((opt) {
         final isSelected = selectedOptionId == opt.id;
-        final showAnswer = selectedOptionId != null; // reveal answer immediately
+        final showAnswer = selectedOptionId != null;
         
-        Color borderColor = AppColors.borderSubtle;
+        Color borderColor = colors.borderSubtle;
         if (showAnswer) {
           if (opt.isCorrect) {
-            borderColor = AppColors.accentEmerald;
+            borderColor = colors.accentEmerald;
           } else if (isSelected && !opt.isCorrect) {
-            borderColor = AppColors.accentRose;
+            borderColor = colors.accentRose;
           }
         } else if (isSelected) {
-          borderColor = AppColors.accentPrimary;
+          borderColor = colors.accentPrimary;
         }
 
         return Padding(
@@ -216,7 +220,7 @@ class _AssessmentSurveyLayoutState extends ConsumerState<AssessmentSurveyLayout>
               width: double.infinity,
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: isSelected ? AppColors.accentPrimary.withValues(alpha: 0.1) : Colors.transparent,
+                color: isSelected ? colors.accentPrimary.withValues(alpha: 0.1) : Colors.transparent,
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(color: borderColor, width: isSelected ? 1.5 : 1.0),
               ),
@@ -228,12 +232,12 @@ class _AssessmentSurveyLayoutState extends ConsumerState<AssessmentSurveyLayout>
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       border: Border.all(
-                        color: isSelected ? AppColors.accentPrimary : AppColors.fgSecondary,
+                        color: isSelected ? colors.accentPrimary : colors.fgSecondary,
                         width: 1.5,
                       ),
                     ),
                     child: isSelected
-                        ? Center(child: Container(width: 10, height: 10, decoration: const BoxDecoration(color: AppColors.accentPrimary, shape: BoxShape.circle)))
+                        ? Center(child: Container(width: 10, height: 10, decoration: BoxDecoration(color: colors.accentPrimary, shape: BoxShape.circle)))
                         : null,
                   ),
                   const SizedBox(width: 12),
@@ -242,15 +246,15 @@ class _AssessmentSurveyLayoutState extends ConsumerState<AssessmentSurveyLayout>
                       opt.text,
                       style: TextStyle(
                         fontSize: 14,
-                        color: isSelected ? AppColors.fgPrimary : AppColors.fgSecondary,
+                        color: isSelected ? colors.fgPrimary : colors.fgSecondary,
                         fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
                       ),
                     ),
                   ),
                   if (showAnswer && opt.isCorrect)
-                    const Icon(Icons.check_circle_rounded, color: AppColors.accentEmerald, size: 20),
+                    Icon(Icons.check_circle_rounded, color: colors.accentEmerald, size: 20),
                   if (showAnswer && isSelected && !opt.isCorrect)
-                    const Icon(Icons.cancel_rounded, color: AppColors.accentRose, size: 20),
+                    Icon(Icons.cancel_rounded, color: colors.accentRose, size: 20),
                 ],
               ),
             ),
@@ -260,14 +264,15 @@ class _AssessmentSurveyLayoutState extends ConsumerState<AssessmentSurveyLayout>
     );
   }
 
-  Widget _buildSubjectiveArea() {
+  Widget _buildSubjectiveArea(BuildContext context) {
+    final colors = context.colors;
     if (_evaluationResult != null) {
       final isPassed = _evaluationResult!['isPassed'] == true;
       return Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: isPassed ? AppColors.accentEmerald.withValues(alpha: 0.1) : AppColors.accentRose.withValues(alpha: 0.1),
-          border: Border.all(color: isPassed ? AppColors.accentEmerald : AppColors.accentRose),
+          color: isPassed ? colors.accentEmerald.withValues(alpha: 0.1) : colors.accentRose.withValues(alpha: 0.1),
+          border: Border.all(color: isPassed ? colors.accentEmerald : colors.accentRose),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Column(
@@ -275,18 +280,18 @@ class _AssessmentSurveyLayoutState extends ConsumerState<AssessmentSurveyLayout>
           children: [
             Row(
               children: [
-                Icon(isPassed ? Icons.check_circle : Icons.warning_amber_rounded, color: isPassed ? AppColors.accentEmerald : AppColors.accentRose),
+                Icon(isPassed ? Icons.check_circle : Icons.warning_amber_rounded, color: isPassed ? colors.accentEmerald : colors.accentRose),
                 const SizedBox(width: 8),
                 Text(isPassed ? 'Passed! Score: ${_evaluationResult!['score']}' : 'Needs Work! Score: ${_evaluationResult!['score']}',
-                    style: TextStyle(fontWeight: FontWeight.bold, color: isPassed ? AppColors.accentEmerald : AppColors.accentRose, fontSize: 16)),
+                    style: TextStyle(fontWeight: FontWeight.bold, color: isPassed ? colors.accentEmerald : colors.accentRose, fontSize: 16)),
               ],
             ),
             const SizedBox(height: 12),
-            Text('Feedback: ${_evaluationResult!['feedback']}', style: const TextStyle(color: AppColors.fgPrimary)),
+            Text('Feedback: ${_evaluationResult!['feedback']}', style: TextStyle(color: colors.fgPrimary)),
             if (!isPassed && _evaluationResult!['suggestedReviewTopic'] != null && _evaluationResult!['suggestedReviewTopic'].toString().isNotEmpty)
                Padding(
                  padding: const EdgeInsets.only(top: 8.0),
-                 child: Text('Suggested Review: ${_evaluationResult!['suggestedReviewTopic']}', style: const TextStyle(color: AppColors.accentAmber)),
+                 child: Text('Suggested Review: ${_evaluationResult!['suggestedReviewTopic']}', style: TextStyle(color: colors.accentAmber)),
                ),
           ],
         ),
@@ -300,22 +305,22 @@ class _AssessmentSurveyLayoutState extends ConsumerState<AssessmentSurveyLayout>
           controller: _textController,
           maxLines: 5,
           onSubmitted: (val) => _submitSubjectiveAnswer(val),
-          decoration: const InputDecoration(
+          decoration: InputDecoration(
             hintText: 'Type your answer here...',
-            border: OutlineInputBorder(),
-            fillColor: AppColors.bgCanvas,
+            border: const OutlineInputBorder(),
+            fillColor: colors.bgCanvas,
             filled: true,
           ),
-          style: const TextStyle(color: AppColors.fgPrimary),
+          style: TextStyle(color: colors.fgPrimary),
           textInputAction: TextInputAction.done,
         ),
         const SizedBox(height: 16),
         if (_isEvaluating)
-          const Row(
+          Row(
             children: [
-              SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
-              SizedBox(width: 8),
-              Text('AI is evaluating your answer...', style: TextStyle(color: AppColors.fgSecondary)),
+              SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: colors.accentPrimary)),
+              const SizedBox(width: 8),
+              Text('AI is evaluating your answer...', style: TextStyle(color: colors.fgSecondary)),
             ],
           )
         else

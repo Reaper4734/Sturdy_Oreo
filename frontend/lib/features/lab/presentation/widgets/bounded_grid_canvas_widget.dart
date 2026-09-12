@@ -32,7 +32,7 @@ class _BoundedGridCanvasWidgetState extends State<BoundedGridCanvasWidget> {
 
   bool _isShiftPressed = false;
   CanvasDrawMode _drawMode = CanvasDrawMode.select;
-  Color _penColor = AppColors.accentPrimary;
+  Color? _selectedPenColor;
   double _penStrokeWidth = 2.5;
   double _penOpacity = 1.0;
   double _eraserRadius = 16.0;
@@ -40,15 +40,6 @@ class _BoundedGridCanvasWidgetState extends State<BoundedGridCanvasWidget> {
 
   // Undo / Redo stacks
   final List<DrawingPath> _undoStack = [];
-
-  static const List<Color> _colorPalette = [
-    AppColors.accentPrimary,
-    AppColors.accentEmerald,
-    Color(0xFFEF4444),
-    Color(0xFFF59E0B),
-    Color(0xFF3B82F6),
-    Colors.white,
-  ];
 
   @override
   void dispose() {
@@ -147,9 +138,9 @@ class _BoundedGridCanvasWidgetState extends State<BoundedGridCanvasWidget> {
     return Size(maxRight, maxBottom);
   }
 
-  // --- Drawing Handlers (with coordinate fix) ---
+  // --- Drawing Handlers ---
 
-  void _onPointerDown(PointerDownEvent event) {
+  void _onPointerDown(PointerDownEvent event, Color activePenColor) {
     final scenePoint = _transformationController.toScene(event.localPosition);
     if (_drawMode == CanvasDrawMode.pen) {
       _currentStrokePoints = [scenePoint];
@@ -170,9 +161,9 @@ class _BoundedGridCanvasWidgetState extends State<BoundedGridCanvasWidget> {
     }
   }
 
-  void _onPointerUp(PointerUpEvent event) {
+  void _onPointerUp(PointerUpEvent event, Color activePenColor) {
     if (_drawMode == CanvasDrawMode.pen && _currentStrokePoints.isNotEmpty) {
-      final effectiveColor = _penColor.withValues(alpha: _penOpacity);
+      final effectiveColor = activePenColor.withValues(alpha: _penOpacity);
       widget.drawingPaths.add(DrawingPath(
         points: List.from(_currentStrokePoints),
         color: effectiveColor,
@@ -206,6 +197,8 @@ class _BoundedGridCanvasWidgetState extends State<BoundedGridCanvasWidget> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
+    final activePenColor = _selectedPenColor ?? colors.accentPrimary;
     final canvasSize = _calculateCanvasBounds();
     final isDrawing = _drawMode == CanvasDrawMode.pen || _drawMode == CanvasDrawMode.eraser;
 
@@ -215,23 +208,23 @@ class _BoundedGridCanvasWidgetState extends State<BoundedGridCanvasWidget> {
       onKeyEvent: _handleKeyEvent,
       child: Container(
         decoration: BoxDecoration(
-          color: AppColors.bgCanvas,
+          color: colors.bgCanvas,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AppColors.borderSubtle),
+          border: Border.all(color: colors.borderSubtle),
         ),
         child: Column(
           children: [
             // Canvas Header Toolbar
-            _buildToolbar(),
+            _buildToolbar(context, activePenColor),
 
             // Canvas Area
             Expanded(
               child: ClipRRect(
                 borderRadius: const BorderRadius.vertical(bottom: Radius.circular(14)),
                 child: Listener(
-                  onPointerDown: isDrawing ? _onPointerDown : null,
+                  onPointerDown: isDrawing ? (e) => _onPointerDown(e, activePenColor) : null,
                   onPointerMove: isDrawing ? _onPointerMove : null,
-                  onPointerUp: isDrawing ? _onPointerUp : null,
+                  onPointerUp: isDrawing ? (e) => _onPointerUp(e, activePenColor) : null,
                   child: MouseRegion(
                     cursor: _drawMode == CanvasDrawMode.pen
                         ? SystemMouseCursors.precise
@@ -249,11 +242,11 @@ class _BoundedGridCanvasWidgetState extends State<BoundedGridCanvasWidget> {
                       boundaryMargin: const EdgeInsets.all(400),
                       child: CustomPaint(
                         size: canvasSize,
-                        painter: CanvasGridBackgroundPainter(),
+                        painter: CanvasGridBackgroundPainter(colors: colors),
                         foregroundPainter: DrawingOverlayPainter(
                           paths: widget.drawingPaths,
                           currentStroke: _currentStrokePoints,
-                          currentColor: _penColor.withValues(alpha: _penOpacity),
+                          currentColor: activePenColor.withValues(alpha: _penOpacity),
                           currentWidth: _penStrokeWidth,
                         ),
                         child: SizedBox(
@@ -261,8 +254,8 @@ class _BoundedGridCanvasWidgetState extends State<BoundedGridCanvasWidget> {
                           height: canvasSize.height,
                           child: Stack(
                             children: [
-                              ...widget.gridCells.map((cell) => _buildGridCellCard(cell)),
-                              ...widget.customObjects.map((obj) => _buildMovableObjectCard(obj)),
+                              ...widget.gridCells.map((cell) => _buildGridCellCard(context, cell)),
+                              ...widget.customObjects.map((obj) => _buildMovableObjectCard(context, obj)),
                             ],
                           ),
                         ),
@@ -280,41 +273,52 @@ class _BoundedGridCanvasWidgetState extends State<BoundedGridCanvasWidget> {
 
   // --- Toolbar ---
 
-  Widget _buildToolbar() {
+  Widget _buildToolbar(BuildContext context, Color activePenColor) {
+    final colors = context.colors;
+
+    final colorPalette = [
+      colors.accentPrimary,
+      colors.accentEmerald,
+      const Color(0xFFEF4444),
+      const Color(0xFFF59E0B),
+      const Color(0xFF3B82F6),
+      colors.fgPrimary,
+    ];
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: const BoxDecoration(
-        color: AppColors.bgActivityBar,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(14)),
-        border: Border(bottom: BorderSide(color: AppColors.borderSubtle, width: 0.8)),
+      decoration: BoxDecoration(
+        color: colors.bgActivityBar,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+        border: Border(bottom: BorderSide(color: colors.borderSubtle, width: 0.8)),
       ),
       child: Row(
         children: [
-          const Icon(Icons.grid_4x4_rounded, size: 14, color: AppColors.accentEmerald),
+          Icon(Icons.grid_4x4_rounded, size: 14, color: colors.accentEmerald),
           const SizedBox(width: 6),
-          const Text('Canvas', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.fgPrimary)),
+          Text('Canvas', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: colors.fgPrimary)),
           const SizedBox(width: 10),
 
           // Divider
-          _toolDivider(),
+          _toolDivider(context),
 
           // Mode Tools
-          _buildModeButton(Icons.near_me_outlined, 'Select', CanvasDrawMode.select),
+          _buildModeButton(context, Icons.near_me_outlined, 'Select', CanvasDrawMode.select),
           const SizedBox(width: 3),
-          _buildModeButton(Icons.edit_rounded, 'Pen', CanvasDrawMode.pen),
+          _buildModeButton(context, Icons.edit_rounded, 'Pen', CanvasDrawMode.pen),
           const SizedBox(width: 3),
-          _buildModeButton(Icons.auto_fix_high_rounded, 'Eraser', CanvasDrawMode.eraser),
+          _buildModeButton(context, Icons.auto_fix_high_rounded, 'Eraser', CanvasDrawMode.eraser),
 
           const SizedBox(width: 6),
-          _toolDivider(),
+          _toolDivider(context),
 
           // Pen options (color palette + stroke width + opacity) — only when pen active
           if (_drawMode == CanvasDrawMode.pen) ...[
             const SizedBox(width: 4),
-            ..._colorPalette.map((c) => Padding(
+            ...colorPalette.map((c) => Padding(
                   padding: const EdgeInsets.only(right: 3),
                   child: InkWell(
-                    onTap: () => setState(() => _penColor = c),
+                    onTap: () => setState(() => _selectedPenColor = c),
                     child: Container(
                       width: 14,
                       height: 14,
@@ -322,8 +326,8 @@ class _BoundedGridCanvasWidgetState extends State<BoundedGridCanvasWidget> {
                         color: c,
                         shape: BoxShape.circle,
                         border: Border.all(
-                          color: c == _penColor ? Colors.white : AppColors.borderSubtle,
-                          width: c == _penColor ? 2 : 1,
+                          color: c == activePenColor ? colors.fgPrimary : colors.borderSubtle,
+                          width: c == activePenColor ? 2 : 1,
                         ),
                       ),
                     ),
@@ -340,9 +344,9 @@ class _BoundedGridCanvasWidgetState extends State<BoundedGridCanvasWidget> {
                   data: SliderThemeData(
                     trackHeight: 2,
                     thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 5),
-                    activeTrackColor: AppColors.accentPrimary,
-                    inactiveTrackColor: AppColors.borderSubtle,
-                    thumbColor: AppColors.accentPrimary,
+                    activeTrackColor: colors.accentPrimary,
+                    inactiveTrackColor: colors.borderSubtle,
+                    thumbColor: colors.accentPrimary,
                   ),
                   child: Slider(
                     min: 1,
@@ -353,7 +357,7 @@ class _BoundedGridCanvasWidgetState extends State<BoundedGridCanvasWidget> {
                 ),
               ),
             ),
-            _toolDivider(),
+            _toolDivider(context),
 
             // Opacity
             Tooltip(
@@ -361,16 +365,16 @@ class _BoundedGridCanvasWidgetState extends State<BoundedGridCanvasWidget> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.opacity_rounded, size: 12, color: AppColors.fgSecondary),
+                  Icon(Icons.opacity_rounded, size: 12, color: colors.fgSecondary),
                   SizedBox(
                     width: 46,
                     child: SliderTheme(
                       data: SliderThemeData(
                         trackHeight: 2,
                         thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 5),
-                        activeTrackColor: AppColors.accentEmerald,
-                        inactiveTrackColor: AppColors.borderSubtle,
-                        thumbColor: AppColors.accentEmerald,
+                        activeTrackColor: colors.accentEmerald,
+                        inactiveTrackColor: colors.borderSubtle,
+                        thumbColor: colors.accentEmerald,
                       ),
                       child: Slider(
                         min: 0.15,
@@ -393,16 +397,16 @@ class _BoundedGridCanvasWidgetState extends State<BoundedGridCanvasWidget> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text('Size', style: TextStyle(fontSize: 10, color: AppColors.fgSecondary)),
+                  Text('Size', style: TextStyle(fontSize: 10, color: colors.fgSecondary)),
                   SizedBox(
                     width: 60,
                     child: SliderTheme(
                       data: SliderThemeData(
                         trackHeight: 2,
                         thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 5),
-                        activeTrackColor: AppColors.accentPrimary,
-                        inactiveTrackColor: AppColors.borderSubtle,
-                        thumbColor: AppColors.accentPrimary,
+                        activeTrackColor: colors.accentPrimary,
+                        inactiveTrackColor: colors.borderSubtle,
+                        thumbColor: colors.accentPrimary,
                       ),
                       child: Slider(
                         min: 8,
@@ -421,12 +425,14 @@ class _BoundedGridCanvasWidgetState extends State<BoundedGridCanvasWidget> {
 
           // Undo
           _buildActionIcon(
+            context,
             Icons.undo_rounded,
             'Undo (Ctrl+Z)',
             widget.drawingPaths.isNotEmpty ? _undo : null,
           ),
           // Redo
           _buildActionIcon(
+            context,
             Icons.redo_rounded,
             'Redo (Ctrl+Shift+Z)',
             _undoStack.isNotEmpty ? _redo : null,
@@ -434,6 +440,7 @@ class _BoundedGridCanvasWidgetState extends State<BoundedGridCanvasWidget> {
           const SizedBox(width: 2),
           // Clear
           _buildActionIcon(
+            context,
             Icons.delete_outline_rounded,
             'Clear All',
             widget.drawingPaths.isNotEmpty ? _clearAll : null,
@@ -442,7 +449,7 @@ class _BoundedGridCanvasWidgetState extends State<BoundedGridCanvasWidget> {
           // Toggle to Transcript (when inline below video)
           if (widget.onToggleToTranscript != null) ...[
             const SizedBox(width: 6),
-            _toolDivider(),
+            _toolDivider(context),
             const SizedBox(width: 6),
             InkWell(
               onTap: widget.onToggleToTranscript,
@@ -450,16 +457,16 @@ class _BoundedGridCanvasWidgetState extends State<BoundedGridCanvasWidget> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: AppColors.bgCanvas,
+                  color: colors.bgCanvas,
                   borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: AppColors.borderSubtle),
+                  border: Border.all(color: colors.borderSubtle),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
-                  children: const [
-                    Icon(Icons.style_outlined, size: 12, color: AppColors.accentEmerald),
-                    SizedBox(width: 4),
-                    Text('Show Flashcards', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.accentEmerald)),
+                  children: [
+                    Icon(Icons.style_outlined, size: 12, color: colors.accentEmerald),
+                    const SizedBox(width: 4),
+                    Text('Show Flashcards', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: colors.accentEmerald)),
                   ],
                 ),
               ),
@@ -470,16 +477,18 @@ class _BoundedGridCanvasWidgetState extends State<BoundedGridCanvasWidget> {
     );
   }
 
-  Widget _toolDivider() {
+  Widget _toolDivider(BuildContext context) {
+    final colors = context.colors;
     return Container(
       width: 1,
       height: 18,
       margin: const EdgeInsets.symmetric(horizontal: 4),
-      color: AppColors.borderSubtle,
+      color: colors.borderSubtle,
     );
   }
 
-  Widget _buildModeButton(IconData icon, String label, CanvasDrawMode mode) {
+  Widget _buildModeButton(BuildContext context, IconData icon, String label, CanvasDrawMode mode) {
+    final colors = context.colors;
     final isActive = _drawMode == mode;
     return InkWell(
       onTap: () => setState(() => _drawMode = mode),
@@ -487,23 +496,24 @@ class _BoundedGridCanvasWidgetState extends State<BoundedGridCanvasWidget> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
         decoration: BoxDecoration(
-          color: isActive ? AppColors.accentPrimary.withValues(alpha: 0.2) : Colors.transparent,
+          color: isActive ? colors.accentPrimary.withValues(alpha: 0.15) : Colors.transparent,
           borderRadius: BorderRadius.circular(6),
-          border: Border.all(color: isActive ? AppColors.accentPrimary : Colors.transparent),
+          border: Border.all(color: isActive ? colors.accentPrimary : Colors.transparent),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 12, color: isActive ? AppColors.accentPrimary : AppColors.fgSecondary),
+            Icon(icon, size: 12, color: isActive ? colors.accentPrimary : colors.fgSecondary),
             const SizedBox(width: 3),
-            Text(label, style: TextStyle(fontSize: 10, color: isActive ? AppColors.accentPrimary : AppColors.fgSecondary, fontWeight: FontWeight.bold)),
+            Text(label, style: TextStyle(fontSize: 10, color: isActive ? colors.accentPrimary : colors.fgSecondary, fontWeight: FontWeight.bold)),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildActionIcon(IconData icon, String tooltip, VoidCallback? onTap) {
+  Widget _buildActionIcon(BuildContext context, IconData icon, String tooltip, VoidCallback? onTap) {
+    final colors = context.colors;
     final isEnabled = onTap != null;
     return Tooltip(
       message: tooltip,
@@ -512,7 +522,7 @@ class _BoundedGridCanvasWidgetState extends State<BoundedGridCanvasWidget> {
         borderRadius: BorderRadius.circular(4),
         child: Padding(
           padding: const EdgeInsets.all(4),
-          child: Icon(icon, size: 16, color: isEnabled ? AppColors.fgPrimary : AppColors.fgSecondary.withValues(alpha: 0.4)),
+          child: Icon(icon, size: 16, color: isEnabled ? colors.fgPrimary : colors.fgSecondary.withValues(alpha: 0.4)),
         ),
       ),
     );
@@ -520,7 +530,8 @@ class _BoundedGridCanvasWidgetState extends State<BoundedGridCanvasWidget> {
 
   // --- Grid Cell Card ---
 
-  Widget _buildGridCellCard(CanvasGridCell cell) {
+  Widget _buildGridCellCard(BuildContext context, CanvasGridCell cell) {
+    final colors = context.colors;
     final rect = cell.rect;
     return Positioned(
       left: rect.left,
@@ -542,15 +553,15 @@ class _BoundedGridCanvasWidgetState extends State<BoundedGridCanvasWidget> {
           duration: const Duration(milliseconds: 150),
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: AppColors.bgSurface,
+            color: colors.bgSurface,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: cell.isSelected ? AppColors.accentPrimary : AppColors.borderSubtle,
+              color: cell.isSelected ? colors.accentPrimary : colors.borderSubtle,
               width: cell.isSelected ? 2.0 : 1.0,
             ),
             boxShadow: cell.isSelected
-                ? [BoxShadow(color: AppColors.accentPrimary.withValues(alpha: 0.2), blurRadius: 10)]
-                : [],
+                ? [BoxShadow(color: colors.accentPrimary.withValues(alpha: 0.2), blurRadius: 10)]
+                : [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 6, offset: const Offset(0, 2))],
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -560,10 +571,10 @@ class _BoundedGridCanvasWidgetState extends State<BoundedGridCanvasWidget> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
-                      color: AppColors.accentEmerald.withValues(alpha: 0.15),
+                      color: colors.accentEmerald.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(4),
                     ),
-                    child: Text(cell.diagramType, style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AppColors.accentEmerald)),
+                    child: Text(cell.diagramType, style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: colors.accentEmerald)),
                   ),
                   const Spacer(),
                   Tooltip(
@@ -574,15 +585,15 @@ class _BoundedGridCanvasWidgetState extends State<BoundedGridCanvasWidget> {
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
-                          color: AppColors.bgCanvas,
+                          color: colors.bgCanvas,
                           borderRadius: BorderRadius.circular(4),
-                          border: Border.all(color: AppColors.borderSubtle),
+                          border: Border.all(color: colors.borderSubtle),
                         ),
                         child: Row(
-                          children: const [
-                            Text('@', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.accentPrimary)),
-                            SizedBox(width: 2),
-                            Text('Attach', style: TextStyle(fontSize: 9, color: AppColors.fgPrimary)),
+                          children: [
+                            Text('@', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: colors.accentPrimary)),
+                            const SizedBox(width: 2),
+                            Text('Attach', style: TextStyle(fontSize: 9, color: colors.fgPrimary)),
                           ],
                         ),
                       ),
@@ -591,8 +602,8 @@ class _BoundedGridCanvasWidgetState extends State<BoundedGridCanvasWidget> {
                 ],
               ),
               const SizedBox(height: 8),
-              Text(cell.title, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.fgPrimary)),
-              const Divider(color: AppColors.borderSubtle, height: 12),
+              Text(cell.title, style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: colors.fgPrimary)),
+              Divider(color: colors.borderSubtle, height: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -600,9 +611,9 @@ class _BoundedGridCanvasWidgetState extends State<BoundedGridCanvasWidget> {
                   children: cell.nodeLabels.map((lbl) {
                     return Row(
                       children: [
-                        const Icon(Icons.circle, size: 6, color: AppColors.accentPrimary),
+                        Icon(Icons.circle, size: 6, color: colors.accentPrimary),
                         const SizedBox(width: 6),
-                        Expanded(child: Text(lbl, style: const TextStyle(fontSize: 11, color: AppColors.fgSecondary))),
+                        Expanded(child: Text(lbl, style: TextStyle(fontSize: 11, color: colors.fgSecondary))),
                       ],
                     );
                   }).toList(),
@@ -617,7 +628,8 @@ class _BoundedGridCanvasWidgetState extends State<BoundedGridCanvasWidget> {
 
   // --- Movable Object Card ---
 
-  Widget _buildMovableObjectCard(CanvasObject obj) {
+  Widget _buildMovableObjectCard(BuildContext context, CanvasObject obj) {
+    final colors = context.colors;
     return Positioned(
       left: obj.position.dx,
       top: obj.position.dy,
@@ -642,10 +654,10 @@ class _BoundedGridCanvasWidgetState extends State<BoundedGridCanvasWidget> {
         child: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: AppColors.bgElevated,
+            color: colors.bgElevated,
             borderRadius: BorderRadius.circular(10),
             border: Border.all(
-              color: obj.isSelected ? AppColors.accentEmerald : AppColors.borderSubtle,
+              color: obj.isSelected ? colors.accentEmerald : colors.borderSubtle,
               width: obj.isSelected ? 2 : 1,
             ),
           ),
@@ -653,7 +665,7 @@ class _BoundedGridCanvasWidgetState extends State<BoundedGridCanvasWidget> {
             child: Text(
               obj.label,
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.fgPrimary),
+              style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: colors.fgPrimary),
             ),
           ),
         ),
@@ -664,10 +676,18 @@ class _BoundedGridCanvasWidgetState extends State<BoundedGridCanvasWidget> {
 
 // --- Grid Lines Background Painter (mat effect) ---
 class CanvasGridBackgroundPainter extends CustomPainter {
+  final AppColorsExtension? colors;
+
+  CanvasGridBackgroundPainter({this.colors});
+
   @override
   void paint(Canvas canvas, Size size) {
+    final gridLineColor = colors != null
+        ? colors!.borderSubtle.withValues(alpha: 0.5)
+        : AppColors.borderSubtle.withValues(alpha: 0.4);
+
     final paint = Paint()
-      ..color = AppColors.borderSubtle.withValues(alpha: 0.4)
+      ..color = gridLineColor
       ..strokeWidth = 0.5;
     const double step = 32.0;
     for (double x = 0; x < size.width; x += step) {
@@ -679,7 +699,8 @@ class CanvasGridBackgroundPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant CanvasGridBackgroundPainter oldDelegate) =>
+      oldDelegate.colors != colors;
 }
 
 // --- Drawing Overlay Painter (pen strokes only — no eraser strokes) ---

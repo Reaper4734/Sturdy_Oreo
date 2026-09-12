@@ -58,18 +58,20 @@ class _YoutubePlayerWidgetState extends State<YoutubePlayerWidget> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
+
     if (widget.videoId.isEmpty || _controller == null) {
       return Container(
-        color: AppColors.bgSurface,
+        color: colors.bgSurface,
         alignment: Alignment.center,
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
-          children: const [
-            Icon(Icons.video_library_outlined, size: 48, color: AppColors.fgSecondary),
-            SizedBox(height: 12),
+          children: [
+            Icon(Icons.video_library_outlined, size: 48, color: colors.fgSecondary),
+            const SizedBox(height: 12),
             Text(
               'Loading video walkthrough...',
-              style: TextStyle(color: AppColors.fgSecondary, fontSize: 14),
+              style: TextStyle(color: colors.fgSecondary, fontSize: 14),
             ),
           ],
         ),

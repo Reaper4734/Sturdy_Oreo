@@ -53,6 +53,7 @@ class _PopupQuestionnaireLayoutState extends State<PopupQuestionnaireLayout> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
     final question = _currentQuestion;
 
     return Center(
@@ -60,14 +61,14 @@ class _PopupQuestionnaireLayoutState extends State<PopupQuestionnaireLayout> {
         width: 580,
         margin: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: AppColors.bgSurface,
+          color: colors.bgSurface,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.borderSubtle, width: 1.2),
-          boxShadow: const [
+          border: Border.all(color: colors.borderSubtle, width: 1.2),
+          boxShadow: [
             BoxShadow(
-              color: Colors.black54,
+              color: Colors.black.withValues(alpha: 0.2),
               blurRadius: 24,
-              offset: Offset(0, 12),
+              offset: const Offset(0, 12),
             ),
           ],
         ),
@@ -79,34 +80,34 @@ class _PopupQuestionnaireLayoutState extends State<PopupQuestionnaireLayout> {
               // --- Header ---
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                color: AppColors.bgActivityBar,
+                color: colors.bgActivityBar,
                 child: Row(
                   children: [
-                    const Icon(Icons.quiz_outlined, size: 16, color: AppColors.accentEmerald),
+                    Icon(Icons.quiz_outlined, size: 16, color: colors.accentEmerald),
                     const SizedBox(width: 8),
                     Text(
                       'Micro-Quiz Checkpoint · Score: $_correctCount/${_currentIndex + 1} · Q${_currentIndex + 1}/${widget.questions.length}',
-                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.fgPrimary),
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: colors.fgPrimary),
                     ),
                     const Spacer(),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
-                        color: AppColors.accentEmerald.withValues(alpha: 0.15),
+                        color: colors.accentEmerald.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
                         question.topicTag,
-                        style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.accentEmerald),
+                        style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: colors.accentEmerald),
                       ),
                     ),
                     const SizedBox(width: 8),
                     InkWell(
                       onTap: widget.onClose ?? widget.onCompleteTest,
                       borderRadius: BorderRadius.circular(12),
-                      child: const Padding(
-                        padding: EdgeInsets.all(4.0),
-                        child: Icon(Icons.close_rounded, size: 16, color: AppColors.fgSecondary),
+                      child: Padding(
+                        padding: const EdgeInsets.all(4.0),
+                        child: Icon(Icons.close_rounded, size: 16, color: colors.fgSecondary),
                       ),
                     ),
                   ],
@@ -121,27 +122,27 @@ class _PopupQuestionnaireLayoutState extends State<PopupQuestionnaireLayout> {
                   children: [
                     Text(
                       question.questionText,
-                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.fgPrimary, height: 1.4),
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: colors.fgPrimary, height: 1.4),
                     ),
                     const SizedBox(height: 16),
 
                     // Options List
                     ...question.options.map((opt) {
                       final isSelected = _selectedOptionId == opt.id;
-                      Color borderColor = AppColors.borderSubtle;
-                      Color bgColor = AppColors.bgCanvas;
+                      Color borderColor = colors.borderSubtle;
+                      Color bgColor = colors.bgCanvas;
 
                       if (_hasSubmittedCurrent) {
                         if (opt.isCorrect) {
-                          borderColor = AppColors.accentEmerald;
-                          bgColor = AppColors.accentEmerald.withValues(alpha: 0.12);
+                          borderColor = colors.accentEmerald;
+                          bgColor = colors.accentEmerald.withValues(alpha: 0.12);
                         } else if (isSelected && !opt.isCorrect) {
                           borderColor = Colors.orange;
                           bgColor = Colors.orange.withValues(alpha: 0.12);
                         }
                       } else if (isSelected) {
-                        borderColor = AppColors.accentPrimary;
-                        bgColor = AppColors.accentPrimary.withValues(alpha: 0.12);
+                        borderColor = colors.accentPrimary;
+                        bgColor = colors.accentPrimary.withValues(alpha: 0.12);
                       }
 
                       return Padding(
@@ -167,8 +168,8 @@ class _PopupQuestionnaireLayoutState extends State<PopupQuestionnaireLayout> {
                                       : (isSelected ? Icons.radio_button_checked : Icons.radio_button_unchecked),
                                   size: 16,
                                   color: _hasSubmittedCurrent
-                                      ? (opt.isCorrect ? AppColors.accentEmerald : (isSelected ? Colors.orange : AppColors.fgSecondary))
-                                      : (isSelected ? AppColors.accentPrimary : AppColors.fgSecondary),
+                                      ? (opt.isCorrect ? colors.accentEmerald : (isSelected ? Colors.orange : colors.fgSecondary))
+                                      : (isSelected ? colors.accentPrimary : colors.fgSecondary),
                                 ),
                                 const SizedBox(width: 10),
                                 Expanded(
@@ -177,7 +178,7 @@ class _PopupQuestionnaireLayoutState extends State<PopupQuestionnaireLayout> {
                                     style: TextStyle(
                                       fontSize: 12,
                                       fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                                      color: AppColors.fgPrimary,
+                                      color: colors.fgPrimary,
                                     ),
                                   ),
                                 ),
@@ -191,22 +192,22 @@ class _PopupQuestionnaireLayoutState extends State<PopupQuestionnaireLayout> {
                 ),
               ),
 
-              // --- Footer Bar (Bottom Right Submit Button as in Wireframe 1) ---
+              // --- Footer Bar (Bottom Right Submit Button) ---
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                color: AppColors.bgActivityBar,
+                color: colors.bgActivityBar,
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
                       'Selected: ${_selectedOptionId != null ? "1 Answer" : "None"}',
-                      style: const TextStyle(fontSize: 11, color: AppColors.fgSecondary),
+                      style: TextStyle(fontSize: 11, color: colors.fgSecondary),
                     ),
                     ElevatedButton(
                       onPressed: _selectedOptionId == null ? null : _handleSubmit,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.accentPrimary,
-                        foregroundColor: Colors.white,
+                        backgroundColor: colors.accentPrimary,
+                        foregroundColor: colors.fgInverse,
                         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                       ),

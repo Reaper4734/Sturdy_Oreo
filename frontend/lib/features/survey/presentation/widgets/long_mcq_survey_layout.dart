@@ -31,44 +31,45 @@ class _LongMcqSurveyLayoutState extends ConsumerState<LongMcqSurveyLayout> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
     final question = _currentQuestion;
     final selectedOptionId = _userAnswers[_currentIndex];
 
     return Container(
       margin: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppColors.bgSurface,
+        color: colors.bgSurface,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.borderSubtle),
+        border: Border.all(color: colors.borderSubtle),
       ),
       child: Column(
         children: [
           // Header
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: const BoxDecoration(
-              color: AppColors.bgActivityBar,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(14)),
-              border: Border(bottom: BorderSide(color: AppColors.borderSubtle)),
+            decoration: BoxDecoration(
+              color: colors.bgActivityBar,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+              border: Border(bottom: BorderSide(color: colors.borderSubtle)),
             ),
             child: Row(
               children: [
-                const Icon(Icons.assignment_outlined, size: 16, color: AppColors.accentPrimary),
+                Icon(Icons.assignment_outlined, size: 16, color: colors.accentPrimary),
                 const SizedBox(width: 8),
                 Text(
                   'Comprehensive Mastery Assessment · Question ${_currentIndex + 1} of ${widget.questions.length}',
-                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.fgPrimary),
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: colors.fgPrimary),
                 ),
                 const Spacer(),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
-                    color: AppColors.accentPrimary.withValues(alpha: 0.15),
+                    color: colors.accentPrimary.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
                     question.topicTag,
-                    style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.accentPrimary),
+                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: colors.accentPrimary),
                   ),
                 ),
               ],
@@ -85,7 +86,7 @@ class _LongMcqSurveyLayoutState extends ConsumerState<LongMcqSurveyLayout> {
                   children: [
                     Text(
                       question.questionText,
-                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.fgPrimary, height: 1.4),
+                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: colors.fgPrimary, height: 1.4),
                     ),
                     const SizedBox(height: 20),
 
@@ -101,10 +102,10 @@ class _LongMcqSurveyLayoutState extends ConsumerState<LongMcqSurveyLayout> {
                             width: double.infinity,
                             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                             decoration: BoxDecoration(
-                              color: isSelected ? AppColors.accentPrimary.withValues(alpha: 0.12) : AppColors.bgCanvas,
+                              color: isSelected ? colors.accentPrimary.withValues(alpha: 0.12) : colors.bgCanvas,
                               borderRadius: BorderRadius.circular(10),
                               border: Border.all(
-                                color: isSelected ? AppColors.accentPrimary : AppColors.borderSubtle,
+                                color: isSelected ? colors.accentPrimary : colors.borderSubtle,
                                 width: isSelected ? 1.5 : 1.0,
                               ),
                             ),
@@ -113,7 +114,7 @@ class _LongMcqSurveyLayoutState extends ConsumerState<LongMcqSurveyLayout> {
                                 Icon(
                                   isSelected ? Icons.radio_button_checked : Icons.radio_button_unchecked,
                                   size: 16,
-                                  color: isSelected ? AppColors.accentPrimary : AppColors.fgSecondary,
+                                  color: isSelected ? colors.accentPrimary : colors.fgSecondary,
                                 ),
                                 const SizedBox(width: 12),
                                 Expanded(
@@ -122,7 +123,7 @@ class _LongMcqSurveyLayoutState extends ConsumerState<LongMcqSurveyLayout> {
                                     style: TextStyle(
                                       fontSize: 12,
                                       fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                                      color: AppColors.fgPrimary,
+                                      color: colors.fgPrimary,
                                     ),
                                   ),
                                 ),
@@ -141,10 +142,10 @@ class _LongMcqSurveyLayoutState extends ConsumerState<LongMcqSurveyLayout> {
           // Footer Bar with Previous/Next/Submit Navigation
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-            decoration: const BoxDecoration(
-              color: AppColors.bgActivityBar,
-              borderRadius: BorderRadius.vertical(bottom: Radius.circular(14)),
-              border: Border(top: BorderSide(color: AppColors.borderSubtle)),
+            decoration: BoxDecoration(
+              color: colors.bgActivityBar,
+              borderRadius: const BorderRadius.vertical(bottom: Radius.circular(14)),
+              border: Border(top: BorderSide(color: colors.borderSubtle)),
             ),
             child: Row(
               children: [
@@ -153,8 +154,8 @@ class _LongMcqSurveyLayoutState extends ConsumerState<LongMcqSurveyLayout> {
                   icon: const Icon(Icons.chevron_left_rounded, size: 16),
                   label: const Text('Previous', style: TextStyle(fontSize: 12)),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.fgPrimary,
-                    side: const BorderSide(color: AppColors.borderSubtle),
+                    foregroundColor: colors.fgPrimary,
+                    side: BorderSide(color: colors.borderSubtle),
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   ),
                 ),
@@ -164,8 +165,8 @@ class _LongMcqSurveyLayoutState extends ConsumerState<LongMcqSurveyLayout> {
                   icon: const Icon(Icons.chevron_right_rounded, size: 16),
                   label: const Text('Next', style: TextStyle(fontSize: 12)),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.fgPrimary,
-                    side: const BorderSide(color: AppColors.borderSubtle),
+                    foregroundColor: colors.fgPrimary,
+                    side: BorderSide(color: colors.borderSubtle),
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   ),
                 ),
@@ -175,7 +176,7 @@ class _LongMcqSurveyLayoutState extends ConsumerState<LongMcqSurveyLayout> {
                   icon: const Icon(Icons.check_circle_outline_rounded, size: 16),
                   label: const Text('Submit', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.accentEmerald,
+                    backgroundColor: colors.accentEmerald,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),

@@ -1,0 +1,1121 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Oreo AI — Learn what matters. Know what to learn next.</title>
+  <meta name="description"
+    content="Oreo helps students build a personalized learning journey — from understanding their goals and current level to finding the right resources, learning step-by-step, and tracking their progress.">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/svg+xml"
+    href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23171719'><circle cx='12' cy='12' r='10'/><path d='M12 6v12M6 12h12' stroke='%2367E8F9' stroke-width='2.5' stroke-linecap='round'/></svg>">
+
+  <!-- Google Fonts: Plus Jakarta Sans & Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,600&display=swap"
+    rel="stylesheet">
+
+  <!-- Three.js for Interactive 3D Knowledge Mesh Graphic -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+  <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+
+  <!-- Floating Capsule Navbar (Glassmorphic) -->
+  <header class="navbar-wrapper">
+    <nav class="navbar" id="main-nav">
+      <a href="#" class="nav-brand">
+        <div class="brand-logo-icon">
+          <span class="logo-circle dark"></span>
+          <span class="logo-circle cyan"></span>
+        </div>
+        <span class="brand-name">Oreo</span>
+        <span class="brand-badge">AI</span>
+      </a>
+
+      <div class="nav-links">
+        <a href="#problem" class="nav-link">The Problem</a>
+        <a href="#solution" class="nav-link">Our Solution</a>
+        <a href="#how-it-works" class="nav-link">How It Works</a>
+        <a href="#for-students" class="nav-link">For Students</a>
+        <a href="#for-teachers" class="nav-link">For Teachers</a>
+        <a href="#pricing" class="nav-link">Pricing</a>
+        <a href="#why-oreo" class="nav-link">Why Oreo</a>
+      </div>
+
+      <div class="nav-actions">
+        <a href="#pricing" class="btn btn-secondary btn-sm nav-secondary-btn">View Plans</a>
+        <a href="#final-cta" class="btn btn-primary btn-sm">Start Learning</a>
+      </div>
+
+      <!-- Mobile Menu Toggle -->
+      <button class="mobile-toggle" id="mobile-toggle" aria-label="Toggle Navigation Menu">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </nav>
+
+    <!-- Mobile Dropdown Menu -->
+    <div class="mobile-menu" id="mobile-menu">
+      <a href="#problem" class="mobile-link">The Problem</a>
+      <a href="#solution" class="mobile-link">Our Solution</a>
+      <a href="#how-it-works" class="mobile-link">How It Works</a>
+      <a href="#for-students" class="mobile-link">For Students</a>
+      <a href="#for-teachers" class="mobile-link">For Teachers</a>
+      <a href="#pricing" class="mobile-link">Pricing Plans</a>
+      <a href="#why-oreo" class="mobile-link">Why Oreo</a>
+      <div class="mobile-actions">
+        <a href="#final-cta" class="btn btn-primary btn-block">Start Learning Now</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Wrapper (1440px Container) -->
+  <main class="page-container">
+
+    <!-- 1. HERO SECTION -->
+    <section class="hero-section" id="hero">
+      <div class="hero-card">
+
+        <!-- Left Text Content -->
+        <div class="hero-content">
+          <!-- Professional Dual-Segment Announcement Badge -->
+          <a href="#how-it-works" class="hero-announcement-badge">
+            <span class="announcement-pill">
+              <span class="pill-pulse"></span>
+              <span class="pill-label">Oreo</span>
+            </span>
+            <span class="announcement-text">Personalized AI Learning Architecture</span>
+            <span class="announcement-arrow">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="M5 12h14M12 5l7 7-7 7" />
+              </svg>
+            </span>
+          </a>
+
+          <h1 class="hero-title">
+            Learn what matters.<br>
+            <span class="serif-accent">Know what to learn next.</span>
+          </h1>
+
+          <p class="hero-description">
+            Oreo helps students build a personalized learning journey — from understanding their goals and current level
+            to finding the right resources, learning step-by-step, and tracking their progress.
+          </p>
+
+          <!-- Dual CTAs -->
+          <div class="hero-cta-group">
+            <a href="#final-cta" class="btn btn-primary btn-lg">
+              <span>Start Learning</span>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="M5 12h14M12 5l7 7-7 7" />
+              </svg>
+            </a>
+            <a href="#how-it-works" class="btn btn-secondary btn-lg">
+              <span class="play-icon">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
+                  <polygon points="5 3 19 12 5 21 5 3" />
+                </svg>
+              </span>
+              <span>See How It Works</span>
+            </a>
+          </div>
+
+          <!-- Trust Proof / Quick Highlights -->
+          <div class="hero-metrics">
+            <div class="metric-item">
+              <span class="metric-val">100%</span>
+              <span class="metric-lbl">Tailored to Your Pace</span>
+            </div>
+            <div class="metric-divider"></div>
+            <div class="metric-item">
+              <span class="metric-val">5x</span>
+              <span class="metric-lbl">Faster Goal Clarity</span>
+            </div>
+            <div class="metric-divider"></div>
+            <div class="metric-item">
+              <span class="metric-val">24/7</span>
+              <span class="metric-lbl">Contextual AI Tutor</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Interactive 3D Graphic & Floating Badges -->
+        <div class="hero-visual">
+          <div class="canvas-wrapper">
+            <canvas id="hero-3d-canvas"></canvas>
+
+            <!-- Floating Interactive Badges with SVGs -->
+            <div class="floating-chip chip-top-right glass-card">
+              <div class="chip-icon bg-cyan">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <path
+                    d="M12 2a4 4 0 0 0-4 4v1a4 4 0 0 0-4 4 4 4 0 0 0 4 4v1a4 4 0 0 0 4 4 4 4 0 0 0 4-4v-1a4 4 0 0 0 4-4 4 4 0 0 0-4-4V6a4 4 0 0 0-4-4z" />
+                  <path d="M12 2v20" />
+                  <path d="M8 8h8" />
+                  <path d="M8 16h8" />
+                </svg>
+              </div>
+              <div class="chip-text">
+                <strong>AI Context Radar</strong>
+                <span>Active Knowledge Node</span>
+              </div>
+            </div>
+
+            <div class="floating-chip chip-bottom-left glass-card">
+              <div class="chip-icon bg-emerald">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10" />
+                  <circle cx="12" cy="12" r="6" />
+                  <circle cx="12" cy="12" r="2" />
+                </svg>
+              </div>
+              <div class="chip-text">
+                <strong>Goal Calibrated</strong>
+                <span>Physics • Banking of Road</span>
+              </div>
+            </div>
+
+            <div class="floating-chip chip-bottom-right glass-card">
+              <div class="chip-icon bg-amber">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+                </svg>
+              </div>
+              <div class="chip-text">
+                <strong>Next Step Ready</strong>
+                <span>Centripetal Force Lab</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+
+    <!-- 2. THE PROBLEM SECTION -->
+    <section class="section problem-section" id="problem">
+      <div class="section-header text-center">
+        <div class="section-tag">The Core Challenge</div>
+        <h2 class="section-title">
+          Learning today is not a lack of content.<br>
+          <span class="highlight-coral">It's a lack of direction.</span>
+        </h2>
+        <p class="section-subtitle max-w-700">
+          Students have access to thousands of courses, videos, articles, and tutorials, but still struggle to answer
+          the critical questions that make learning stick.
+        </p>
+      </div>
+
+      <!-- Problem 4-Card Bento Grid with Interactive SVG Icons -->
+      <div class="grid grid-4 problem-grid">
+        <div class="card problem-card">
+          <div class="problem-number">01</div>
+          <div class="problem-icon-wrapper icon-coral">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              <path d="M11 8v6" />
+              <path d="M8 11h6" />
+            </svg>
+          </div>
+          <h3 class="problem-heading">What do I already know?</h3>
+          <p class="problem-text">Students waste dozens of hours reviewing concepts they've already mastered because
+            platforms can't diagnose their exact baseline.</p>
+        </div>
+
+        <div class="card problem-card">
+          <div class="problem-number">02</div>
+          <div class="problem-icon-wrapper icon-amber">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="12 2 2 7 12 12 22 7 12 2" />
+              <polyline points="2 17 12 22 22 17" />
+              <polyline points="2 12 12 17 22 12" />
+            </svg>
+          </div>
+          <h3 class="problem-heading">What should I learn first?</h3>
+          <p class="problem-text">Without prerequisite mapping, learners jump into advanced topics too early, leading to
+            confusion, frustration, and burnout.</p>
+        </div>
+
+        <div class="card problem-card">
+          <div class="problem-number">03</div>
+          <div class="problem-icon-wrapper icon-cyan">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" />
+            </svg>
+          </div>
+          <h3 class="problem-heading">What should I learn next?</h3>
+          <p class="problem-text">Once a single tutorial ends, the learning momentum is lost. There is no continuous,
+            personalized roadmap guiding the next step.</p>
+        </div>
+
+        <div class="card problem-card">
+          <div class="problem-number">04</div>
+          <div class="problem-icon-wrapper icon-purple">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+              <line x1="9" y1="6" x2="15" y2="6" />
+              <line x1="9" y1="10" x2="15" y2="10" />
+            </svg>
+          </div>
+          <h3 class="problem-heading">Which resource is actually useful?</h3>
+          <p class="problem-text">Endless searching through Reddit, YouTube, and blog posts leads to analysis paralysis
+            rather than actual deep understanding.</p>
+        </div>
+      </div>
+
+      <!-- Teacher Perspective Callout Banner with Interactive SVG -->
+      <div class="teacher-perspective-banner">
+        <div class="banner-icon-badge">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 10v6M2 10l10-5 10 5-10 5z" />
+            <path d="M6 12v5c3 3 9 3 12 0v-5" />
+          </svg>
+        </div>
+        <div class="banner-content">
+          <h4>The Challenge for Educators</h4>
+          <p>Teachers face the same challenge from the other side — personalizing this journey for every student takes
+            time and constant effort.</p>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- 3. OUR SOLUTION SECTION -->
+    <section class="section solution-section" id="solution">
+      <div class="solution-wrapper">
+        <div class="section-header text-center">
+          <div class="section-tag">The Oreo Architecture</div>
+          <h2 class="section-title">
+            One learning journey,<br>
+            <span class="gradient-text">built around you.</span>
+          </h2>
+          <p class="section-subtitle max-w-700">
+            Oreo takes a learner's goal, background, and current understanding and turns them into a structured,
+            adaptive learning path.
+          </p>
+        </div>
+
+        <!-- 5 Solution Pillars Grid with Interactive SVGs -->
+        <div class="grid grid-3 solution-grid">
+
+          <div class="card solution-card">
+            <div class="card-glow glow-blue"></div>
+            <div class="solution-header">
+              <div class="solution-icon bg-soft-blue">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6" />
+                  <line x1="8" y1="2" x2="8" y2="18" />
+                  <line x1="16" y1="6" x2="16" y2="22" />
+                </svg>
+              </div>
+              <span class="solution-step-num">Step 1</span>
+            </div>
+            <h3 class="solution-title">Understand what to learn and in what order</h3>
+            <p class="solution-description">Diagnostic micro-interviews map your cognitive baseline into an interactive,
+              step-by-step prerequisite tree.</p>
+            <div class="solution-preview-pill">
+              <span class="pill-dot"></span> Dynamic Roadmap Graph
+            </div>
+          </div>
+
+          <div class="card solution-card">
+            <div class="card-glow glow-emerald"></div>
+            <div class="solution-header">
+              <div class="solution-icon bg-soft-emerald">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10" />
+                  <circle cx="12" cy="12" r="6" />
+                  <circle cx="12" cy="12" r="2" />
+                </svg>
+              </div>
+              <span class="solution-step-num">Step 2</span>
+            </div>
+            <h3 class="solution-title">Find relevant learning resources</h3>
+            <p class="solution-description">AI curates and filters high-yield videos, interactive simulations, and
+              structured reference docs matching your exact topic.</p>
+            <div class="solution-preview-pill">
+              <span class="pill-dot"></span> Zero-Noise Resource Feed
+            </div>
+          </div>
+
+          <div class="card solution-card">
+            <div class="card-glow glow-purple"></div>
+            <div class="solution-header">
+              <div class="solution-icon bg-soft-purple">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M10 2v7.31M14 2v7.31" />
+                  <path d="M8.5 2h7" />
+                  <path d="M14 9.3a6.5 6.5 0 1 1-4 0" />
+                  <line x1="9" y1="15" x2="15" y2="15" />
+                </svg>
+              </div>
+              <span class="solution-step-num">Step 3</span>
+            </div>
+            <h3 class="solution-title">Learn through structured sessions</h3>
+            <p class="solution-description">Engage in focused, timed learning sprints with synchronized video playback,
+              active canvas notes, and flashcard recall.</p>
+            <div class="solution-preview-pill">
+              <span class="pill-dot"></span> Learning Lab Workspace
+            </div>
+          </div>
+
+          <div class="card solution-card">
+            <div class="card-glow glow-coral"></div>
+            <div class="solution-header">
+              <div class="solution-icon bg-soft-coral">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                  <line x1="9" y1="10" x2="15" y2="10" />
+                  <line x1="12" y1="7" x2="12" y2="13" />
+                </svg>
+              </div>
+              <span class="solution-step-num">Step 4</span>
+            </div>
+            <h3 class="solution-title">Ask an AI tutor questions while learning</h3>
+            <p class="solution-description">Get instant contextual explanations right alongside your study materials
+              without breaking your learning flow.</p>
+            <div class="solution-preview-pill">
+              <span class="pill-dot"></span> Context-Aware Micro-Tutor
+            </div>
+          </div>
+
+          <div class="card solution-card solution-card-wide">
+            <div class="card-glow glow-amber"></div>
+            <div class="solution-header">
+              <div class="solution-icon bg-soft-amber">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="18" y1="20" x2="18" y2="10" />
+                  <line x1="12" y1="20" x2="12" y2="4" />
+                  <line x1="6" y1="20" x2="6" y2="14" />
+                  <line x1="2" y1="20" x2="22" y2="20" />
+                </svg>
+              </div>
+              <span class="solution-step-num">Step 5</span>
+            </div>
+            <h3 class="solution-title">Track what has been completed and what comes next</h3>
+            <p class="solution-description">Gain total clarity with visual node mastery, streak retention metrics, and
+              intelligent milestone projections.</p>
+            <div class="solution-preview-pill">
+              <span class="pill-dot"></span> Real-Time Mastery Tracker
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Supportive Statement -->
+        <div class="solution-quote-card">
+          <p class="solution-quote">
+            “Oreo doesn't replace teachers. It gives students and teachers better tools to learn and teach more
+            effectively.”
+          </p>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- 4. HOW OREO HELPS (5-Step Progression Pathway) -->
+    <section class="section how-it-works-section" id="how-it-works">
+      <div class="section-header text-center">
+        <div class="section-tag">How Oreo Helps</div>
+        <h2 class="section-title">
+          From a goal to a <span class="serif-accent">clear learning path.</span>
+        </h2>
+        <p class="section-subtitle">
+          Here is how Oreo guides you through every stage of your educational journey.
+        </p>
+      </div>
+
+      <!-- Step Cards Pipeline -->
+      <div class="pipeline-container">
+
+        <div class="pipeline-step">
+          <div class="step-badge">
+            <span class="step-badge-num">01</span>
+            <span class="step-badge-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <circle cx="12" cy="12" r="10" />
+                <path d="M12 16v-4" />
+                <path d="M12 8h.01" />
+              </svg>
+            </span>
+          </div>
+          <div class="step-card">
+            <div class="step-card-header">
+              <h3>Understand You</h3>
+              <span class="step-subtag">Goal & Skill Calibration</span>
+            </div>
+            <p>Oreo identifies your current knowledge, learning goals, and specific study preferences through an
+              intuitive micro-interview.</p>
+          </div>
+        </div>
+
+        <div class="pipeline-connector"></div>
+
+        <div class="pipeline-step">
+          <div class="step-badge">
+            <span class="step-badge-num">02</span>
+            <span class="step-badge-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <polygon points="12 2 2 7 12 12 22 7 12 2" />
+                <polyline points="2 17 12 22 22 17" />
+              </svg>
+            </span>
+          </div>
+          <div class="step-card">
+            <div class="step-card-header">
+              <h3>Build Your Path</h3>
+              <span class="step-subtag">Curriculum Generation</span>
+            </div>
+            <p>A structured, modular curriculum is generated around what you actually need to learn, skipping what you
+              already know.</p>
+          </div>
+        </div>
+
+        <div class="pipeline-connector"></div>
+
+        <div class="pipeline-step">
+          <div class="step-badge">
+            <span class="step-badge-num">03</span>
+            <span class="step-badge-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+            </span>
+          </div>
+          <div class="step-card">
+            <div class="step-card-header">
+              <h3>Find the Right Resources</h3>
+              <span class="step-subtag">Curation & Synthesis</span>
+            </div>
+            <p>Oreo discovers, organizes, and links high-quality learning materials, videos, and documentation for each
+              individual topic.</p>
+          </div>
+        </div>
+
+        <div class="pipeline-connector"></div>
+
+        <div class="pipeline-step">
+          <div class="step-badge">
+            <span class="step-badge-num">04</span>
+            <span class="step-badge-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+              </svg>
+            </span>
+          </div>
+          <div class="step-card">
+            <div class="step-card-header">
+              <h3>Learn With Guidance</h3>
+              <span class="step-subtag">Interactive Learning Lab</span>
+            </div>
+            <p>Learn through structured sessions and ask the AI Tutor questions within your current learning context
+              without losing focus.</p>
+          </div>
+        </div>
+
+        <div class="pipeline-connector"></div>
+
+        <div class="pipeline-step">
+          <div class="step-badge">
+            <span class="step-badge-num">05</span>
+            <span class="step-badge-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+              </svg>
+            </span>
+          </div>
+          <div class="step-card">
+            <div class="step-card-header">
+              <h3>Track Your Progress</h3>
+              <span class="step-subtag">Visual Mastery</span>
+            </div>
+            <p>See exactly what you've completed, where you currently stand in your curriculum, and what you should
+              learn next.</p>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+
+    <!-- 5. FOR STUDENTS SECTION -->
+    <section class="section students-section" id="for-students">
+      <div class="section-header">
+        <div class="section-tag">For Students</div>
+        <h2 class="section-title">
+          Stop searching. <span class="highlight-coral">Start learning.</span>
+        </h2>
+        <p class="section-subtitle max-w-700">
+          Oreo reduces the time spent deciding what to study and helps students focus on actually learning and building
+          real skills.
+        </p>
+      </div>
+
+      <!-- Bento Grid for Students -->
+      <div class="grid grid-2 bento-students-grid">
+
+        <!-- Feature 1: Personalized Path -->
+        <div class="card bento-card">
+          <div class="bento-image-wrapper">
+            <img
+              src="https://images.pexels.com/photos/3807755/pexels-photo-3807755.jpeg?auto=compress&cs=tinysrgb&h=650&w=940"
+              alt="Student studying with personalized path" class="bento-img" loading="lazy">
+            <div class="bento-img-overlay"></div>
+          </div>
+          <div class="bento-card-body">
+            <div class="bento-tag">Personalized Learning Path</div>
+            <h3 class="bento-title">Know exactly where to start.</h3>
+            <p class="bento-desc">No more staring at a blank screen wondering what course to begin. Your path is
+              sequenced specifically for your goals.</p>
+          </div>
+        </div>
+
+        <!-- Feature 2: Relevant Resources -->
+        <div class="card bento-card">
+          <div class="bento-image-wrapper">
+            <img
+              src="https://images.pexels.com/photos/771317/pexels-photo-771317.jpeg?auto=compress&cs=tinysrgb&h=650&w=940"
+              alt="Student reviewing curated resources" class="bento-img" loading="lazy">
+            <div class="bento-img-overlay"></div>
+          </div>
+          <div class="bento-card-body">
+            <div class="bento-tag">Relevant Resources</div>
+            <h3 class="bento-title">Spend less time searching through endless content.</h3>
+            <p class="bento-desc">Oreo filters through the noise to bring the most concise, high-yield videos, notes,
+              and interactive materials straight to your desk.</p>
+          </div>
+        </div>
+
+        <!-- Feature 3: AI Tutor -->
+        <div class="card bento-card">
+          <div class="bento-image-wrapper">
+            <img
+              src="https://images.pexels.com/photos/5538344/pexels-photo-5538344.jpeg?auto=compress&cs=tinysrgb&h=650&w=940"
+              alt="Students getting AI tutor help" class="bento-img" loading="lazy">
+            <div class="bento-img-overlay"></div>
+          </div>
+          <div class="bento-card-body">
+            <div class="bento-tag">24/7 AI Tutor</div>
+            <h3 class="bento-title">Get help when you're stuck without losing context.</h3>
+            <p class="bento-desc">Ask doubts directly in the sidebar. Oreo knows what video timestamp, concept node, or
+              note block you are currently working on.</p>
+          </div>
+        </div>
+
+        <!-- Feature 4: Progress Tracking -->
+        <div class="card bento-card">
+          <div class="bento-image-wrapper">
+            <img
+              src="https://images.pexels.com/photos/8199651/pexels-photo-8199651.jpeg?auto=compress&cs=tinysrgb&h=650&w=940"
+              alt="Students tracking study progress" class="bento-img" loading="lazy">
+            <div class="bento-img-overlay"></div>
+          </div>
+          <div class="bento-card-body">
+            <div class="bento-tag">Progress Tracking</div>
+            <h3 class="bento-title">Always know where you are and what comes next.</h3>
+            <p class="bento-desc">Visual progress bars, concept mastery indicators, and consistency streaks keep you
+              motivated and accountable every single day.</p>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+
+    <!-- 6. FOR TEACHERS SECTION -->
+    <section class="section teachers-section" id="for-teachers">
+      <div class="teachers-card">
+
+        <div class="teachers-content">
+          <div class="section-tag light-tag">For Teachers & Educators</div>
+          <h2 class="teachers-title">
+            Support every learner without creating a separate plan for everyone.
+          </h2>
+          <p class="teachers-description">
+            Oreo helps teachers understand each student's learning journey and progress, giving them deep context to
+            guide students effectively.
+          </p>
+
+          <!-- Core Value Proposition Highlight -->
+          <div class="teachers-goal-box">
+            <span class="goal-label">THE GOAL IS SIMPLE</span>
+            <h3 class="goal-statement">Less time organizing learning.<br><span class="highlight-cyan">More time
+                teaching.</span></h3>
+          </div>
+
+          <ul class="teachers-feature-list">
+            <li>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.5">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+              <span>Instant visibility into student concept mastery and learning bottlenecks</span>
+            </li>
+            <li>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.5">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+              <span>Automated curriculum scaffolding tailored to varied learning paces</span>
+            </li>
+            <li>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.5">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+              <span>Actionable student progress analytics without manual report writing</span>
+            </li>
+          </ul>
+        </div>
+
+        <div class="teachers-visual">
+          <div class="teachers-img-container">
+            <img
+              src="https://images.pexels.com/photos/5212340/pexels-photo-5212340.jpeg?auto=compress&cs=tinysrgb&h=650&w=940"
+              alt="Teacher explaining subject in modern classroom" class="teachers-img" loading="lazy">
+            <div class="teachers-badge-overlay glass-card">
+              <span class="t-badge-num">100%</span>
+              <span class="t-badge-text">Student Context Available</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+
+    <!-- 7. SUBSCRIPTION PLANS (PRICING BENTO) -->
+    <section class="section pricing-section" id="pricing">
+      <div class="section-header text-center">
+        <div class="section-tag">Transparent Pricing</div>
+        <h2 class="section-title">
+          Choose how you <span class="serif-accent">learn.</span>
+        </h2>
+        <p class="section-subtitle max-w-700">
+          Flexible plans designed for individuals, power learners, and dedicated students.
+        </p>
+      </div>
+
+      <!-- Pricing Cards 3-Column Grid -->
+      <div class="grid grid-3 pricing-grid">
+
+        <!-- Plan 1: Starter -->
+        <div class="card pricing-card">
+          <div class="pricing-card-header">
+            <h3 class="plan-name">Starter</h3>
+            <p class="plan-tagline">For learners who want a clear direction.</p>
+            <div class="plan-price">
+              <span class="currency">₹</span>
+              <span class="amount">199</span>
+              <span class="period">/ month</span>
+            </div>
+          </div>
+
+          <div class="pricing-features">
+            <div class="feature-category-label">Included Features</div>
+            <ul class="feature-list">
+              <li>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.5">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+                <span>Personalized learning plan</span>
+              </li>
+              <li>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.5">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+                <span>Structured learning sessions</span>
+              </li>
+              <li>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.5">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+                <span>Learning progress tracking</span>
+              </li>
+              <li>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.5">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+                <span>Curated learning resources</span>
+              </li>
+              <li>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.5">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+                <span>Basic AI Tutor access</span>
+              </li>
+            </ul>
+          </div>
+
+          <a href="#final-cta" class="btn btn-secondary btn-block">Start with Starter</a>
+        </div>
+
+        <!-- Plan 2: Pro (POPULAR / RECOMMENDED) -->
+        <div class="card pricing-card pricing-card-featured">
+          <div class="featured-ribbon">
+            <span class="ribbon-icon">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                <polygon
+                  points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+              </svg>
+            </span> Recommended
+          </div>
+
+          <div class="pricing-card-header">
+            <h3 class="plan-name">Pro</h3>
+            <p class="plan-tagline">For learners who want deeper AI-assisted learning.</p>
+            <div class="plan-price">
+              <span class="currency">₹</span>
+              <span class="amount">499</span>
+              <span class="period">/ month</span>
+            </div>
+          </div>
+
+          <div class="pricing-features">
+            <div class="feature-category-label">Everything in Starter, plus:</div>
+            <ul class="feature-list">
+              <li>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#67E8F9" stroke-width="2.5">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+                <span><strong>Advanced AI Tutor</strong></span>
+              </li>
+              <li>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#67E8F9" stroke-width="2.5">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+                <span>More personalized resource recommendations</span>
+              </li>
+              <li>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#67E8F9" stroke-width="2.5">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+                <span>Detailed learning progress analytics</span>
+              </li>
+              <li>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#67E8F9" stroke-width="2.5">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+                <span>Expanded AI usage limits</span>
+              </li>
+              <li>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#67E8F9" stroke-width="2.5">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+                <span>Priority generation of learning plans</span>
+              </li>
+            </ul>
+          </div>
+
+          <a href="#final-cta" class="btn btn-primary btn-block">Choose Pro</a>
+        </div>
+
+        <!-- Plan 3: Advanced -->
+        <div class="card pricing-card">
+          <div class="pricing-card-header">
+            <h3 class="plan-name">Advanced</h3>
+            <p class="plan-tagline">For intensive learners who want the complete Oreo experience.</p>
+            <div class="plan-price">
+              <span class="currency">₹</span>
+              <span class="amount">999</span>
+              <span class="period">/ month</span>
+            </div>
+          </div>
+
+          <div class="pricing-features">
+            <div class="feature-category-label">Everything in Pro, plus:</div>
+            <ul class="feature-list">
+              <li>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.5">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+                <span><strong>Higher AI Tutor usage</strong></span>
+              </li>
+              <li>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.5">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+                <span>Advanced personalized learning journeys</span>
+              </li>
+              <li>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.5">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+                <span>Deeper progress insights & cognitive radar</span>
+              </li>
+              <li>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.5">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+                <span>Priority AI processing pipeline</span>
+              </li>
+              <li>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.5">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+                <span>Early access to new learning features</span>
+              </li>
+            </ul>
+          </div>
+
+          <a href="#final-cta" class="btn btn-secondary btn-block">Go Advanced</a>
+        </div>
+
+      </div>
+    </section>
+
+
+    <!-- 8. WHY OREO SECTION -->
+    <section class="section why-oreo-section" id="why-oreo">
+      <div class="why-oreo-card">
+
+        <div class="section-header text-center">
+          <div class="section-tag">Our Philosophy</div>
+          <h2 class="section-title">
+            More than a <span class="serif-accent">course library.</span>
+          </h2>
+          <p class="section-subtitle max-w-700">
+            Traditional platforms primarily give learners content to consume. Oreo focuses on the journey around that
+            content — understanding the learner, structuring what they need to learn, finding resources, providing
+            contextual help, and tracking progress.
+          </p>
+        </div>
+
+        <!-- Comparison Bento Grid with Interactive SVGs -->
+        <div class="grid grid-2 comparison-grid">
+
+          <!-- Traditional Platforms Column -->
+          <div class="comparison-column traditional-col">
+            <div class="col-badge text-muted">Traditional Course Platforms</div>
+            <h3 class="col-title">Content Repositories</h3>
+            <ul class="comparison-list">
+              <li>
+                <span class="cross-icon">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"
+                    stroke-linecap="round">
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
+                </span>
+                <span>Passive video bingeing without retention checkpoints</span>
+              </li>
+              <li>
+                <span class="cross-icon">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"
+                    stroke-linecap="round">
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
+                </span>
+                <span>One-size-fits-all curricula that ignore what you already know</span>
+              </li>
+              <li>
+                <span class="cross-icon">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"
+                    stroke-linecap="round">
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
+                </span>
+                <span>Dead-end completions with no clear next milestone</span>
+              </li>
+              <li>
+                <span class="cross-icon">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"
+                    stroke-linecap="round">
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
+                </span>
+                <span>Disconnected notes, videos, and external practice tools</span>
+              </li>
+            </ul>
+          </div>
+
+          <!-- Oreo AI System Column -->
+          <div class="comparison-column oreo-col">
+            <div class="col-badge highlight-badge">Oreo AI Learning System</div>
+            <h3 class="col-title">Active Learning Journey</h3>
+            <ul class="comparison-list">
+              <li>
+                <span class="check-icon">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"
+                    stroke-linecap="round">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                </span>
+                <span>Personalized curriculum calibrated to your exact knowledge gaps</span>
+              </li>
+              <li>
+                <span class="check-icon">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"
+                    stroke-linecap="round">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                </span>
+                <span>Curated multi-format resources (videos, notes, flashcards)</span>
+              </li>
+              <li>
+                <span class="check-icon">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"
+                    stroke-linecap="round">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                </span>
+                <span>Context-aware AI Tutor answering questions in real-time</span>
+              </li>
+              <li>
+                <span class="check-icon">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"
+                    stroke-linecap="round">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                </span>
+                <span>Dynamic roadmap that evolves as you master each topic</span>
+              </li>
+            </ul>
+          </div>
+
+        </div>
+
+        <!-- Key Takeaway Banner -->
+        <div class="why-oreo-takeaway">
+          <div class="takeaway-badge">KEY PHILOSOPHY</div>
+          <h3 class="takeaway-text">The goal isn't more content. <span class="highlight-coral">It's better
+              learning.</span></h3>
+        </div>
+
+      </div>
+    </section>
+
+
+    <!-- 9. FINAL CTA SECTION -->
+    <section class="section final-cta-section" id="final-cta">
+      <div class="final-cta-card">
+        <div class="cta-glow-effect"></div>
+
+        <div class="final-cta-content text-center">
+          <div class="section-tag light-tag">Start Your Learning Journey</div>
+          <h2 class="final-cta-title">
+            Know what to learn next.
+          </h2>
+          <p class="final-cta-subtitle">
+            Start with your goal. Oreo builds the path.
+          </p>
+
+          <div class="final-cta-btn-wrapper">
+            <a href="#hero" class="btn btn-primary btn-xl">
+              <span>Start Learning</span>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="M5 12h14M12 5l7 7-7 7" />
+              </svg>
+            </a>
+          </div>
+
+          <div class="final-cta-footer-note">
+            <span class="note-pill">Plans start at ₹199/month</span>
+            <span class="note-sep">•</span>
+            <span>Cancel anytime</span>
+            <span class="note-sep">•</span>
+            <span>No credit card required for preview</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="footer-container">
+      <div class="footer-top">
+
+        <div class="footer-brand-col">
+          <a href="#" class="nav-brand">
+            <div class="brand-logo-icon">
+              <span class="logo-circle dark"></span>
+              <span class="logo-circle cyan"></span>
+            </div>
+            <span class="brand-text">Oreo <span class="brand-badge">AI</span></span>
+          </a>
+          <p class="footer-tagline">
+            Personalized learning paths, curated resources, and context-aware AI tutoring for students and educators
+            worldwide.
+          </p>
+        </div>
+
+        <div class="footer-links-group">
+          <div class="footer-col">
+            <div class="footer-col-title">Platform</div>
+            <a href="#hero">Hero Overview</a>
+            <a href="#problem">The Problem</a>
+            <a href="#solution">Our Solution</a>
+            <a href="#how-it-works">How It Works</a>
+          </div>
+
+          <div class="footer-col">
+            <div class="footer-col-title">Audience</div>
+            <a href="#for-students">For Students</a>
+            <a href="#for-teachers">For Teachers</a>
+            <a href="#why-oreo">Why Oreo</a>
+            <a href="#pricing">Pricing Plans</a>
+          </div>
+
+          <div class="footer-col">
+            <div class="footer-col-title">Plans</div>
+            <a href="#pricing">Starter (₹199/mo)</a>
+            <a href="#pricing">Pro (₹499/mo)</a>
+            <a href="#pricing">Advanced (₹999/mo)</a>
+            <a href="#final-cta">Get Started</a>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="footer-bottom">
+        <p class="footer-copyright">
+          © 2026 Oreo AI Learning Platform. All rights reserved. Built with precision.
+        </p>
+        <div class="footer-bottom-links">
+          <a href="#hero" class="back-to-top-btn" id="back-to-top">
+            <span>Back to top</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <polyline points="18 15 12 9 6 15" />
+            </svg>
+          </a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+
+</html>

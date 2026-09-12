@@ -110,8 +110,8 @@ class _LearningLabWorkspaceScreenState extends ConsumerState<LearningLabWorkspac
     try {
       final repo = ref.read(httpWorkspaceRepositoryProvider);
       final enhancedContext = activeWs.subject.isNotEmpty && activeWs.subject != contextTopic
-          ? "${activeWs.subject} tutorial".trim()
-          : "tutorial";
+          ? "${activeWs.subject} $contextTopic $subtopicsContext tutorial".trim()
+          : "$contextTopic $subtopicsContext tutorial".trim();
       videos = await repo.searchVideos(activeWs.id, contextTopic, context: enhancedContext);
       if (videos.isNotEmpty) {
         final videoId = videos.first['id'] as String?;
@@ -138,7 +138,6 @@ class _LearningLabWorkspaceScreenState extends ConsumerState<LearningLabWorkspac
         assessments = await mRepo.generateAssessment(activeWs.activeLearningContext);
       } catch (e) {
         debugPrint('Mastery generation failed: $e');
-        // No fallback
       }
     }
 
@@ -152,21 +151,15 @@ class _LearningLabWorkspaceScreenState extends ConsumerState<LearningLabWorkspac
     }
   }
 
-  void _handleAttachVideoToChat() {
-  }
+  void _handleAttachVideoToChat() {}
 
-  void _handleAttachCardToChat(FlashcardItem card) {
-  }
+  void _handleAttachCardToChat(FlashcardItem card) {}
 
-  void _handleAttachDiagramToChat(CanvasGridCell cell) {
-  }
+  void _handleAttachDiagramToChat(CanvasGridCell cell) {}
 
   void _handleReviewCard(String cardId, int quality) {
-    // _flashcardRepo.reviewCard(cardId, quality); // TODO: wire to http repository if needed
     setState(() {});
   }
-
-
 
   RoadmapNode? _findNodeByTitle(List<RoadmapNode>? nodes, String title) {
     if (nodes == null) return null;
@@ -180,6 +173,8 @@ class _LearningLabWorkspaceScreenState extends ConsumerState<LearningLabWorkspac
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
+
     ref.listen(activeWorkspaceProvider, (previous, next) {
       final contextChanged = previous?.activeLearningContext != next?.activeLearningContext;
       final confirmationChanged = (previous?.isCourseConfirmed != true) && (next?.isCourseConfirmed == true);
@@ -212,18 +207,16 @@ class _LearningLabWorkspaceScreenState extends ConsumerState<LearningLabWorkspac
     final currentObjects = activeWs?.canvasObjects ?? widget.sharedCanvasObjects;
 
     final stageContent = _isLoading
-        ? const Center(child: CircularProgressIndicator(color: AppColors.accentPrimary))
+        ? Center(child: CircularProgressIndicator(color: colors.accentPrimary))
         : LayoutBuilder(
             builder: (context, leftConstraints) {
-              final totalHeight = leftConstraints.maxHeight;
-
               if (_isScrollMode) {
                 return Padding(
                   padding: const EdgeInsets.all(12.0),
                   child: SingleChildScrollView(
                     child: Column(
                       children: [
-                        if (widget.isEmbedded) _buildModeToggle(),
+                        if (widget.isEmbedded) _buildModeToggle(context),
                         SizedBox(
                           height: 400,
                           child: VideoPlayerPanel(
@@ -273,7 +266,7 @@ class _LearningLabWorkspaceScreenState extends ConsumerState<LearningLabWorkspac
                 padding: const EdgeInsets.all(12.0),
                 child: Column(
                   children: [
-                    if (widget.isEmbedded) _buildModeToggle(),
+                    if (widget.isEmbedded) _buildModeToggle(context),
                     // Video Player
                     Expanded(
                       flex: (_videoFraction * 1000).toInt(),
@@ -291,12 +284,12 @@ class _LearningLabWorkspaceScreenState extends ConsumerState<LearningLabWorkspac
                       ),
                     ),
 
-                    // Vertical Draggable Splitter
+                    // Vertical Split Resizer
                     GestureDetector(
                       onVerticalDragUpdate: (details) {
                         setState(() {
-                          _videoFraction += details.delta.dy / (totalHeight > 0 ? totalHeight : 1.0);
-                          _videoFraction = _videoFraction.clamp(0.25, 0.85);
+                          _videoFraction += details.delta.dy / leftConstraints.maxHeight;
+                          _videoFraction = _videoFraction.clamp(0.20, 0.80);
                         });
                       },
                       child: MouseRegion(
@@ -304,10 +297,10 @@ class _LearningLabWorkspaceScreenState extends ConsumerState<LearningLabWorkspac
                         child: Container(
                           height: 6,
                           margin: const EdgeInsets.symmetric(vertical: 4),
-                          color: AppColors.bgActivityBar,
-                          child: const Center(
+                          color: colors.bgActivityBar,
+                          child: Center(
                             child: Divider(
-                              color: AppColors.borderSubtle,
+                              color: colors.borderSubtle,
                               thickness: 1,
                               height: 1,
                             ),
@@ -354,10 +347,10 @@ class _LearningLabWorkspaceScreenState extends ConsumerState<LearningLabWorkspac
 
     Widget activityStageContent;
     if (_isLoading) {
-      activityStageContent = const Center(child: CircularProgressIndicator(color: AppColors.accentPrimary));
+      activityStageContent = Center(child: CircularProgressIndicator(color: colors.accentPrimary));
     } else if (isLongQuiz && _dismissedQuizForContext != currentContext) {
       activityStageContent = _topicAssessments == null 
-        ? const Center(child: CircularProgressIndicator(color: AppColors.accentPrimary))
+        ? Center(child: CircularProgressIndicator(color: colors.accentPrimary))
         : LongMcqSurveyLayout(
         questions: _topicAssessments!,
         onCompleteTest: () {
@@ -367,13 +360,11 @@ class _LearningLabWorkspaceScreenState extends ConsumerState<LearningLabWorkspac
           });
           if (widget.onUndoBackToMindMap != null) {
             widget.onUndoBackToMindMap!();
-          } else {
           }
         },
       );
     } else if (isCodeChallenge && _dismissedQuizForContext != currentContext) {
       activityStageContent = CodeTerminalChallengeLayout(
-        // TODO: Wire up to real coding challenge API
         question: QuestionItem(id: 'c1', topicTag: 'code', questionText: 'Write a Python program', type: QuestionType.subjective, options: []),
         onCompleteTest: () {
           setState(() {
@@ -396,7 +387,7 @@ class _LearningLabWorkspaceScreenState extends ConsumerState<LearningLabWorkspac
                   child: SingleChildScrollView(
                     padding: const EdgeInsets.all(24),
                     child: PopupQuestionnaireLayout(
-                      questions: [], // TODO: Wire up to real short popups
+                      questions: const [],
                       onCompleteTest: () {
                         setState(() {
                           _dismissedQuizForContext = currentContext;
@@ -422,13 +413,13 @@ class _LearningLabWorkspaceScreenState extends ConsumerState<LearningLabWorkspac
 
     if (widget.isEmbedded) {
       return Container(
-        color: AppColors.bgCanvas,
+        color: colors.bgCanvas,
         child: activityStageContent,
       );
     }
 
     return Scaffold(
-      backgroundColor: AppColors.bgCanvas,
+      backgroundColor: colors.bgCanvas,
       body: Column(
         children: [
           _buildWorkspaceHeader(context, currentContext),
@@ -452,9 +443,9 @@ class _LearningLabWorkspaceScreenState extends ConsumerState<LearningLabWorkspac
                         cursor: SystemMouseCursors.resizeColumn,
                         child: Container(
                           width: 6,
-                          color: AppColors.bgActivityBar,
-                          child: const Center(
-                            child: VerticalDivider(color: AppColors.borderSubtle, thickness: 1, width: 2),
+                          color: colors.bgActivityBar,
+                          child: Center(
+                            child: VerticalDivider(color: colors.borderSubtle, thickness: 1, width: 2),
                           ),
                         ),
                       ),
@@ -483,7 +474,8 @@ class _LearningLabWorkspaceScreenState extends ConsumerState<LearningLabWorkspac
     );
   }
 
-  Widget _buildModeToggle() {
+  Widget _buildModeToggle(BuildContext context) {
+    final colors = context.colors;
     return Padding(
       padding: const EdgeInsets.only(bottom: 8.0),
       child: Row(
@@ -497,16 +489,16 @@ class _LearningLabWorkspaceScreenState extends ConsumerState<LearningLabWorkspac
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
               decoration: BoxDecoration(
-                color: _isScrollMode ? AppColors.accentPrimary.withValues(alpha: 0.2) : AppColors.bgElevated,
+                color: _isScrollMode ? colors.accentPrimary.withValues(alpha: 0.15) : colors.bgElevated,
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: _isScrollMode ? AppColors.accentPrimary : AppColors.borderSubtle),
+                border: Border.all(color: _isScrollMode ? colors.accentPrimary : colors.borderSubtle),
               ),
               child: Row(
                 children: [
                   Icon(
                     _isScrollMode ? Icons.unfold_less_rounded : Icons.unfold_more_rounded,
                     size: 13,
-                    color: _isScrollMode ? AppColors.accentPrimary : AppColors.fgSecondary,
+                    color: _isScrollMode ? colors.accentPrimary : colors.fgSecondary,
                   ),
                   const SizedBox(width: 6),
                   Text(
@@ -514,7 +506,7 @@ class _LearningLabWorkspaceScreenState extends ConsumerState<LearningLabWorkspac
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.bold,
-                      color: _isScrollMode ? AppColors.accentPrimary : AppColors.fgSecondary,
+                      color: _isScrollMode ? colors.accentPrimary : colors.fgSecondary,
                     ),
                   ),
                 ],
@@ -527,38 +519,44 @@ class _LearningLabWorkspaceScreenState extends ConsumerState<LearningLabWorkspac
   }
 
   Widget _buildWorkspaceHeader(BuildContext context, String currentContext) {
+    final colors = context.colors;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-      decoration: const BoxDecoration(
-        color: AppColors.bgActivityBar,
-        border: Border(bottom: BorderSide(color: AppColors.borderSubtle, width: 0.8)),
+      decoration: BoxDecoration(
+        color: colors.bgActivityBar,
+        border: Border(bottom: BorderSide(color: colors.borderSubtle, width: 0.8)),
       ),
       child: Row(
         children: [
           if (widget.onUndoBackToMindMap != null)
             OutlinedButton.icon(
               style: OutlinedButton.styleFrom(
-                side: const BorderSide(color: AppColors.borderActive),
+                side: BorderSide(color: colors.borderActive),
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
               ),
-              icon: const Icon(Icons.undo_rounded, size: 16, color: AppColors.accentPrimary),
-              label: const Text('Back to Mind Map', style: TextStyle(fontSize: 12, color: AppColors.accentPrimary, fontWeight: FontWeight.bold)),
+              icon: Icon(Icons.undo_rounded, size: 16, color: colors.accentPrimary),
+              label: Text('Back to Mind Map', style: TextStyle(fontSize: 12, color: colors.accentPrimary, fontWeight: FontWeight.bold)),
               onPressed: widget.onUndoBackToMindMap,
             ),
           if (widget.onUndoBackToMindMap != null) const SizedBox(width: 16),
           Text(
             'Learning Lab Workspace',
-            style: Theme.of(context).textTheme.displayMedium?.copyWith(fontSize: 15, fontWeight: FontWeight.bold),
+            style: Theme.of(context).textTheme.displayMedium?.copyWith(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                  color: colors.fgPrimary,
+                ),
           ),
           const SizedBox(width: 8),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
             decoration: BoxDecoration(
-              color: AppColors.accentEmerald.withValues(alpha: 0.15),
+              color: colors.accentEmerald.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Text('Active: $currentContext', style: const TextStyle(fontSize: 11, color: AppColors.accentEmerald, fontWeight: FontWeight.bold)),
+            child: Text('Active: $currentContext', style: TextStyle(fontSize: 11, color: colors.accentEmerald, fontWeight: FontWeight.bold)),
           ),
           const Spacer(),
 
@@ -573,16 +571,16 @@ class _LearningLabWorkspaceScreenState extends ConsumerState<LearningLabWorkspac
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
-                color: _isScrollMode ? AppColors.accentPrimary.withValues(alpha: 0.2) : AppColors.bgCanvas,
+                color: _isScrollMode ? colors.accentPrimary.withValues(alpha: 0.15) : colors.bgCanvas,
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: _isScrollMode ? AppColors.accentPrimary : AppColors.borderSubtle),
+                border: Border.all(color: _isScrollMode ? colors.accentPrimary : colors.borderSubtle),
               ),
               child: Row(
                 children: [
                   Icon(
                     _isScrollMode ? Icons.unfold_less_rounded : Icons.unfold_more_rounded,
                     size: 14,
-                    color: _isScrollMode ? AppColors.accentPrimary : AppColors.fgSecondary,
+                    color: _isScrollMode ? colors.accentPrimary : colors.fgSecondary,
                   ),
                   const SizedBox(width: 6),
                   Text(
@@ -590,7 +588,7 @@ class _LearningLabWorkspaceScreenState extends ConsumerState<LearningLabWorkspac
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.bold,
-                      color: _isScrollMode ? AppColors.accentPrimary : AppColors.fgSecondary,
+                      color: _isScrollMode ? colors.accentPrimary : colors.fgSecondary,
                     ),
                   ),
                 ],

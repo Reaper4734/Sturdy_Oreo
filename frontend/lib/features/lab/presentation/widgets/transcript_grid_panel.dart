@@ -20,29 +20,31 @@ class TranscriptGridPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
+
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.bgSurface,
+        color: colors.bgSurface,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.borderSubtle),
+        border: Border.all(color: colors.borderSubtle),
       ),
       child: Column(
         children: [
           // Header Bar with Canvas Toggle Button
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-            decoration: const BoxDecoration(
-              color: AppColors.bgActivityBar,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(14)),
-              border: Border(bottom: BorderSide(color: AppColors.borderSubtle, width: 0.8)),
+            decoration: BoxDecoration(
+              color: colors.bgActivityBar,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+              border: Border(bottom: BorderSide(color: colors.borderSubtle, width: 0.8)),
             ),
             child: Row(
               children: [
-                const Icon(Icons.subtitles_outlined, size: 16, color: AppColors.accentEmerald),
+                Icon(Icons.subtitles_outlined, size: 16, color: colors.accentEmerald),
                 const SizedBox(width: 8),
-                const Text(
+                Text(
                   'Transcript (Drag or @ to attach)',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.fgPrimary),
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: colors.fgPrimary),
                 ),
                 const Spacer(),
 
@@ -53,16 +55,16 @@ class TranscriptGridPanel extends StatelessWidget {
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: AppColors.bgCanvas,
+                      color: colors.bgCanvas,
                       borderRadius: BorderRadius.circular(6),
-                      border: Border.all(color: AppColors.borderSubtle),
+                      border: Border.all(color: colors.borderSubtle),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
-                      children: const [
-                        Icon(Icons.grid_4x4_rounded, size: 12, color: AppColors.accentPrimary),
-                        SizedBox(width: 4),
-                        Text('Show Canvas', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.accentPrimary)),
+                      children: [
+                        Icon(Icons.grid_4x4_rounded, size: 12, color: colors.accentPrimary),
+                        const SizedBox(width: 4),
+                        Text('Show Canvas', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: colors.accentPrimary)),
                       ],
                     ),
                   ),
@@ -87,21 +89,21 @@ class TranscriptGridPanel extends StatelessWidget {
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                       decoration: BoxDecoration(
-                        color: AppColors.bgElevated,
+                        color: colors.bgElevated,
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: AppColors.accentPrimary),
+                        border: Border.all(color: colors.accentPrimary),
                         boxShadow: [
-                          BoxShadow(color: Colors.black.withValues(alpha: 0.4), blurRadius: 10),
+                          BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 10),
                         ],
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text(line.formattedTime, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.accentEmerald)),
+                          Text(line.formattedTime, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: colors.accentEmerald)),
                           const SizedBox(width: 8),
                           ConstrainedBox(
                             constraints: const BoxConstraints(maxWidth: 300),
-                            child: Text(line.text, style: const TextStyle(fontSize: 12, color: AppColors.fgPrimary), overflow: TextOverflow.ellipsis),
+                            child: Text(line.text, style: TextStyle(fontSize: 12, color: colors.fgPrimary), overflow: TextOverflow.ellipsis),
                           ),
                         ],
                       ),
@@ -111,10 +113,10 @@ class TranscriptGridPanel extends StatelessWidget {
                     margin: const EdgeInsets.only(bottom: 6),
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     decoration: BoxDecoration(
-                      color: isActive ? AppColors.accentPrimary.withValues(alpha: 0.1) : AppColors.bgCanvas,
+                      color: isActive ? colors.accentPrimary.withValues(alpha: 0.1) : colors.bgCanvas,
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(
-                        color: isActive ? AppColors.borderActive : AppColors.borderSubtle,
+                        color: isActive ? colors.borderActive : colors.borderSubtle,
                       ),
                     ),
                     child: Row(
@@ -126,7 +128,7 @@ class TranscriptGridPanel extends StatelessWidget {
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.bold,
-                              color: isActive ? AppColors.accentEmerald : AppColors.fgAccent,
+                              color: isActive ? colors.accentEmerald : colors.fgAccent,
                             ),
                           ),
                         ),
@@ -138,7 +140,7 @@ class TranscriptGridPanel extends StatelessWidget {
                               line.text,
                               style: TextStyle(
                                 fontSize: 12,
-                                color: isActive ? AppColors.fgPrimary : AppColors.fgSecondary,
+                                color: isActive ? colors.fgPrimary : colors.fgSecondary,
                               ),
                             ),
                           ),
@@ -151,11 +153,11 @@ class TranscriptGridPanel extends StatelessWidget {
                             child: Container(
                               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                               decoration: BoxDecoration(
-                                color: AppColors.bgSurface,
+                                color: colors.bgSurface,
                                 borderRadius: BorderRadius.circular(4),
-                                border: Border.all(color: AppColors.borderSubtle),
+                                border: Border.all(color: colors.borderSubtle),
                               ),
-                              child: const Text('@', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.accentEmerald)),
+                              child: Text('@', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: colors.accentEmerald)),
                             ),
                           ),
                         ),

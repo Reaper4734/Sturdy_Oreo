@@ -7,14 +7,18 @@ import 'mascot_selection_dialog.dart';
 import 'mascot_widget.dart';
 
 class GreetingBackgroundPainter extends CustomPainter {
+  final AppColorsExtension colors;
+
+  GreetingBackgroundPainter({required this.colors});
+
   @override
   void paint(Canvas canvas, Size size) {
     // Soft gradient circle behind the mascot
     final circlePaint = Paint()
       ..shader = RadialGradient(
         colors: [
-          AppColors.accentPrimary.withValues(alpha: 0.15),
-          AppColors.accentPrimary.withValues(alpha: 0.0),
+          colors.accentPrimary.withValues(alpha: 0.15),
+          colors.accentPrimary.withValues(alpha: 0.0),
         ],
         stops: const [0.2, 1.0],
       ).createShader(Rect.fromCircle(center: Offset(size.width / 2, size.height / 2), radius: size.height))
@@ -24,7 +28,7 @@ class GreetingBackgroundPainter extends CustomPainter {
 
     // Subtle floating particles / tiny stars
     final random = Random(42); // fixed seed for determinism in rendering
-    final particlePaint = Paint()..color = AppColors.fgPrimary.withValues(alpha: 0.1);
+    final particlePaint = Paint()..color = colors.fgPrimary.withValues(alpha: 0.1);
     
     for (int i = 0; i < 15; i++) {
       final x = random.nextDouble() * size.width;
@@ -53,11 +57,15 @@ class GreetingHeroCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final mascotState = ref.watch(mascotProvider);
+    final colors = context.colors;
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      padding: AppSpacing.pXl,
       decoration: BoxDecoration(
-        color: AppColors.bgSurface,
-        borderRadius: BorderRadius.circular(16),
+        color: colors.bgSurface,
+        borderRadius: AppRadius.rXl,
+        border: Border.all(color: colors.borderSubtle, width: 1),
+        boxShadow: AppElevation.low,
       ),
       child: Row(
         children: [
@@ -65,7 +73,7 @@ class GreetingHeroCard extends ConsumerWidget {
           Expanded(
             flex: 35,
             child: CustomPaint(
-              painter: GreetingBackgroundPainter(),
+              painter: GreetingBackgroundPainter(colors: colors),
               child: SizedBox(
                 height: 120,
                 child: Row(
@@ -110,18 +118,18 @@ class GreetingHeroCard extends ConsumerWidget {
               children: [
                 Text(
                   '$greeting, $learnerName',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
-                    color: AppColors.fgPrimary,
+                    color: colors.fgPrimary,
                   ),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   insight,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14,
-                    color: AppColors.fgSecondary,
+                    color: colors.fgSecondary,
                     height: 1.4,
                   ),
                 ),

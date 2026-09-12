@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
+import '../../../../app/theme/app_theme.dart';
 import '../../domain/models/knowledge_graph_model.dart';
 
-/// Renders a minimal, sleek dark-themed card for a Knowledge Graph concept node.
-/// Follows Oreo's exact color tokens: #212121 Surface, #333333 Border, #ECECEC Text, #878787 Muted.
+/// Renders a dynamic, theme-harmonized card for a Knowledge Graph concept node.
 class GraphNodeWidget extends StatelessWidget {
   final GraphNode node;
   final bool isSelected;
@@ -19,20 +19,22 @@ class GraphNodeWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
+
     if (node.type == NodeType.section) {
-      return _buildSectionHeader();
+      return _buildSectionHeader(context);
     }
 
     final Color borderColor = isSelected
-        ? const Color(0xFF67E8F9)
-        : _getBorderColor(node.type, node.status);
+        ? colors.accentCyan
+        : _getBorderColor(context, node.type, node.status);
 
     final double borderWidth = isSelected ? 1.5 : 1.0;
 
     // Determine shape hierarchy per Hallmark specifications
     final BorderRadius borderRadius = _getBorderRadius(node.type);
     final EdgeInsets padding = _getPadding(node.type);
-    final Color backgroundColor = _getBackgroundColor(node.type);
+    final Color backgroundColor = _getBackgroundColor(context, node.type);
 
     return GestureDetector(
       onTap: onTap,
@@ -52,16 +54,22 @@ class GraphNodeWidget extends StatelessWidget {
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                    color: const Color(0xFF67E8F9).withValues(alpha: 0.15),
+                    color: colors.accentCyan.withValues(alpha: 0.25),
                     blurRadius: 8.0,
                     spreadRadius: 1.0,
                   )
                 ]
-              : null,
+              : [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.05),
+                    blurRadius: 4.0,
+                    offset: const Offset(0, 1),
+                  ),
+                ],
         ),
         child: Row(
           children: [
-            _buildTypeIcon(),
+            _buildTypeIcon(context),
             const SizedBox(width: 8),
             Expanded(
               child: Column(
@@ -72,8 +80,8 @@ class GraphNodeWidget extends StatelessWidget {
                     node.label,
                     style: TextStyle(
                       color: node.status == NodeStatus.skipped
-                          ? const Color(0xFF878787)
-                          : (node.isOptional ? const Color(0xFFB0B0B0) : const Color(0xFFECECEC)),
+                          ? colors.fgSecondary.withValues(alpha: 0.6)
+                          : (node.isOptional ? colors.fgSecondary : colors.fgPrimary),
                       fontSize: _getFontSize(node.type),
                       fontWeight: isSelected ? FontWeight.w600 : _getFontWeight(node.type),
                       decoration: node.status == NodeStatus.skipped
@@ -86,8 +94,8 @@ class GraphNodeWidget extends StatelessWidget {
                   if (node.description.isNotEmpty)
                     Text(
                       node.description,
-                      style: const TextStyle(
-                        color: Color(0xFF878787),
+                      style: TextStyle(
+                        color: colors.fgSecondary,
                         fontSize: 10.0,
                       ),
                       maxLines: 1,
@@ -97,17 +105,18 @@ class GraphNodeWidget extends StatelessWidget {
               ),
             ),
             if (node.status == NodeStatus.completed)
-              const Icon(Icons.check_circle, color: Color(0xFF10B981), size: 16)
+              Icon(Icons.check_circle, color: colors.accentEmerald, size: 16)
             else if (node.metadata.activityType != null)
               GestureDetector(
                 onTap: onLaunchActivity,
                 child: Container(
                   padding: const EdgeInsets.all(4),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF333333),
+                    color: colors.bgElevated,
                     borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: colors.borderSubtle, width: 0.8),
                   ),
-                  child: const Icon(Icons.play_arrow, color: Color(0xFF67E8F9), size: 14),
+                  child: Icon(Icons.play_arrow, color: colors.accentCyan, size: 14),
                 ),
               ),
           ],
@@ -116,7 +125,9 @@ class GraphNodeWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildSectionHeader() {
+  Widget _buildSectionHeader(BuildContext context) {
+    final colors = context.colors;
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -124,15 +135,15 @@ class GraphNodeWidget extends StatelessWidget {
         height: node.geometry.height,
         padding: const EdgeInsets.symmetric(horizontal: 20.0),
         decoration: BoxDecoration(
-          color: const Color(0xFF161616),
+          color: colors.bgElevated,
           borderRadius: BorderRadius.circular(8.0),
           border: Border.all(
-            color: isSelected ? const Color(0xFF67E8F9) : const Color(0xFF38BDF8),
+            color: isSelected ? colors.accentCyan : colors.accentCyan.withValues(alpha: 0.7),
             width: isSelected ? 2.0 : 1.5,
           ),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF67E8F9).withValues(alpha: isSelected ? 0.2 : 0.05),
+              color: colors.accentCyan.withValues(alpha: isSelected ? 0.25 : 0.08),
               blurRadius: 10.0,
               offset: const Offset(0, 2),
             )
@@ -140,17 +151,17 @@ class GraphNodeWidget extends StatelessWidget {
         ),
         child: Row(
           children: [
-            const Icon(
+            Icon(
               Icons.bookmark_outline,
-              color: Color(0xFF67E8F9),
+              color: colors.accentCyan,
               size: 20,
             ),
             const SizedBox(width: 12),
             Expanded(
               child: Text(
                 node.label,
-                style: const TextStyle(
-                  color: Color(0xFFECECEC),
+                style: TextStyle(
+                  color: colors.fgPrimary,
                   fontSize: 16.0,
                   fontWeight: FontWeight.w800,
                   letterSpacing: 0.5,
@@ -162,14 +173,14 @@ class GraphNodeWidget extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
-                color: const Color(0xFF262626),
+                color: colors.bgSurface,
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: const Color(0xFF333333), width: 0.8),
+                border: Border.all(color: colors.borderSubtle, width: 0.8),
               ),
-              child: const Text(
+              child: Text(
                 'Section',
                 style: TextStyle(
-                  color: Color(0xFF67E8F9),
+                  color: colors.accentCyan,
                   fontSize: 11.0,
                   fontWeight: FontWeight.w600,
                 ),
@@ -210,17 +221,18 @@ class GraphNodeWidget extends StatelessWidget {
     }
   }
 
-  Color _getBackgroundColor(NodeType type) {
+  Color _getBackgroundColor(BuildContext context, NodeType type) {
+    final colors = context.colors;
     switch (type) {
       case NodeType.reference:
       case NodeType.resource:
-        return const Color(0xFF141414); // Sleek darker chip
+        return colors.bgElevated;
       case NodeType.alternative:
-        return const Color(0xFF161616);
+        return colors.bgSurface;
       case NodeType.optional:
-        return const Color(0xFF1A1A1A);
+        return colors.bgCanvas;
       default:
-        return const Color(0xFF212121);
+        return colors.bgSurface;
     }
   }
 
@@ -256,65 +268,67 @@ class GraphNodeWidget extends StatelessWidget {
     }
   }
 
-  Widget _buildTypeIcon() {
+  Widget _buildTypeIcon(BuildContext context) {
+    final colors = context.colors;
     IconData icon;
     Color color;
 
     switch (node.type) {
       case NodeType.section:
         icon = Icons.folder_open;
-        color = const Color(0xFF38BDF8);
+        color = colors.accentCyan;
       case NodeType.topic:
         icon = Icons.radio_button_checked;
-        color = const Color(0xFF67E8F9);
+        color = colors.accentCyan;
       case NodeType.subtopic:
         icon = Icons.commit;
-        color = const Color(0xFF878787);
+        color = colors.fgSecondary;
       case NodeType.quiz:
         icon = Icons.quiz_outlined;
         color = const Color(0xFFC084FC);
       case NodeType.project:
         icon = Icons.code;
-        color = const Color(0xFF10B981);
+        color = colors.accentEmerald;
       case NodeType.assessment:
         icon = Icons.workspace_premium_outlined;
         color = const Color(0xFFF59E0B);
       case NodeType.reference:
         icon = Icons.menu_book_outlined;
-        color = const Color(0xFF64748B);
+        color = colors.fgSecondary;
       case NodeType.optional:
         icon = Icons.help_outline;
-        color = const Color(0xFF878787);
+        color = colors.fgSecondary;
       case NodeType.alternative:
         icon = Icons.alt_route;
-        color = const Color(0xFF94A3B8);
+        color = colors.fgSecondary;
       case NodeType.resource:
         icon = Icons.link;
-        color = const Color(0xFF38BDF8);
+        color = colors.accentCyan;
     }
 
     return Icon(icon, size: 16, color: color);
   }
 
-  Color _getBorderColor(NodeType type, NodeStatus status) {
-    if (status == NodeStatus.completed) return const Color(0xFF10B981);
-    if (status == NodeStatus.inProgress) return const Color(0xFF67E8F9);
+  Color _getBorderColor(BuildContext context, NodeType type, NodeStatus status) {
+    final colors = context.colors;
+    if (status == NodeStatus.completed) return colors.accentEmerald;
+    if (status == NodeStatus.inProgress) return colors.accentCyan;
 
     switch (type) {
       case NodeType.section:
-        return const Color(0xFF38BDF8);
+        return colors.accentCyan;
       case NodeType.topic:
-        return const Color(0xFF383838);
+        return colors.borderSubtle;
       case NodeType.project:
-        return const Color(0xFF10B981).withValues(alpha: 0.6); // Emerald accent
+        return colors.accentEmerald.withValues(alpha: 0.6); // Emerald accent
       case NodeType.assessment:
         return const Color(0xFFF59E0B).withValues(alpha: 0.6); // Amber milestone
       case NodeType.quiz:
         return const Color(0xFF9333EA).withValues(alpha: 0.6);
       case NodeType.optional:
-        return const Color(0xFF2A2A2A);
+        return colors.borderSubtle;
       default:
-        return const Color(0xFF333333);
+        return colors.borderSubtle;
     }
   }
 }

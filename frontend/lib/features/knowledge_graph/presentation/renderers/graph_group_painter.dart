@@ -6,8 +6,14 @@ import '../../domain/models/layout_result.dart';
 /// Performs zero layout or coordinate calculations (100% dumb renderer).
 class GraphGroupPainter extends CustomPainter {
   final List<ContainerBox> containerBoxes;
+  final Color fillColor;
+  final Color borderColor;
 
-  const GraphGroupPainter({required this.containerBoxes});
+  const GraphGroupPainter({
+    required this.containerBoxes,
+    this.fillColor = const Color(0xFF121212),
+    this.borderColor = const Color(0xFF262626),
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -16,13 +22,13 @@ class GraphGroupPainter extends CustomPainter {
 
       // Fill background
       final Paint fillPaint = Paint()
-        ..color = const Color(0xFF121212)
+        ..color = fillColor
         ..style = PaintingStyle.fill;
       canvas.drawRRect(roundedRect, fillPaint);
 
       // Subtle border
       final Paint borderPaint = Paint()
-        ..color = const Color(0xFF262626)
+        ..color = borderColor
         ..strokeWidth = 1.0
         ..style = PaintingStyle.stroke;
       canvas.drawRRect(roundedRect, borderPaint);
@@ -31,6 +37,8 @@ class GraphGroupPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant GraphGroupPainter oldDelegate) {
-    return oldDelegate.containerBoxes != containerBoxes;
+    return oldDelegate.containerBoxes != containerBoxes ||
+        oldDelegate.fillColor != fillColor ||
+        oldDelegate.borderColor != borderColor;
   }
 }

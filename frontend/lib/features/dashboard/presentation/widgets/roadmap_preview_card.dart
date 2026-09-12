@@ -14,11 +14,15 @@ class RoadmapPreviewCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
+
     return Container(
-      padding: const EdgeInsets.all(32),
+      padding: AppSpacing.pXl,
       decoration: BoxDecoration(
-        color: AppColors.bgSurface,
-        borderRadius: BorderRadius.circular(16),
+        color: colors.bgSurface,
+        borderRadius: AppRadius.rXl,
+        border: Border.all(color: colors.borderSubtle, width: 1),
+        boxShadow: AppElevation.low,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -26,7 +30,7 @@ class RoadmapPreviewCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Learning Roadmap', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.fgPrimary)),
+              Text('Learning Roadmap', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: colors.fgPrimary)),
               InkWell(
                 onTap: onOpenFullRoadmap,
                 borderRadius: BorderRadius.circular(8),
@@ -35,9 +39,9 @@ class RoadmapPreviewCard extends StatelessWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Text('Open Full Roadmap', style: TextStyle(fontSize: 13, color: AppColors.fgAccent, fontWeight: FontWeight.bold)),
+                      Text('Open Full Roadmap', style: TextStyle(fontSize: 13, color: colors.fgAccent, fontWeight: FontWeight.bold)),
                       const SizedBox(width: 8),
-                      const Icon(Icons.arrow_forward, size: 16, color: AppColors.fgAccent),
+                      Icon(Icons.arrow_forward, size: 16, color: colors.fgAccent),
                     ],
                   ),
                 ),
@@ -54,7 +58,7 @@ class RoadmapPreviewCard extends StatelessWidget {
               physics: const BouncingScrollPhysics(),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: _buildAdaptiveNodes(),
+                children: _buildAdaptiveNodes(context),
               ),
             ),
           ),
@@ -63,39 +67,40 @@ class RoadmapPreviewCard extends StatelessWidget {
     );
   }
 
-  List<Widget> _buildAdaptiveNodes() {
+  List<Widget> _buildAdaptiveNodes(BuildContext context) {
     final List<Widget> children = [];
     for (int i = 0; i < nodes.length; i++) {
-      children.add(_buildNode(nodes[i]));
+      children.add(_buildNode(context, nodes[i]));
       if (i < nodes.length - 1) {
-        children.add(_buildConnector());
+        children.add(_buildConnector(context));
       }
     }
     return children;
   }
 
-  Widget _buildConnector() {
+  Widget _buildConnector(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(top: 14, left: 8, right: 8),
       child: SizedBox(
         width: 32,
-        child: Divider(color: AppColors.borderSubtle, thickness: 2),
+        child: Divider(color: context.colors.borderSubtle, thickness: 2),
       ),
     );
   }
 
-  Widget _buildNode(RoadmapPreviewNode node) {
+  Widget _buildNode(BuildContext context, RoadmapPreviewNode node) {
+    final colors = context.colors;
     final Color color;
     final IconData icon;
     switch (node.status) {
       case RoadmapNodeStatus.completed:
-        color = AppColors.accentEmerald;
+        color = colors.accentEmerald;
         icon = Icons.check_circle;
       case RoadmapNodeStatus.active:
-        color = AppColors.fgAccent;
+        color = colors.fgAccent;
         icon = Icons.play_circle_fill;
       case RoadmapNodeStatus.locked:
-        color = AppColors.fgTertiary;
+        color = colors.fgTertiary;
         icon = Icons.circle_outlined;
     }
 
@@ -104,7 +109,7 @@ class RoadmapPreviewCard extends StatelessWidget {
       child: ConstrainedBox(
         constraints: const BoxConstraints(
           minWidth: 80,
-          maxWidth: 120, // Clamp width so it doesn't grow indefinitely
+          maxWidth: 120,
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -119,7 +124,7 @@ class RoadmapPreviewCard extends StatelessWidget {
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: node.status == RoadmapNodeStatus.active ? FontWeight.bold : FontWeight.normal,
-                color: node.status == RoadmapNodeStatus.locked ? AppColors.fgTertiary : AppColors.fgPrimary,
+                color: node.status == RoadmapNodeStatus.locked ? colors.fgTertiary : colors.fgPrimary,
               ),
             ),
           ],

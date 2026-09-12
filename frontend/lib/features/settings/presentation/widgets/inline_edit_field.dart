@@ -57,6 +57,8 @@ class _InlineEditFieldState extends State<InlineEditField> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 24),
       child: Column(
@@ -64,10 +66,10 @@ class _InlineEditFieldState extends State<InlineEditField> {
         children: [
           Text(
             widget.label,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,
-              color: AppColors.fgSecondary,
+              color: colors.fgSecondary,
               letterSpacing: 0.5,
             ),
           ),
@@ -79,21 +81,21 @@ class _InlineEditFieldState extends State<InlineEditField> {
                   child: TextField(
                     controller: _controller,
                     autofocus: true,
-                    style: const TextStyle(color: AppColors.fgPrimary, fontSize: 15),
+                    style: TextStyle(color: colors.fgPrimary, fontSize: 15),
                     decoration: InputDecoration(
                       filled: true,
-                      fillColor: AppColors.bgSurface,
+                      fillColor: colors.bgSurface,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
-                        borderSide: const BorderSide(color: AppColors.borderSubtle),
+                        borderSide: BorderSide(color: colors.borderSubtle),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
-                        borderSide: const BorderSide(color: AppColors.borderSubtle),
+                        borderSide: BorderSide(color: colors.borderSubtle),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
-                        borderSide: const BorderSide(color: AppColors.borderActive),
+                        borderSide: BorderSide(color: colors.borderActive),
                       ),
                       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                     ),
@@ -104,7 +106,7 @@ class _InlineEditFieldState extends State<InlineEditField> {
                 TextButton(
                   onPressed: _save,
                   style: TextButton.styleFrom(
-                    foregroundColor: AppColors.accentEmerald,
+                    foregroundColor: colors.accentEmerald,
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   ),
                   child: const Text('Save', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -112,7 +114,7 @@ class _InlineEditFieldState extends State<InlineEditField> {
                 TextButton(
                   onPressed: _cancel,
                   style: TextButton.styleFrom(
-                    foregroundColor: AppColors.fgSecondary,
+                    foregroundColor: colors.fgSecondary,
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   ),
                   child: const Text('Cancel'),
@@ -125,14 +127,14 @@ class _InlineEditFieldState extends State<InlineEditField> {
                 Expanded(
                   child: Text(
                     widget.value,
-                    style: const TextStyle(color: AppColors.fgPrimary, fontSize: 15),
+                    style: TextStyle(color: colors.fgPrimary, fontSize: 15),
                   ),
                 ),
                 if (widget.enabled)
                   TextButton(
                     onPressed: () => setState(() => _isEditing = true),
                     style: TextButton.styleFrom(
-                      foregroundColor: AppColors.fgSecondary,
+                      foregroundColor: colors.fgSecondary,
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     ),
                     child: const Text('Edit', style: TextStyle(fontSize: 13)),

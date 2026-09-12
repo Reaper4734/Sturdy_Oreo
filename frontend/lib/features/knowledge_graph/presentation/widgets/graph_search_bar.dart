@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../app/theme/app_theme.dart';
 import '../../domain/models/knowledge_graph_model.dart';
 
 /// Floating auto-complete search bar that searches nodes in the Knowledge Graph.
@@ -55,6 +56,8 @@ class _GraphSearchBarState extends State<GraphSearchBar> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
@@ -64,12 +67,12 @@ class _GraphSearchBarState extends State<GraphSearchBar> {
           height: 42,
           padding: const EdgeInsets.symmetric(horizontal: 12),
           decoration: BoxDecoration(
-            color: const Color(0xFF212121),
+            color: colors.bgSurface,
             borderRadius: BorderRadius.circular(8.0),
-            border: Border.all(color: const Color(0xFF333333), width: 1.0),
+            border: Border.all(color: colors.borderSubtle, width: 1.0),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.3),
+                color: Colors.black.withValues(alpha: 0.1),
                 blurRadius: 6,
                 offset: const Offset(0, 2),
               ),
@@ -77,18 +80,22 @@ class _GraphSearchBarState extends State<GraphSearchBar> {
           ),
           child: Row(
             children: [
-              const Icon(Icons.search, color: Color(0xFF878787), size: 18),
+              Icon(Icons.search, color: colors.fgSecondary, size: 18),
               const SizedBox(width: 8),
               Expanded(
                 child: TextField(
                   controller: _controller,
                   focusNode: _focusNode,
                   onChanged: _onQueryChanged,
-                  style: const TextStyle(color: Color(0xFFECECEC), fontSize: 13),
-                  decoration: const InputDecoration(
+                  style: TextStyle(color: colors.fgPrimary, fontSize: 13),
+                  decoration: InputDecoration(
+                    filled: false,
+                    fillColor: Colors.transparent,
                     hintText: 'Search concepts, skills, tasks...',
-                    hintStyle: TextStyle(color: Color(0xFF878787), fontSize: 13),
+                    hintStyle: TextStyle(color: colors.fgSecondary, fontSize: 13),
                     border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
                     isDense: true,
                   ),
                 ),
@@ -99,7 +106,7 @@ class _GraphSearchBarState extends State<GraphSearchBar> {
                     _controller.clear();
                     _onQueryChanged('');
                   },
-                  child: const Icon(Icons.close, color: Color(0xFF878787), size: 16),
+                  child: Icon(Icons.close, color: colors.fgSecondary, size: 16),
                 ),
             ],
           ),
@@ -110,12 +117,12 @@ class _GraphSearchBarState extends State<GraphSearchBar> {
             width: 300,
             constraints: const BoxConstraints(maxHeight: 240),
             decoration: BoxDecoration(
-              color: const Color(0xFF1E1E1E),
+              color: colors.bgSurface,
               borderRadius: BorderRadius.circular(8.0),
-              border: Border.all(color: const Color(0xFF333333), width: 1.0),
+              border: Border.all(color: colors.borderSubtle, width: 1.0),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.4),
+                  color: Colors.black.withValues(alpha: 0.15),
                   blurRadius: 8,
                   offset: const Offset(0, 4),
                 ),
@@ -125,7 +132,7 @@ class _GraphSearchBarState extends State<GraphSearchBar> {
               shrinkWrap: true,
               padding: const EdgeInsets.symmetric(vertical: 4),
               itemCount: _suggestions.length,
-              separatorBuilder: (context, index) => const Divider(color: Color(0xFF2A2A2A), height: 1),
+              separatorBuilder: (context, index) => Divider(color: colors.borderSubtle, height: 1),
               itemBuilder: (context, index) {
                 final node = _suggestions[index];
                 return InkWell(
@@ -137,8 +144,8 @@ class _GraphSearchBarState extends State<GraphSearchBar> {
                       children: [
                         Text(
                           node.label,
-                          style: const TextStyle(
-                            color: Color(0xFFECECEC),
+                          style: TextStyle(
+                            color: colors.fgPrimary,
                             fontSize: 13,
                             fontWeight: FontWeight.w500,
                           ),
@@ -148,7 +155,7 @@ class _GraphSearchBarState extends State<GraphSearchBar> {
                         if (node.description.isNotEmpty)
                           Text(
                             node.description,
-                            style: const TextStyle(color: Color(0xFF878787), fontSize: 11),
+                            style: TextStyle(color: colors.fgSecondary, fontSize: 11),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),

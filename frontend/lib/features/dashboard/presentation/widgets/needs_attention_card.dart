@@ -9,52 +9,57 @@ class NeedsAttentionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
+
     return Container(
-      padding: const EdgeInsets.all(32),
+      padding: AppSpacing.pXl,
       decoration: BoxDecoration(
-        color: AppColors.bgSurface,
-        borderRadius: BorderRadius.circular(16),
+        color: colors.bgSurface,
+        borderRadius: AppRadius.rXl,
+        border: Border.all(color: colors.borderSubtle, width: 1),
+        boxShadow: AppElevation.low,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Needs Attention', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.fgPrimary)),
+          Text('Needs Attention', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: colors.fgPrimary)),
           const SizedBox(height: 32),
           if (items.isEmpty)
-            const Column(
+            Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Nothing requires your attention.', style: TextStyle(fontSize: 16, color: AppColors.fgPrimary)),
-                SizedBox(height: 8),
-                Text('You\'re ready to continue learning.', style: TextStyle(fontSize: 14, color: AppColors.fgSecondary)),
+                Text('Nothing requires your attention.', style: TextStyle(fontSize: 16, color: colors.fgPrimary)),
+                const SizedBox(height: 8),
+                Text('You\'re ready to continue learning.', style: TextStyle(fontSize: 14, color: colors.fgSecondary)),
               ],
             )
           else
             ...items.take(3).map((item) => Padding(
               padding: const EdgeInsets.only(bottom: 24),
-              child: _buildItemCard(item),
+              child: _buildItemCard(context, item),
             )),
         ],
       ),
     );
   }
 
-  Widget _buildItemCard(AttentionItem item) {
+  Widget _buildItemCard(BuildContext context, AttentionItem item) {
+    final colors = context.colors;
     final Color iconColor;
     final IconData icon;
 
     switch (item.type) {
       case AttentionType.pendingQuiz:
-        iconColor = AppColors.accentWarning;
+        iconColor = colors.accentWarning;
         icon = Icons.quiz_outlined;
       case AttentionType.resumeProject:
-        iconColor = AppColors.fgAccent;
+        iconColor = colors.fgAccent;
         icon = Icons.code;
       case AttentionType.reviewSuggested:
-        iconColor = AppColors.fgSecondary;
+        iconColor = colors.fgSecondary;
         icon = Icons.history_edu;
       case AttentionType.remedialLesson:
-        iconColor = AppColors.accentDestructive;
+        iconColor = colors.accentDestructive;
         icon = Icons.warning_amber_rounded;
     }
 
@@ -66,13 +71,13 @@ class NeedsAttentionCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(item.title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.fgPrimary)),
+              Text(item.title, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: colors.fgPrimary)),
               const SizedBox(height: 4),
-              Text(item.subtitle, style: const TextStyle(fontSize: 14, color: AppColors.fgSecondary)),
+              Text(item.subtitle, style: TextStyle(fontSize: 14, color: colors.fgSecondary)),
             ],
           ),
         ),
-        const Icon(Icons.chevron_right, color: AppColors.fgTertiary, size: 24),
+        Icon(Icons.chevron_right, color: colors.fgTertiary, size: 24),
       ],
     );
   }

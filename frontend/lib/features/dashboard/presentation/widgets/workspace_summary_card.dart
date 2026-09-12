@@ -9,48 +9,51 @@ class WorkspaceSummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
+
     return Container(
-      padding: const EdgeInsets.all(32),
+      padding: AppSpacing.pXl,
       decoration: BoxDecoration(
-        color: AppColors.bgSurface,
-        borderRadius: BorderRadius.circular(16),
+        color: colors.bgSurface,
+        borderRadius: AppRadius.rXl,
+        border: Border.all(color: colors.borderSubtle, width: 1),
+        boxShadow: AppElevation.low,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
+          Row(
             children: [
-              Icon(Icons.workspace_premium_outlined, color: AppColors.fgPrimary, size: 24),
-              SizedBox(width: 8),
-              Text('Workspace Summary', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.fgPrimary)),
+              Icon(Icons.workspace_premium_outlined, color: colors.fgPrimary, size: 24),
+              const SizedBox(width: 8),
+              Text('Workspace Summary', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: colors.fgPrimary)),
             ],
           ),
           const SizedBox(height: 32),
           
-          Text(data.workspaceName, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.fgPrimary)),
+          Text(data.workspaceName, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: colors.fgPrimary)),
           const SizedBox(height: 24),
 
-          _buildRow('Created', data.createdDate),
+          _buildRow(context, 'Created', data.createdDate),
           const SizedBox(height: 16),
-          _buildRow('Last Active', data.lastActive),
+          _buildRow(context, 'Last Active', data.lastActive),
           const SizedBox(height: 16),
-          _buildRow('Completion', '${(data.completionPercent * 100).round()}%'),
+          _buildRow(context, 'Completion', '${(data.completionPercent * 100).round()}%'),
           const SizedBox(height: 16),
-          _buildRow('Estimated Finish', '${data.estimatedFinishDays} Days'),
+          _buildRow(context, 'Estimated Finish', '${data.estimatedFinishDays} Days'),
           
-          const SizedBox(height: 32),
-          const Spacer(),
+          const SizedBox(height: 24),
           
           SizedBox(
             width: double.infinity,
             child: TextButton(
               onPressed: () {},
               style: TextButton.styleFrom(
-                foregroundColor: AppColors.fgAccent,
+                foregroundColor: colors.fgAccent,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
-                  side: const BorderSide(color: AppColors.borderSubtle),
+                  side: BorderSide(color: colors.borderSubtle),
                 ),
               ),
               child: const Text('Open Workspace →', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
@@ -61,12 +64,13 @@ class WorkspaceSummaryCard extends StatelessWidget {
     );
   }
 
-  Widget _buildRow(String label, String value) {
+  Widget _buildRow(BuildContext context, String label, String value) {
+    final colors = context.colors;
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: const TextStyle(fontSize: 14, color: AppColors.fgSecondary)),
-        Text(value, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.fgPrimary)),
+        Text(label, style: TextStyle(fontSize: 14, color: colors.fgSecondary)),
+        Text(value, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: colors.fgPrimary)),
       ],
     );
   }

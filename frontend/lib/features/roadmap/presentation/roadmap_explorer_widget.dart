@@ -30,39 +30,41 @@ class RoadmapExplorerWidget extends StatefulWidget {
 class _RoadmapExplorerWidgetState extends State<RoadmapExplorerWidget> {
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
+
     return Container(
-      color: AppColors.bgCanvas,
+      color: colors.bgCanvas,
       padding: EdgeInsets.all(widget.isCompact ? 12 : 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (!widget.isCompact) ...[
             Row(
-              children: const [
-                Icon(Icons.menu_book_rounded, color: AppColors.fgAccent, size: 22),
-                SizedBox(width: 10),
+              children: [
+                Icon(Icons.menu_book_rounded, color: colors.fgAccent, size: 22),
+                const SizedBox(width: 10),
                 Text(
                   'Curriculum Navigator',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.fgPrimary),
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: colors.fgPrimary),
                 ),
               ],
             ),
             const SizedBox(height: 6),
-            const Text(
+            Text(
               'What can I learn next? Select any activity below to jump straight into the interactive Learning Lab.',
-              style: TextStyle(fontSize: 13, color: AppColors.fgSecondary),
+              style: TextStyle(fontSize: 13, color: colors.fgSecondary),
             ),
             const SizedBox(height: 24),
           ],
           Expanded(
             child: widget.roadmap.isEmpty
-                ? _buildEmptyState()
+                ? _buildEmptyState(context)
                 : ListView.builder(
                     physics: const BouncingScrollPhysics(),
                     itemCount: widget.roadmap.length,
                     itemBuilder: (context, index) {
                       final week = widget.roadmap[index];
-                      return _buildWeekCard(week);
+                      return _buildWeekCard(context, week);
                     },
                   ),
           ),
@@ -71,21 +73,22 @@ class _RoadmapExplorerWidgetState extends State<RoadmapExplorerWidget> {
     );
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildEmptyState(BuildContext context) {
+    final colors = context.colors;
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
-        children: const [
-          Icon(Icons.auto_stories_outlined, size: 48, color: AppColors.fgSecondary),
-          SizedBox(height: 12),
+        children: [
+          Icon(Icons.auto_stories_outlined, size: 48, color: colors.fgSecondary),
+          const SizedBox(height: 12),
           Text(
             'No Curriculum Available',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.fgPrimary),
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: colors.fgPrimary),
           ),
-          SizedBox(height: 6),
+          const SizedBox(height: 6),
           Text(
             'Generate a personalized roadmap to begin learning.',
-            style: TextStyle(fontSize: 13, color: AppColors.fgSecondary),
+            style: TextStyle(fontSize: 13, color: colors.fgSecondary),
           ),
         ],
       ),
@@ -93,15 +96,17 @@ class _RoadmapExplorerWidgetState extends State<RoadmapExplorerWidget> {
   }
 
   /// Level 1: Week Card
-  Widget _buildWeekCard(RoadmapNode week) {
+  Widget _buildWeekCard(BuildContext context, RoadmapNode week) {
+    final colors = context.colors;
     final progressInt = (week.progressPercent * 100).toInt();
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-        color: AppColors.bgSurface,
+        color: colors.bgSurface,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.borderSubtle),
+        border: Border.all(color: colors.borderSubtle),
+        boxShadow: AppElevation.low,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -116,7 +121,7 @@ class _RoadmapExplorerWidgetState extends State<RoadmapExplorerWidget> {
                 });
               },
               borderRadius: BorderRadius.circular(12),
-              hoverColor: AppColors.bgElevated,
+              hoverColor: colors.bgElevated,
               child: Padding(
                 padding: EdgeInsets.symmetric(
                   horizontal: widget.isCompact ? 12 : 20,
@@ -132,7 +137,7 @@ class _RoadmapExplorerWidgetState extends State<RoadmapExplorerWidget> {
                           style: TextStyle(
                             fontSize: widget.isCompact ? 11 : 13,
                             fontWeight: FontWeight.w600,
-                            color: AppColors.fgAccent,
+                            color: colors.fgAccent,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -147,7 +152,7 @@ class _RoadmapExplorerWidgetState extends State<RoadmapExplorerWidget> {
                         style: TextStyle(
                           fontSize: widget.isCompact ? 14 : 16,
                           fontWeight: FontWeight.w600,
-                          color: AppColors.fgPrimary,
+                          color: colors.fgPrimary,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -161,8 +166,8 @@ class _RoadmapExplorerWidgetState extends State<RoadmapExplorerWidget> {
                           borderRadius: BorderRadius.circular(3),
                           child: LinearProgressIndicator(
                             value: week.progressPercent,
-                            backgroundColor: AppColors.bgElevated,
-                            valueColor: const AlwaysStoppedAnimation<Color>(AppColors.fgAccent),
+                            backgroundColor: colors.bgSecondary,
+                            valueColor: AlwaysStoppedAnimation<Color>(colors.fgAccent),
                             minHeight: 6,
                           ),
                         ),
@@ -174,13 +179,13 @@ class _RoadmapExplorerWidgetState extends State<RoadmapExplorerWidget> {
                       style: TextStyle(
                         fontSize: widget.isCompact ? 11 : 13,
                         fontWeight: FontWeight.w600,
-                        color: AppColors.fgSecondary,
+                        color: colors.fgSecondary,
                       ),
                     ),
                     SizedBox(width: widget.isCompact ? 6 : 14),
                     Icon(
                       week.isExpanded ? Icons.keyboard_arrow_down_rounded : Icons.keyboard_arrow_right_rounded,
-                      color: AppColors.fgSecondary,
+                      color: colors.fgSecondary,
                       size: widget.isCompact ? 16 : 20,
                     ),
                   ],
@@ -195,7 +200,7 @@ class _RoadmapExplorerWidgetState extends State<RoadmapExplorerWidget> {
             alignment: Alignment.topCenter,
             child: week.isExpanded && week.children.isNotEmpty
                 ? Column(
-                    children: week.children.map((day) => _buildDaySection(day)).toList(),
+                    children: week.children.map((day) => _buildDaySection(context, day)).toList(),
                   )
                 : const SizedBox.shrink(),
           ),
@@ -205,18 +210,20 @@ class _RoadmapExplorerWidgetState extends State<RoadmapExplorerWidget> {
   }
 
   /// Level 2: Day Section
-  Widget _buildDaySection(RoadmapNode day) {
+  Widget _buildDaySection(BuildContext context, RoadmapNode day) {
+    final colors = context.colors;
+
     return Container(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         border: Border(
-          top: BorderSide(color: AppColors.borderSubtle),
+          top: BorderSide(color: colors.borderSubtle),
         ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Material(
-            color: AppColors.bgSidebar,
+            color: colors.bgSidebar,
             child: InkWell(
               onTap: () {
                 setState(() {
@@ -225,7 +232,7 @@ class _RoadmapExplorerWidgetState extends State<RoadmapExplorerWidget> {
                 widget.onSelectNode(day.title);
                 widget.onLaunchInLab?.call(day.title);
               },
-              hoverColor: AppColors.bgElevated,
+              hoverColor: colors.bgElevated,
               child: Padding(
                 padding: EdgeInsets.symmetric(
                   horizontal: widget.isCompact ? 12 : 20,
@@ -238,7 +245,7 @@ class _RoadmapExplorerWidgetState extends State<RoadmapExplorerWidget> {
                       style: TextStyle(
                         fontSize: widget.isCompact ? 12 : 14,
                         fontWeight: FontWeight.w600,
-                        color: AppColors.accentEmerald,
+                        color: colors.accentEmerald,
                         decoration: TextDecoration.underline,
                       ),
                     ),
@@ -248,14 +255,14 @@ class _RoadmapExplorerWidgetState extends State<RoadmapExplorerWidget> {
                         widget.isCompact ? day.estimatedTime! : 'Estimated ${day.estimatedTime}',
                         style: TextStyle(
                           fontSize: widget.isCompact ? 11 : 12,
-                          color: AppColors.fgSecondary,
+                          color: colors.fgSecondary,
                         ),
                       ),
                       SizedBox(width: widget.isCompact ? 6 : 12),
                     ],
                     Icon(
                       day.isExpanded ? Icons.keyboard_arrow_down_rounded : Icons.keyboard_arrow_right_rounded,
-                      color: AppColors.fgSecondary,
+                      color: colors.fgSecondary,
                       size: widget.isCompact ? 16 : 18,
                     ),
                   ],
@@ -271,7 +278,7 @@ class _RoadmapExplorerWidgetState extends State<RoadmapExplorerWidget> {
                 ? Padding(
                     padding: const EdgeInsets.only(top: 8, bottom: 12),
                     child: Column(
-                      children: day.children.map((activity) => _buildActivityRow(activity)).toList(),
+                      children: day.children.map((activity) => _buildActivityRow(context, activity)).toList(),
                     ),
                   )
                 : const SizedBox.shrink(),
@@ -282,17 +289,18 @@ class _RoadmapExplorerWidgetState extends State<RoadmapExplorerWidget> {
   }
 
   /// Level 3: Activity Row
-  Widget _buildActivityRow(RoadmapNode activity) {
+  Widget _buildActivityRow(BuildContext context, RoadmapNode activity) {
+    final colors = context.colors;
     final completed = _isCompleted(activity);
     final inProgress = !completed && _isInProgress(activity);
 
     final bgColor = completed
-        ? AppColors.bgSidebar
+        ? colors.bgSidebar
         : (inProgress
-            ? Color.alphaBlend(AppColors.fgAccent.withValues(alpha: 0.08), AppColors.bgSurface)
-            : AppColors.bgSurface);
+            ? Color.alphaBlend(colors.fgAccent.withValues(alpha: 0.08), colors.bgSurface)
+            : colors.bgSurface);
 
-    final borderColor = inProgress ? AppColors.fgAccent : AppColors.borderSubtle;
+    final borderColor = inProgress ? colors.fgAccent : colors.borderSubtle;
 
     return Column(
       children: [
@@ -315,7 +323,7 @@ class _RoadmapExplorerWidgetState extends State<RoadmapExplorerWidget> {
                 widget.onLaunchInLab?.call(activity.title);
               },
               borderRadius: BorderRadius.circular(8),
-              hoverColor: AppColors.bgElevated,
+              hoverColor: colors.bgElevated,
               child: Padding(
                 padding: EdgeInsets.symmetric(
                   horizontal: widget.isCompact ? 10 : 16,
@@ -324,9 +332,9 @@ class _RoadmapExplorerWidgetState extends State<RoadmapExplorerWidget> {
                 child: Row(
                   children: [
                     if (completed)
-                      Icon(Icons.check_circle_rounded, color: AppColors.accentEmerald, size: widget.isCompact ? 16 : 18)
+                      Icon(Icons.check_circle_rounded, color: colors.accentEmerald, size: widget.isCompact ? 16 : 18)
                     else
-                      Icon(_getActivityIcon(activity.activityType), color: inProgress ? AppColors.fgPrimary : AppColors.fgSecondary, size: widget.isCompact ? 16 : 18),
+                      Icon(_getActivityIcon(activity.activityType), color: inProgress ? colors.fgPrimary : colors.fgSecondary, size: widget.isCompact ? 16 : 18),
                     SizedBox(width: widget.isCompact ? 8 : 14),
                     Expanded(
                       child: Text(
@@ -334,7 +342,7 @@ class _RoadmapExplorerWidgetState extends State<RoadmapExplorerWidget> {
                         style: TextStyle(
                           fontSize: widget.isCompact ? 12 : 14,
                           fontWeight: inProgress ? FontWeight.bold : FontWeight.w500,
-                          color: AppColors.accentEmerald,
+                          color: colors.accentEmerald,
                           decoration: TextDecoration.underline,
                         ),
                         maxLines: widget.isCompact ? 1 : 2,
@@ -346,7 +354,7 @@ class _RoadmapExplorerWidgetState extends State<RoadmapExplorerWidget> {
                         activity.estimatedTime!,
                         style: TextStyle(
                           fontSize: widget.isCompact ? 11 : 12,
-                          color: AppColors.fgSecondary,
+                          color: colors.fgSecondary,
                         ),
                       ),
                       SizedBox(width: widget.isCompact ? 4 : 12),
@@ -354,7 +362,7 @@ class _RoadmapExplorerWidgetState extends State<RoadmapExplorerWidget> {
                     Icon(
                       activity.isExpanded ? Icons.keyboard_arrow_down_rounded : Icons.keyboard_arrow_right_rounded,
                       size: widget.isCompact ? 12 : 14,
-                      color: AppColors.fgSecondary,
+                      color: colors.fgSecondary,
                     ),
                   ],
                 ),
@@ -375,11 +383,11 @@ class _RoadmapExplorerWidgetState extends State<RoadmapExplorerWidget> {
                   ),
                   child: Column(
                     children: [
-                      _buildModalityOption(Icons.play_circle_outline_rounded, 'Watch Video', activity),
-                      _buildModalityOption(Icons.article_outlined, 'Read Article', activity),
-                      _buildModalityOption(Icons.code_rounded, 'Practice Lab', activity),
-                      _buildModalityOption(Icons.quiz_outlined, 'Take Quiz', activity),
-                      _buildFlashcardOption(Icons.style_outlined, 'Generate Flashcards', activity),
+                      _buildModalityOption(context, Icons.play_circle_outline_rounded, 'Watch Video', activity),
+                      _buildModalityOption(context, Icons.article_outlined, 'Read Article', activity),
+                      _buildModalityOption(context, Icons.code_rounded, 'Practice Lab', activity),
+                      _buildModalityOption(context, Icons.quiz_outlined, 'Take Quiz', activity),
+                      _buildFlashcardOption(context, Icons.style_outlined, 'Generate Flashcards', activity),
                     ],
                   ),
                 )
@@ -389,7 +397,8 @@ class _RoadmapExplorerWidgetState extends State<RoadmapExplorerWidget> {
     );
   }
 
-  Widget _buildFlashcardOption(IconData icon, String title, RoadmapNode activity) {
+  Widget _buildFlashcardOption(BuildContext context, IconData icon, String title, RoadmapNode activity) {
+    final colors = context.colors;
     return InkWell(
       onTap: () {
         widget.onGenerateFlashcards?.call(activity.title);
@@ -399,21 +408,22 @@ class _RoadmapExplorerWidgetState extends State<RoadmapExplorerWidget> {
         padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
         child: Row(
           children: [
-            Icon(icon, size: 16, color: AppColors.accentEmerald),
+            Icon(icon, size: 16, color: colors.accentEmerald),
             const SizedBox(width: 10),
             Text(
               title,
-              style: const TextStyle(fontSize: 13, color: AppColors.fgPrimary, fontWeight: FontWeight.w600),
+              style: TextStyle(fontSize: 13, color: colors.fgPrimary, fontWeight: FontWeight.w600),
             ),
             const Spacer(),
-            const Icon(Icons.bolt_rounded, size: 14, color: AppColors.accentEmerald),
+            Icon(Icons.bolt_rounded, size: 14, color: colors.accentEmerald),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildModalityOption(IconData icon, String title, RoadmapNode activity) {
+  Widget _buildModalityOption(BuildContext context, IconData icon, String title, RoadmapNode activity) {
+    final colors = context.colors;
     return InkWell(
       onTap: () {
         widget.onSelectNode(activity.title);
@@ -424,14 +434,14 @@ class _RoadmapExplorerWidgetState extends State<RoadmapExplorerWidget> {
         padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
         child: Row(
           children: [
-            Icon(icon, size: 16, color: AppColors.fgAccent),
+            Icon(icon, size: 16, color: colors.fgAccent),
             const SizedBox(width: 10),
             Text(
               title,
-              style: const TextStyle(fontSize: 13, color: AppColors.fgPrimary),
+              style: TextStyle(fontSize: 13, color: colors.fgPrimary),
             ),
             const Spacer(),
-            const Icon(Icons.arrow_forward_ios_rounded, size: 10, color: AppColors.fgSecondary),
+            Icon(Icons.arrow_forward_ios_rounded, size: 10, color: colors.fgSecondary),
           ],
         ),
       ),

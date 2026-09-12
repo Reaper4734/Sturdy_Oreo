@@ -121,16 +121,18 @@ class _FlashcardDeckPanelState extends State<FlashcardDeckPanel> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
+
     if (_activeCards.isEmpty) {
       return Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: AppColors.bgSurface,
+          color: colors.bgSurface,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AppColors.borderSubtle),
+          border: Border.all(color: colors.borderSubtle),
         ),
-        child: const Center(
-          child: Text('No flashcards available for this topic.', style: TextStyle(color: AppColors.fgSecondary)),
+        child: Center(
+          child: Text('No flashcards available for this topic.', style: TextStyle(color: colors.fgSecondary)),
         ),
       );
     }
@@ -141,24 +143,24 @@ class _FlashcardDeckPanelState extends State<FlashcardDeckPanel> {
       onKeyEvent: (event) {},
       child: Container(
         decoration: BoxDecoration(
-          color: AppColors.bgSurface,
+          color: colors.bgSurface,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AppColors.borderSubtle),
+          border: Border.all(color: colors.borderSubtle),
         ),
         child: Column(
           children: [
             // --- Header Bar ---
-            _buildHeader(),
+            _buildHeader(context),
 
             // --- Stats Bar ---
-            _buildStatsBar(),
+            _buildStatsBar(context),
 
             // --- Mat Background Viewport ---
             Expanded(
               child: ClipRRect(
                 borderRadius: const BorderRadius.vertical(bottom: Radius.circular(14)),
                 child: CustomPaint(
-                  painter: CanvasGridBackgroundPainter(),
+                  painter: CanvasGridBackgroundPainter(colors: colors),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
                     child: widget.isScrollMode ? _build2x2Grid() : _build1x1SplitCard(),
@@ -168,7 +170,7 @@ class _FlashcardDeckPanelState extends State<FlashcardDeckPanel> {
             ),
 
             // --- Footer Controls for 1x1 Split Mode ---
-            if (!widget.isScrollMode && _currentCard != null) _build1x1FooterControls(_currentCard!),
+            if (!widget.isScrollMode && _currentCard != null) _build1x1FooterControls(context, _currentCard!),
           ],
         ),
       ),
@@ -307,7 +309,8 @@ class _FlashcardDeckPanelState extends State<FlashcardDeckPanel> {
 
   // --- Header ---
 
-  Widget _buildHeader() {
+  Widget _buildHeader(BuildContext context) {
+    final colors = context.colors;
     final modeLabel = _studyMode == StudyMode.browse
         ? 'Browse'
         : _studyMode == StudyMode.quiz
@@ -316,61 +319,61 @@ class _FlashcardDeckPanelState extends State<FlashcardDeckPanel> {
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-      decoration: const BoxDecoration(
-        color: AppColors.bgActivityBar,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(14)),
-        border: Border(bottom: BorderSide(color: AppColors.borderSubtle, width: 0.8)),
+      decoration: BoxDecoration(
+        color: colors.bgActivityBar,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+        border: Border(bottom: BorderSide(color: colors.borderSubtle, width: 0.8)),
       ),
       child: Row(
         children: [
-          const Icon(Icons.style_outlined, size: 15, color: AppColors.accentEmerald),
+          Icon(Icons.style_outlined, size: 15, color: colors.accentEmerald),
           const SizedBox(width: 6),
           Text(
             'Flashcards · ${widget.topicTag}',
-            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.fgPrimary),
+            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: colors.fgPrimary),
           ),
           const SizedBox(width: 10),
 
           // Clean Popup Menu (Opens Below Button, No Overlap)
           PopupMenuButton<StudyMode>(
             position: PopupMenuPosition.under,
-            color: AppColors.bgElevated,
+            color: colors.bgElevated,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(10),
-              side: const BorderSide(color: AppColors.borderSubtle),
+              side: BorderSide(color: colors.borderSubtle),
             ),
             elevation: 8,
             onSelected: _handleModeChange,
-            itemBuilder: (context) => const [
+            itemBuilder: (context) => [
               PopupMenuItem(
                 value: StudyMode.browse,
                 height: 36,
-                child: Text('Browse', style: TextStyle(fontSize: 12, color: AppColors.fgPrimary)),
+                child: Text('Browse', style: TextStyle(fontSize: 12, color: colors.fgPrimary)),
               ),
               PopupMenuItem(
                 value: StudyMode.quiz,
                 height: 36,
-                child: Text('Quiz', style: TextStyle(fontSize: 12, color: AppColors.fgPrimary)),
+                child: Text('Quiz', style: TextStyle(fontSize: 12, color: colors.fgPrimary)),
               ),
               PopupMenuItem(
                 value: StudyMode.shuffle,
                 height: 36,
-                child: Text('Shuffle', style: TextStyle(fontSize: 12, color: AppColors.fgPrimary)),
+                child: Text('Shuffle', style: TextStyle(fontSize: 12, color: colors.fgPrimary)),
               ),
             ],
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: AppColors.bgCanvas,
+                color: colors.bgCanvas,
                 borderRadius: BorderRadius.circular(6),
-                border: Border.all(color: AppColors.borderSubtle),
+                border: Border.all(color: colors.borderSubtle),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(modeLabel, style: const TextStyle(fontSize: 11, color: AppColors.fgPrimary, fontWeight: FontWeight.w600)),
+                  Text(modeLabel, style: TextStyle(fontSize: 11, color: colors.fgPrimary, fontWeight: FontWeight.w600)),
                   const SizedBox(width: 4),
-                  const Icon(Icons.arrow_drop_down, size: 14, color: AppColors.fgSecondary),
+                  Icon(Icons.arrow_drop_down, size: 14, color: colors.fgSecondary),
                 ],
               ),
             ),
@@ -385,16 +388,16 @@ class _FlashcardDeckPanelState extends State<FlashcardDeckPanel> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: AppColors.bgCanvas,
+                color: colors.bgCanvas,
                 borderRadius: BorderRadius.circular(6),
-                border: Border.all(color: AppColors.borderSubtle),
+                border: Border.all(color: colors.borderSubtle),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
-                children: const [
-                  Icon(Icons.grid_4x4_rounded, size: 12, color: AppColors.accentPrimary),
-                  SizedBox(width: 4),
-                  Text('Show Canvas', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.accentPrimary)),
+                children: [
+                  Icon(Icons.grid_4x4_rounded, size: 12, color: colors.accentPrimary),
+                  const SizedBox(width: 4),
+                  Text('Show Canvas', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: colors.accentPrimary)),
                 ],
               ),
             ),
@@ -406,10 +409,12 @@ class _FlashcardDeckPanelState extends State<FlashcardDeckPanel> {
 
   // --- Stats Bar ---
 
-  Widget _buildStatsBar() {
+  Widget _buildStatsBar(BuildContext context) {
+    final colors = context.colors;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-      color: AppColors.bgCanvas.withValues(alpha: 0.6),
+      color: colors.bgCanvas.withValues(alpha: 0.6),
       child: Row(
         children: [
           const Icon(Icons.local_fire_department, size: 14, color: Color(0xFFF59E0B)),
@@ -417,7 +422,7 @@ class _FlashcardDeckPanelState extends State<FlashcardDeckPanel> {
           Text('$_streakCount streak', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFFF59E0B))),
           const SizedBox(width: 16),
 
-          const Text('Mastery', style: TextStyle(fontSize: 10, color: AppColors.fgSecondary)),
+          Text('Mastery', style: TextStyle(fontSize: 10, color: colors.fgSecondary)),
           const SizedBox(width: 6),
           Expanded(
             child: ClipRRect(
@@ -425,13 +430,13 @@ class _FlashcardDeckPanelState extends State<FlashcardDeckPanel> {
               child: LinearProgressIndicator(
                 value: _masteryRatio,
                 minHeight: 5,
-                backgroundColor: AppColors.borderSubtle,
-                valueColor: const AlwaysStoppedAnimation<Color>(AppColors.accentEmerald),
+                backgroundColor: colors.borderSubtle,
+                valueColor: AlwaysStoppedAnimation<Color>(colors.accentEmerald),
               ),
             ),
           ),
           const SizedBox(width: 8),
-          Text('${(_masteryRatio * 100).toInt()}%', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.accentEmerald)),
+          Text('${(_masteryRatio * 100).toInt()}%', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: colors.accentEmerald)),
         ],
       ),
     );
@@ -439,20 +444,22 @@ class _FlashcardDeckPanelState extends State<FlashcardDeckPanel> {
 
   // --- Footer Controls for 1x1 Split Mode (Ratings on Bottom Right ONLY) ---
 
-  Widget _build1x1FooterControls(FlashcardItem card) {
+  Widget _build1x1FooterControls(BuildContext context, FlashcardItem card) {
+    final colors = context.colors;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-      decoration: const BoxDecoration(
-        color: AppColors.bgActivityBar,
-        borderRadius: BorderRadius.vertical(bottom: Radius.circular(14)),
-        border: Border(top: BorderSide(color: AppColors.borderSubtle, width: 0.8)),
+      decoration: BoxDecoration(
+        color: colors.bgActivityBar,
+        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(14)),
+        border: Border(top: BorderSide(color: colors.borderSubtle, width: 0.8)),
       ),
       child: Row(
         children: [
           // Left side: Paging Navigation
           IconButton(
             icon: const Icon(Icons.chevron_left_rounded, size: 18),
-            color: AppColors.fgPrimary,
+            color: colors.fgPrimary,
             onPressed: _prevCard,
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(),
@@ -460,12 +467,12 @@ class _FlashcardDeckPanelState extends State<FlashcardDeckPanel> {
           const SizedBox(width: 6),
           Text(
             '${_currentIndex + 1} / ${_activeCards.length}',
-            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.fgPrimary),
+            style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: colors.fgPrimary),
           ),
           const SizedBox(width: 6),
           IconButton(
             icon: const Icon(Icons.chevron_right_rounded, size: 18),
-            color: AppColors.fgPrimary,
+            color: colors.fgPrimary,
             onPressed: _nextCard,
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(),
@@ -477,9 +484,9 @@ class _FlashcardDeckPanelState extends State<FlashcardDeckPanel> {
           if (card.isFlipped) ...[
             _buildQualityBtn('Hard', 3, Colors.orange, Icons.sentiment_dissatisfied_rounded, card),
             const SizedBox(width: 6),
-            _buildQualityBtn('Good', 4, AppColors.accentEmerald, Icons.sentiment_satisfied_alt_rounded, card),
+            _buildQualityBtn('Good', 4, colors.accentEmerald, Icons.sentiment_satisfied_alt_rounded, card),
             const SizedBox(width: 6),
-            _buildQualityBtn('Perfect', 5, AppColors.accentPrimary, Icons.stars_rounded, card),
+            _buildQualityBtn('Perfect', 5, colors.accentPrimary, Icons.stars_rounded, card),
           ] else ...[
             InkWell(
               onTap: () => widget.onAttachCardToChat(card),
@@ -487,16 +494,16 @@ class _FlashcardDeckPanelState extends State<FlashcardDeckPanel> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: AppColors.bgCanvas,
+                  color: colors.bgCanvas,
                   borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: AppColors.borderSubtle),
+                  border: Border.all(color: colors.borderSubtle),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
-                  children: const [
-                    Icon(Icons.alternate_email_rounded, size: 12, color: AppColors.accentPrimary),
-                    SizedBox(width: 4),
-                    Text('Attach to Chat', style: TextStyle(fontSize: 11, color: AppColors.fgPrimary, fontWeight: FontWeight.w600)),
+                  children: [
+                    Icon(Icons.alternate_email_rounded, size: 12, color: colors.accentPrimary),
+                    const SizedBox(width: 4),
+                    Text('Attach to Chat', style: TextStyle(fontSize: 11, color: colors.fgPrimary, fontWeight: FontWeight.w600)),
                   ],
                 ),
               ),
@@ -608,6 +615,8 @@ class _Spring3DFlipCardState extends State<Spring3DFlipCard> with SingleTickerPr
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
+
     return AnimatedBuilder(
       animation: _flipAnimation,
       builder: (context, child) {
@@ -632,16 +641,16 @@ class _Spring3DFlipCardState extends State<Spring3DFlipCard> with SingleTickerPr
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
                 color: isBack
-                    ? AppColors.accentEmerald.withValues(alpha: 0.08)
-                    : AppColors.bgElevated,
+                    ? colors.accentEmerald.withValues(alpha: 0.08)
+                    : colors.bgSurface,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: isBack ? AppColors.accentEmerald : widget.card.confidenceColor,
+                  color: isBack ? colors.accentEmerald : widget.card.confidenceColor,
                   width: 1.5,
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: (isBack ? AppColors.accentEmerald : widget.card.confidenceColor)
+                    color: (isBack ? colors.accentEmerald : widget.card.confidenceColor)
                         .withValues(alpha: 0.15 + (0.2 * liftFactor)),
                     blurRadius: shadowBlur,
                     offset: Offset(0, shadowOffsetY),
@@ -652,9 +661,9 @@ class _Spring3DFlipCardState extends State<Spring3DFlipCard> with SingleTickerPr
                   ? Transform(
                       transform: Matrix4.identity()..rotateY(math.pi),
                       alignment: Alignment.center,
-                      child: _buildCardBack(),
+                      child: _buildCardBack(context),
                     )
-                  : _buildCardFront(),
+                  : _buildCardFront(context),
             ),
           ),
         );
@@ -664,7 +673,9 @@ class _Spring3DFlipCardState extends State<Spring3DFlipCard> with SingleTickerPr
 
   // --- Front Side (Question) ---
 
-  Widget _buildCardFront() {
+  Widget _buildCardFront(BuildContext context) {
+    final colors = context.colors;
+
     return LayoutBuilder(
       builder: (context, constraints) {
         final isSmall = constraints.maxHeight < 110;
@@ -685,11 +696,11 @@ class _Spring3DFlipCardState extends State<Spring3DFlipCard> with SingleTickerPr
                     child: Text(widget.card.confidenceLabel, style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: widget.card.confidenceColor)),
                   ),
                   const SizedBox(width: 4),
-                  Text(widget.card.topicTag, style: const TextStyle(fontSize: 9, color: AppColors.fgSecondary)),
+                  Text(widget.card.topicTag, style: TextStyle(fontSize: 9, color: colors.fgSecondary)),
                   const Spacer(),
                   InkWell(
                     onTap: () => widget.onAttachCardToChat(widget.card),
-                    child: const Icon(Icons.alternate_email_rounded, size: 13, color: AppColors.accentPrimary),
+                    child: Icon(Icons.alternate_email_rounded, size: 13, color: colors.accentPrimary),
                   ),
                 ],
               ),
@@ -706,13 +717,13 @@ class _Spring3DFlipCardState extends State<Spring3DFlipCard> with SingleTickerPr
                           width: double.infinity,
                           padding: const EdgeInsets.all(6),
                           decoration: BoxDecoration(
-                            color: Colors.black45,
+                            color: colors.bgElevated,
                             borderRadius: BorderRadius.circular(6),
-                            border: Border.all(color: AppColors.borderSubtle),
+                            border: Border.all(color: colors.borderSubtle),
                           ),
                           child: Text(
                             widget.card.front,
-                            style: const TextStyle(fontFamily: 'monospace', fontSize: 11, color: AppColors.accentEmerald),
+                            style: TextStyle(fontFamily: 'monospace', fontSize: 11, color: colors.accentEmerald),
                           ),
                         ),
                       ] else ...[
@@ -722,7 +733,7 @@ class _Spring3DFlipCardState extends State<Spring3DFlipCard> with SingleTickerPr
                           style: TextStyle(
                             fontSize: widget.isScrollMode ? 11 : (isSmall ? 11 : 13),
                             fontWeight: FontWeight.bold,
-                            color: AppColors.fgPrimary,
+                            color: colors.fgPrimary,
                             height: 1.3,
                           ),
                         ),
@@ -736,9 +747,9 @@ class _Spring3DFlipCardState extends State<Spring3DFlipCard> with SingleTickerPr
             if (!isSmall)
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: const [
-                  Text('Question', style: TextStyle(fontSize: 8, color: AppColors.fgSecondary)),
-                  Text('Tap to flip', style: TextStyle(fontSize: 8, color: AppColors.accentPrimary)),
+                children: [
+                  Text('Question', style: TextStyle(fontSize: 8, color: colors.fgSecondary)),
+                  Text('Tap to flip', style: TextStyle(fontSize: 8, color: colors.accentPrimary)),
                 ],
               ),
           ],
@@ -749,7 +760,9 @@ class _Spring3DFlipCardState extends State<Spring3DFlipCard> with SingleTickerPr
 
   // --- Back Side (Answer) ---
 
-  Widget _buildCardBack() {
+  Widget _buildCardBack(BuildContext context) {
+    final colors = context.colors;
+
     return LayoutBuilder(
       builder: (context, constraints) {
         final isSmall = constraints.maxHeight < 110;
@@ -764,13 +777,13 @@ class _Spring3DFlipCardState extends State<Spring3DFlipCard> with SingleTickerPr
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                     decoration: BoxDecoration(
-                      color: AppColors.accentEmerald.withValues(alpha: 0.15),
+                      color: colors.accentEmerald.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(4),
                     ),
-                    child: const Text('ANSWER & EXPLANATION', style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: AppColors.accentEmerald)),
+                    child: Text('ANSWER & EXPLANATION', style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: colors.accentEmerald)),
                   ),
                   const Spacer(),
-                  Text('Interval: ${widget.card.intervalDays}d', style: const TextStyle(fontSize: 8, color: AppColors.fgSecondary)),
+                  Text('Interval: ${widget.card.intervalDays}d', style: TextStyle(fontSize: 8, color: colors.fgSecondary)),
                 ],
               ),
 
@@ -783,7 +796,7 @@ class _Spring3DFlipCardState extends State<Spring3DFlipCard> with SingleTickerPr
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: widget.isScrollMode ? 11 : (isSmall ? 11 : 12),
-                      color: AppColors.fgPrimary,
+                      color: colors.fgPrimary,
                       height: 1.35,
                     ),
                   ),
@@ -797,18 +810,18 @@ class _Spring3DFlipCardState extends State<Spring3DFlipCard> with SingleTickerPr
                   children: [
                     _buildQualityBtn('Hard', 3, Colors.orange),
                     const SizedBox(width: 4),
-                    _buildQualityBtn('Good', 4, AppColors.accentEmerald),
+                    _buildQualityBtn('Good', 4, colors.accentEmerald),
                     const SizedBox(width: 4),
-                    _buildQualityBtn('Perfect', 5, AppColors.accentPrimary),
+                    _buildQualityBtn('Perfect', 5, colors.accentPrimary),
                   ],
                 ),
             ] else ...[
               if (!isSmall)
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: const [
-                    Text('Answer Revealed', style: TextStyle(fontSize: 8, color: AppColors.accentEmerald)),
-                    Text('Rate quality in bottom right →', style: TextStyle(fontSize: 8, color: AppColors.fgSecondary)),
+                  children: [
+                    Text('Answer Revealed', style: TextStyle(fontSize: 8, color: colors.accentEmerald)),
+                    Text('Rate quality in bottom right →', style: TextStyle(fontSize: 8, color: colors.fgSecondary)),
                   ],
                 ),
             ],

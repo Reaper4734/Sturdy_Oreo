@@ -15,11 +15,15 @@ class LearningConsistencyWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
+
     return Container(
-      padding: const EdgeInsets.all(32),
+      padding: AppSpacing.pXl,
       decoration: BoxDecoration(
-        color: AppColors.bgSurface,
-        borderRadius: BorderRadius.circular(16),
+        color: colors.bgSurface,
+        borderRadius: AppRadius.rXl,
+        border: Border.all(color: colors.borderSubtle, width: 1),
+        boxShadow: AppElevation.low,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -27,14 +31,14 @@ class LearningConsistencyWidget extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Learning Consistency', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.fgPrimary)),
+              Text('Learning Consistency', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: colors.fgPrimary)),
               Row(
                 children: [
-                  _buildStat('Current Streak', '${summary.longestStreak} Days'), // Normally would be current streak, mocking with longest
+                  _buildStat(context, 'Current Streak', '${summary.longestStreak} Days'),
                   const SizedBox(width: 32),
-                  _buildStat('Best Streak', '${summary.longestStreak} Days'),
+                  _buildStat(context, 'Best Streak', '${summary.longestStreak} Days'),
                   const SizedBox(width: 32),
-                  _buildStat('Consistency', '${summary.weeklyConsistency}%'),
+                  _buildStat(context, 'Consistency', '${summary.weeklyConsistency}%'),
                 ],
               ),
             ],
@@ -43,13 +47,11 @@ class LearningConsistencyWidget extends StatelessWidget {
           
           LayoutBuilder(
             builder: (context, constraints) {
-              // Automatically calculate based on available width
               final availableWidth = constraints.maxWidth;
               const int targetRows = 7;
               const int totalDays = 365;
               final int columns = (totalDays / targetRows).ceil(); // ~53
               
-              // We want spacing to be roughly 10% of cell size, up to 4px
               final double maxSpacing = 4.0;
               final double calculatedSpacing = (availableWidth * 0.05 / columns).clamp(1.0, maxSpacing);
               final double cellSize = (availableWidth - (columns - 1) * calculatedSpacing) / columns;
@@ -68,7 +70,6 @@ class LearningConsistencyWidget extends StatelessWidget {
                   itemBuilder: (context, index) {
                     final score = scores[index];
                     
-                    // Simple mock data for tooltip
                     final date = DateTime.now().subtract(Duration(days: 364 - index));
                     final dateStr = DateFormat('d MMM').format(date);
                     
@@ -80,9 +81,9 @@ class LearningConsistencyWidget extends StatelessWidget {
                     return Tooltip(
                       message: tooltipMsg,
                       decoration: BoxDecoration(
-                        color: AppColors.bgSurface,
+                        color: colors.bgSurface,
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: AppColors.borderSubtle),
+                        border: Border.all(color: colors.borderSubtle),
                         boxShadow: [
                           BoxShadow(
                             color: Colors.black.withValues(alpha: 0.1),
@@ -91,12 +92,12 @@ class LearningConsistencyWidget extends StatelessWidget {
                           )
                         ],
                       ),
-                      textStyle: const TextStyle(fontSize: 13, color: AppColors.fgPrimary, fontWeight: FontWeight.normal, height: 1.5),
+                      textStyle: TextStyle(fontSize: 13, color: colors.fgPrimary, fontWeight: FontWeight.normal, height: 1.5),
                       padding: const EdgeInsets.all(12),
                       child: Container(
                         decoration: BoxDecoration(
-                          color: _getColorForScore(score),
-                          borderRadius: BorderRadius.circular(cellSize * 0.2), // slightly rounded
+                          color: _getColorForScore(context, score),
+                          borderRadius: BorderRadius.circular(cellSize * 0.2),
                         ),
                       ),
                     );
@@ -110,22 +111,24 @@ class LearningConsistencyWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildStat(String label, String value) {
+  Widget _buildStat(BuildContext context, String label, String value) {
+    final colors = context.colors;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
-        Text(value, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.fgPrimary)),
+        Text(value, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: colors.fgPrimary)),
         const SizedBox(height: 4),
-        Text(label, style: const TextStyle(fontSize: 13, color: AppColors.fgSecondary)),
+        Text(label, style: TextStyle(fontSize: 13, color: colors.fgSecondary)),
       ],
     );
   }
 
-  Color _getColorForScore(int score) {
-    if (score == 0) return AppColors.bgSecondary;
-    if (score < 25) return AppColors.fgAccent.withValues(alpha: 0.2);
-    if (score < 50) return AppColors.fgAccent.withValues(alpha: 0.5);
-    if (score < 75) return AppColors.fgAccent.withValues(alpha: 0.8);
-    return AppColors.fgAccent;
+  Color _getColorForScore(BuildContext context, int score) {
+    final colors = context.colors;
+    if (score == 0) return colors.bgSecondary;
+    if (score < 25) return colors.fgAccent.withValues(alpha: 0.2);
+    if (score < 50) return colors.fgAccent.withValues(alpha: 0.5);
+    if (score < 75) return colors.fgAccent.withValues(alpha: 0.8);
+    return colors.fgAccent;
   }
 }

@@ -28,6 +28,7 @@ class MascotSelectionDialog extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final colors = context.colors;
     final assets = type == MascotType.companion ? _petAssets : _characterAssets;
     final basePath = type == MascotType.companion
         ? 'assets/mascots/cube_pets/png/'
@@ -40,8 +41,11 @@ class MascotSelectionDialog extends ConsumerWidget {
         : currentState.mentorAsset;
 
     return Dialog(
-      backgroundColor: AppColors.bgSurface,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      backgroundColor: colors.bgSurface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: colors.borderSubtle),
+      ),
       child: Container(
         width: 600,
         padding: const EdgeInsets.all(24),
@@ -54,14 +58,14 @@ class MascotSelectionDialog extends ConsumerWidget {
               children: [
                 Text(
                   title,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
-                    color: AppColors.fgPrimary,
+                    color: colors.fgPrimary,
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.close, color: AppColors.fgSecondary),
+                  icon: Icon(Icons.close, color: colors.fgSecondary),
                   onPressed: () => Navigator.of(context).pop(),
                 ),
               ],
@@ -92,9 +96,9 @@ class MascotSelectionDialog extends ConsumerWidget {
                     borderRadius: BorderRadius.circular(12),
                     child: Container(
                       decoration: BoxDecoration(
-                        color: isSelected ? AppColors.accentPrimary.withValues(alpha: 0.2) : AppColors.bgCanvas,
+                        color: isSelected ? colors.accentPrimary.withValues(alpha: 0.15) : colors.bgElevated,
                         border: Border.all(
-                          color: isSelected ? AppColors.accentPrimary : Colors.transparent,
+                          color: isSelected ? colors.accentPrimary : colors.borderSubtle,
                           width: 2,
                         ),
                         borderRadius: BorderRadius.circular(12),

@@ -177,7 +177,7 @@ class _MicroInterviewScreenState extends ConsumerState<MicroInterviewScreen> {
     final activeWs = ref.read(activeWorkspaceProvider);
     if (widget.isWorkspaceMode && activeWs != null) {
       activeWs.chatHistory = List.from(_messages);
-      ref.read(workspaceListProvider.notifier).touchWorkspace(activeWs.id);
+      ref.read(workspaceListProvider.notifier).updateWorkspace(activeWs);
 
       // Conversational Workspace Editing
       if (text.toLowerCase().contains('already know') || text.toLowerCase().contains('master')) {
@@ -221,6 +221,7 @@ class _MicroInterviewScreenState extends ConsumerState<MicroInterviewScreen> {
         });
         if (widget.isWorkspaceMode && activeWs != null) {
           activeWs.chatHistory = List.from(_messages);
+          ref.read(workspaceListProvider.notifier).updateWorkspace(activeWs);
         }
         _scrollToBottom();
       }
@@ -273,14 +274,12 @@ class _MicroInterviewScreenState extends ConsumerState<MicroInterviewScreen> {
     }
   }
 
-  bool get _hasUserInteracted => _messages.any((m) => m.sender == 'USER');
-
   bool get _canSend => _inputController.text.trim().isNotEmpty || _attachedFiles.isNotEmpty;
 
   @override
   Widget build(BuildContext context) {
     ref.listen(activeWorkspaceProvider, (previous, next) {
-      if (next != null && (previous == null || previous.id != next.id)) {
+      if (widget.isWorkspaceMode && next != null && (previous == null || previous.id != next.id)) {
         setState(() {
           _messages = List.from(next.chatHistory);
         });
@@ -303,6 +302,7 @@ class _MicroInterviewScreenState extends ConsumerState<MicroInterviewScreen> {
              final personaStr = "Domain: $domain, Subject: $subject, Score: ${metadata['confidence_score']}";
              
              newWs = await repo.createWorkspaceFromCourse(subject, persona: personaStr);
+             // Preserve the complete onboarding chat history inside the newly created workspace
              newWs.chatHistory = List.from(_messages);
           } catch (e) {
              debugPrint('Workspace generation failed: $e');
@@ -329,22 +329,24 @@ class _MicroInterviewScreenState extends ConsumerState<MicroInterviewScreen> {
       );
     }
 
+    final colors = context.colors;
+
     return Stack(
       children: [
         Scaffold(
-          backgroundColor: AppColors.bgCanvas,
+          backgroundColor: colors.bgCanvas,
           body: _isLoading
-              ? const Center(child: CircularProgressIndicator(color: AppColors.accentPrimary))
+              ? Center(child: CircularProgressIndicator(color: colors.accentPrimary))
               : Column(
                   children: [
                     // Top Header Bar
                     if (widget.showHeader) _buildHeader(context),
 
-                    // Main Viewport (ChatGPT Landing vs Active Unboxed Chat Thread)
+                    // Main Viewport (ChatGPT Landing when empty vs Active Unboxed Chat Thread)
                     Expanded(
                       child: Stack(
                         children: [
-                          if (!_hasUserInteracted)
+                          if (_messages.isEmpty)
                             _buildChatGPTLandingState(context)
                           else
                             _buildActiveChatThread(context),
@@ -352,8 +354,8 @@ class _MicroInterviewScreenState extends ConsumerState<MicroInterviewScreen> {
                       ),
                     ),
 
-                    // Bottom Floating Input Bar + Disclaimer (ONLY when user has started chatting)
-                    if (_hasUserInteracted) _buildBottomInputArea(context),
+                    // Bottom Floating Input Bar + Disclaimer (Always visible when in active chat thread)
+                    if (_messages.isNotEmpty) _buildBottomInputArea(context),
                   ],
                 ),
         ),
@@ -366,23 +368,24 @@ class _MicroInterviewScreenState extends ConsumerState<MicroInterviewScreen> {
 
   // Top Header Bar
   Widget _buildHeader(BuildContext context) {
+    final colors = context.colors;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: const BoxDecoration(
-        color: AppColors.bgActivityBar,
-        border: Border(bottom: BorderSide(color: AppColors.borderSubtle, width: 0.8)),
+      decoration: BoxDecoration(
+        color: colors.bgActivityBar,
+        border: Border(bottom: BorderSide(color: colors.borderSubtle, width: 0.8)),
       ),
       child: Row(
         children: [
           Flexible(
             child: Text(
               'Oreo AI Tutor',
-              style: Theme.of(context).textTheme.displayMedium?.copyWith(fontSize: 15, fontWeight: FontWeight.bold),
+              style: Theme.of(context).textTheme.displayMedium?.copyWith(fontSize: 15, fontWeight: FontWeight.bold, color: colors.fgPrimary),
               overflow: TextOverflow.ellipsis,
             ),
           ),
           const SizedBox(width: 4),
-          const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.fgSecondary, size: 18),
+          Icon(Icons.keyboard_arrow_down_rounded, color: colors.fgSecondary, size: 18),
           const Spacer(),
         ],
       ),
@@ -391,6 +394,7 @@ class _MicroInterviewScreenState extends ConsumerState<MicroInterviewScreen> {
 
   // ChatGPT Centered Landing View State (Single Centered Input Bar)
   Widget _buildChatGPTLandingState(BuildContext context) {
+    final colors = context.colors;
     return Center(
       child: SingleChildScrollView(
         child: Container(
@@ -402,7 +406,7 @@ class _MicroInterviewScreenState extends ConsumerState<MicroInterviewScreen> {
               Text(
                 'What do you want to learn today?',
                 textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.displayLarge?.copyWith(fontSize: 26, fontWeight: FontWeight.w600, color: AppColors.fgPrimary),
+                style: Theme.of(context).textTheme.displayLarge?.copyWith(fontSize: 26, fontWeight: FontWeight.w600, color: colors.fgPrimary),
               ).animate().fadeIn(duration: 300.ms),
               const SizedBox(height: 32),
 
@@ -448,6 +452,7 @@ class _MicroInterviewScreenState extends ConsumerState<MicroInterviewScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
           itemCount: _messages.length,
           itemBuilder: (context, index) {
+            final colors = context.colors;
             final msg = _messages[index];
             final isAI = msg.sender == 'AI';
             return Column(
@@ -461,21 +466,23 @@ class _MicroInterviewScreenState extends ConsumerState<MicroInterviewScreen> {
                       spacing: 8,
                       runSpacing: 8,
                       alignment: isAI ? WrapAlignment.start : WrapAlignment.end,
-                      children: msg.attachments!.map((f) => _buildAttachedFileChip(f, isDismissible: false)).toList(),
+                      children: msg.attachments!.map((f) => _buildAttachedFileChip(context, f, isDismissible: false)).toList(),
                     ),
                   ),
 
-                // USER Message (Sleek Dark Pill) vs AI Message (Unboxed Text directly on Canvas)
+                // USER Message (Sleek Elevated Pill) vs AI Message (Unboxed Text directly on Canvas)
                 if (!isAI)
                   Container(
                     margin: const EdgeInsets.symmetric(vertical: 12),
                     padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
                     constraints: const BoxConstraints(maxWidth: 550),
                     decoration: BoxDecoration(
-                      color: AppColors.bgSurface,
+                      color: colors.bgSurface,
                       borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: colors.borderSubtle, width: 1),
+                      boxShadow: AppElevation.low,
                     ),
-                    child: Text(msg.text, style: Theme.of(context).textTheme.bodyLarge),
+                    child: Text(msg.text, style: TextStyle(color: colors.fgPrimary, fontSize: 15)),
                   ).animate().fadeIn(duration: 200.ms)
                 else
                   Padding(
@@ -488,9 +495,9 @@ class _MicroInterviewScreenState extends ConsumerState<MicroInterviewScreen> {
                           StreamingMarkdownBody(
                             text: msg.text,
                             styleSheet: MarkdownStyleSheet(
-                              p: Theme.of(context).textTheme.bodyLarge,
-                              strong: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold),
-                              listBullet: Theme.of(context).textTheme.bodyLarge,
+                              p: Theme.of(context).textTheme.bodyLarge?.copyWith(color: colors.fgPrimary),
+                              strong: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold, color: colors.fgPrimary),
+                              listBullet: Theme.of(context).textTheme.bodyLarge?.copyWith(color: colors.fgPrimary),
                             ),
                             onTick: _scrollToBottom,
                             onFinished: () {
@@ -505,9 +512,9 @@ class _MicroInterviewScreenState extends ConsumerState<MicroInterviewScreen> {
                           MarkdownBody(
                             data: msg.text,
                             styleSheet: MarkdownStyleSheet(
-                              p: Theme.of(context).textTheme.bodyLarge,
-                              strong: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold),
-                              listBullet: Theme.of(context).textTheme.bodyLarge,
+                              p: Theme.of(context).textTheme.bodyLarge?.copyWith(color: colors.fgPrimary),
+                              strong: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold, color: colors.fgPrimary),
+                              listBullet: Theme.of(context).textTheme.bodyLarge?.copyWith(color: colors.fgPrimary),
                             ),
                           ),
 
@@ -516,17 +523,17 @@ class _MicroInterviewScreenState extends ConsumerState<MicroInterviewScreen> {
                         // Action Bar Below AI Message (Copy, Like, Dislike, Share, Retry)
                         Row(
                           children: [
-                            _buildIconActionButton(Icons.content_copy_outlined, 'Copy', () {
+                            _buildIconActionButton(context, Icons.content_copy_outlined, 'Copy', () {
                               Clipboard.setData(ClipboardData(text: msg.text));
                             }),
                             const SizedBox(width: 4),
-                            _buildIconActionButton(Icons.thumb_up_outlined, 'Good response', () {}),
+                            _buildIconActionButton(context, Icons.thumb_up_outlined, 'Good response', () {}),
                             const SizedBox(width: 4),
-                            _buildIconActionButton(Icons.thumb_down_outlined, 'Bad response', () {}),
+                            _buildIconActionButton(context, Icons.thumb_down_outlined, 'Bad response', () {}),
                             const SizedBox(width: 4),
-                            _buildIconActionButton(Icons.refresh_rounded, 'Regenerate', () {}),
+                            _buildIconActionButton(context, Icons.refresh_rounded, 'Regenerate', () {}),
                             const SizedBox(width: 4),
-                            _buildIconActionButton(Icons.more_horiz_rounded, 'More', () {}),
+                            _buildIconActionButton(context, Icons.more_horiz_rounded, 'More', () {}),
                           ],
                         ),
 
@@ -540,14 +547,14 @@ class _MicroInterviewScreenState extends ConsumerState<MicroInterviewScreen> {
                               children: msg.options!.map((opt) {
                                 final isNavCTA = opt.contains('➔');
                                 return ActionChip(
-                                  backgroundColor: isNavCTA ? AppColors.accentEmerald.withValues(alpha: 0.15) : AppColors.bgSurface,
+                                  backgroundColor: isNavCTA ? colors.accentEmerald.withValues(alpha: 0.15) : colors.bgSurface,
                                   side: BorderSide(
-                                    color: isNavCTA ? AppColors.accentEmerald : AppColors.borderSubtle,
+                                    color: isNavCTA ? colors.accentEmerald : colors.borderSubtle,
                                   ),
                                   label: Text(
                                     opt,
                                     style: TextStyle(
-                                      color: isNavCTA ? AppColors.accentEmerald : AppColors.fgPrimary,
+                                      color: isNavCTA ? colors.accentEmerald : colors.fgPrimary,
                                       fontWeight: isNavCTA ? FontWeight.bold : FontWeight.normal,
                                       fontSize: 13,
                                     ),
@@ -578,14 +585,15 @@ class _MicroInterviewScreenState extends ConsumerState<MicroInterviewScreen> {
 
   // Bottom Area (Input Container + Disclaimer Text)
   Widget _buildBottomInputArea(BuildContext context) {
+    final colors = context.colors;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         _buildPillInputBox(context),
         const SizedBox(height: 6),
-        const Text(
+        Text(
           'Oreo AI Tutor can make mistakes. Check important info.',
-          style: TextStyle(fontSize: 11, color: AppColors.fgSecondary),
+          style: TextStyle(fontSize: 11, color: colors.fgSecondary),
         ),
         const SizedBox(height: 12),
       ],
@@ -594,13 +602,15 @@ class _MicroInterviewScreenState extends ConsumerState<MicroInterviewScreen> {
 
   // ChatGPT Sleek Pill Input Box Widget (Dynamically toggles Send button vs Voice buttons)
   Widget _buildPillInputBox(BuildContext context) {
+    final colors = context.colors;
     return Container(
       constraints: const BoxConstraints(maxWidth: 720),
       margin: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
-        color: AppColors.bgSurface,
+        color: colors.bgSurface,
         borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: AppColors.borderSubtle, width: 1),
+        border: Border.all(color: colors.borderSubtle, width: 1),
+        boxShadow: AppElevation.low,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -613,7 +623,7 @@ class _MicroInterviewScreenState extends ConsumerState<MicroInterviewScreen> {
               child: Wrap(
                 spacing: 8,
                 runSpacing: 8,
-                children: _attachedFiles.map((f) => _buildAttachedFileChip(f, isDismissible: true)).toList(),
+                children: _attachedFiles.map((f) => _buildAttachedFileChip(context, f, isDismissible: true)).toList(),
               ),
             ),
 
@@ -624,30 +634,30 @@ class _MicroInterviewScreenState extends ConsumerState<MicroInterviewScreen> {
               children: [
                 // Left Attachment Popup Button (+)
                 PopupMenuButton<String>(
-                  icon: const Icon(Icons.add_rounded, color: AppColors.fgSecondary, size: 22),
-                  color: AppColors.bgElevated,
+                  icon: Icon(Icons.add_rounded, color: colors.fgSecondary, size: 22),
+                  color: colors.bgElevated,
                   tooltip: 'Attach PDF, DOCX, MD, or Images',
                   onSelected: (value) {
                     if (value == 'file') _pickFiles();
                   },
                   itemBuilder: (context) => [
-                    const PopupMenuItem(
+                    PopupMenuItem(
                       value: 'file',
                       child: Row(
                         children: [
-                          Icon(Icons.file_present_outlined, color: AppColors.fgAccent, size: 16),
-                          SizedBox(width: 8),
-                          Expanded(child: Text('Upload Document (PDF, DOCX, MD)', style: TextStyle(color: AppColors.fgPrimary, fontSize: 13))),
+                          Icon(Icons.file_present_outlined, color: colors.fgAccent, size: 16),
+                          const SizedBox(width: 8),
+                          Expanded(child: Text('Upload Document (PDF, DOCX, MD)', style: TextStyle(color: colors.fgPrimary, fontSize: 13))),
                         ],
                       ),
                     ),
-                    const PopupMenuItem(
+                    PopupMenuItem(
                       value: 'file',
                       child: Row(
                         children: [
-                          Icon(Icons.image_outlined, color: AppColors.accentEmerald, size: 16),
-                          SizedBox(width: 8),
-                          Expanded(child: Text('Upload Image / Screenshot', style: TextStyle(color: AppColors.fgPrimary, fontSize: 13))),
+                          Icon(Icons.image_outlined, color: colors.accentEmerald, size: 16),
+                          const SizedBox(width: 8),
+                          Expanded(child: Text('Upload Image / Screenshot', style: TextStyle(color: colors.fgPrimary, fontSize: 13))),
                         ],
                       ),
                     ),
@@ -661,17 +671,21 @@ class _MicroInterviewScreenState extends ConsumerState<MicroInterviewScreen> {
                     focusNode: _inputFocusNode,
                     keyboardType: TextInputType.multiline,
                     textInputAction: TextInputAction.newline,
-                    style: Theme.of(context).textTheme.bodyLarge,
+                    style: TextStyle(color: colors.fgPrimary, fontSize: 15),
                     maxLines: 5,
                     minLines: 1,
                     decoration: InputDecoration(
+                      filled: false,
+                      fillColor: Colors.transparent,
                       hintText: ref.watch(activeWorkspaceProvider)?.activeLearningContext != null
                           ? 'Ask about ${ref.watch(activeWorkspaceProvider)!.activeLearningContext}...'
                           : 'Ask anything',
-                      hintStyle: const TextStyle(color: AppColors.fgSecondary, fontSize: 14),
+                      hintStyle: TextStyle(color: colors.fgSecondary, fontSize: 14),
                       border: InputBorder.none,
                       focusedBorder: InputBorder.none,
                       enabledBorder: InputBorder.none,
+                      disabledBorder: InputBorder.none,
+                      errorBorder: InputBorder.none,
                       contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
                     ),
                   ),
@@ -683,11 +697,11 @@ class _MicroInterviewScreenState extends ConsumerState<MicroInterviewScreen> {
                   IconButton(
                     icon: Container(
                       padding: const EdgeInsets.all(6),
-                      decoration: const BoxDecoration(
-                        color: AppColors.accentPrimary,
+                      decoration: BoxDecoration(
+                        color: colors.accentPrimary,
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(Icons.arrow_upward_rounded, color: Colors.black, size: 18),
+                      child: Icon(Icons.arrow_upward_rounded, color: colors.fgInverse, size: 18),
                     ),
                     tooltip: 'Send message',
                     onPressed: () => _handleUserMessage(_inputController.text),
@@ -695,7 +709,7 @@ class _MicroInterviewScreenState extends ConsumerState<MicroInterviewScreen> {
                 else ...[
                   // Right Dictation Mic Button (🎤)
                   IconButton(
-                    icon: const Icon(Icons.mic_none_rounded, color: AppColors.fgSecondary, size: 20),
+                    icon: Icon(Icons.mic_none_rounded, color: colors.fgSecondary, size: 20),
                     tooltip: 'Voice Dictation',
                     onPressed: () {
                       _voiceService.startListening(
@@ -710,11 +724,11 @@ class _MicroInterviewScreenState extends ConsumerState<MicroInterviewScreen> {
                   IconButton(
                     icon: Container(
                       padding: const EdgeInsets.all(6),
-                      decoration: const BoxDecoration(
-                        color: AppColors.accentPrimary,
+                      decoration: BoxDecoration(
+                        color: colors.accentPrimary,
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(Icons.graphic_eq_rounded, color: Colors.black, size: 16),
+                      child: Icon(Icons.graphic_eq_rounded, color: colors.fgInverse, size: 16),
                     ),
                     tooltip: 'Live Voice Assistant Mode',
                     onPressed: _toggleVoiceAssistantModal,
@@ -729,7 +743,8 @@ class _MicroInterviewScreenState extends ConsumerState<MicroInterviewScreen> {
   }
 
   // Minimal Action Row Icon Button
-  Widget _buildIconActionButton(IconData icon, String tooltip, VoidCallback onTap) {
+  Widget _buildIconActionButton(BuildContext context, IconData icon, String tooltip, VoidCallback onTap) {
+    final colors = context.colors;
     return Tooltip(
       message: tooltip,
       child: InkWell(
@@ -737,7 +752,7 @@ class _MicroInterviewScreenState extends ConsumerState<MicroInterviewScreen> {
         borderRadius: BorderRadius.circular(6),
         child: Padding(
           padding: const EdgeInsets.all(6.0),
-          child: Icon(icon, size: 16, color: AppColors.fgSecondary),
+          child: Icon(icon, size: 16, color: colors.fgSecondary),
         ),
       ),
     );
@@ -745,6 +760,7 @@ class _MicroInterviewScreenState extends ConsumerState<MicroInterviewScreen> {
 
   // Quick Action Row Item
   Widget _buildQuickActionItem({required IconData icon, required String label, required VoidCallback onTap}) {
+    final colors = context.colors;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(10),
@@ -753,12 +769,12 @@ class _MicroInterviewScreenState extends ConsumerState<MicroInterviewScreen> {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, color: AppColors.fgSecondary, size: 16),
+            Icon(icon, color: colors.fgSecondary, size: 16),
             const SizedBox(width: 8),
             Flexible(
               child: Text(
                 label,
-                style: const TextStyle(fontSize: 13, color: AppColors.fgSecondary),
+                style: TextStyle(fontSize: 13, color: colors.fgSecondary),
                 overflow: TextOverflow.ellipsis,
               ),
             ),
@@ -769,13 +785,14 @@ class _MicroInterviewScreenState extends ConsumerState<MicroInterviewScreen> {
   }
 
   // Attached File Chip Component
-  Widget _buildAttachedFileChip(AttachedFileModel file, {required bool isDismissible}) {
+  Widget _buildAttachedFileChip(BuildContext context, AttachedFileModel file, {required bool isDismissible}) {
+    final colors = context.colors;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: AppColors.bgSurface,
+        color: colors.bgSurface,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: AppColors.borderSubtle),
+        border: Border.all(color: colors.borderSubtle),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -783,17 +800,17 @@ class _MicroInterviewScreenState extends ConsumerState<MicroInterviewScreen> {
           Icon(
             file.isImage ? Icons.image_outlined : Icons.description_outlined,
             size: 14,
-            color: AppColors.fgAccent,
+            color: colors.fgAccent,
           ),
           const SizedBox(width: 6),
           Text(
             file.name,
-            style: const TextStyle(fontSize: 12, color: AppColors.fgPrimary, fontWeight: FontWeight.w500),
+            style: TextStyle(fontSize: 12, color: colors.fgPrimary, fontWeight: FontWeight.w500),
           ),
           const SizedBox(width: 4),
           Text(
             '(${file.formattedSize})',
-            style: const TextStyle(fontSize: 10, color: AppColors.fgSecondary),
+            style: TextStyle(fontSize: 10, color: colors.fgSecondary),
           ),
           if (isDismissible) ...[
             const SizedBox(width: 6),

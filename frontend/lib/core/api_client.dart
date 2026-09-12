@@ -40,6 +40,13 @@ class ApiClient {
     );
   }
 
+  Future<http.Response> delete(String endpoint) async {
+    return _client.delete(
+      Uri.parse('$baseUrl$endpoint'),
+      headers: _headers(),
+    );
+  }
+
   Map<String, String> _headers() {
     final headers = {
       'Content-Type': 'application/json',

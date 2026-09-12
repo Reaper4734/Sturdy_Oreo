@@ -31,11 +31,13 @@ class TopTabBarWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
+
     return Container(
       height: 38,
-      decoration: const BoxDecoration(
-        color: AppColors.bgActivityBar,
-        border: Border(bottom: BorderSide(color: AppColors.borderSubtle, width: 0.8)),
+      decoration: BoxDecoration(
+        color: colors.bgActivityBar,
+        border: Border(bottom: BorderSide(color: colors.borderSubtle, width: 0.8)),
       ),
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
@@ -48,29 +50,29 @@ class TopTabBarWidget extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 14),
               decoration: BoxDecoration(
-                color: isActive ? AppColors.bgCanvas : AppColors.bgActivityBar,
+                color: isActive ? colors.bgCanvas : colors.bgActivityBar,
                 border: Border(
-                  right: const BorderSide(color: AppColors.borderSubtle, width: 0.8),
-                  top: isActive ? const BorderSide(color: AppColors.accentPrimary, width: 2) : BorderSide.none,
+                  right: BorderSide(color: colors.borderSubtle, width: 0.8),
+                  top: isActive ? BorderSide(color: colors.accentPrimary, width: 2) : BorderSide.none,
                 ),
               ),
               child: Row(
                 children: [
-                  Icon(tab.icon, size: 14, color: isActive ? AppColors.accentPrimary : AppColors.fgSecondary),
+                  Icon(tab.icon, size: 14, color: isActive ? colors.accentPrimary : colors.fgSecondary),
                   const SizedBox(width: 8),
                   Text(
                     tab.title,
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-                      color: isActive ? AppColors.fgPrimary : AppColors.fgSecondary,
+                      color: isActive ? colors.fgPrimary : colors.fgSecondary,
                     ),
                   ),
                   if (tab.isClosable && onTabClosed != null) ...[
                     const SizedBox(width: 8),
                     InkWell(
                       onTap: () => onTabClosed!(tab.id),
-                      child: const Icon(Icons.close_rounded, size: 12, color: AppColors.fgSecondary),
+                      child: Icon(Icons.close_rounded, size: 12, color: colors.fgSecondary),
                     ),
                   ],
                 ],

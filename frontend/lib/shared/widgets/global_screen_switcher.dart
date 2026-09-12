@@ -33,15 +33,17 @@ class _GlobalScreenSwitcherState extends State<GlobalScreenSwitcher> {
   @override
   Widget build(BuildContext context) {
     final screenSize = MediaQuery.of(context).size;
-    // Default initial position at bottom-right if not yet dragged
-    _position ??= Offset(screenSize.width - 70, screenSize.height - 120);
+    final colors = context.colors;
+
+    // Default position at bottom-right if not initialized
+    _position ??= Offset(screenSize.width - 70, screenSize.height - 110);
 
     return Stack(
       children: [
         // Main Screen Child Viewport
         widget.child,
 
-        // Tap Outside Overlay to Dismiss Menu
+        // Modal backdrop when menu is open
         if (_isMenuOpen)
           Positioned.fill(
             child: GestureDetector(
@@ -68,7 +70,7 @@ class _GlobalScreenSwitcherState extends State<GlobalScreenSwitcher> {
               // Screen Switcher Popup List (Wrapped in Material to satisfy InkWell)
               if (_isMenuOpen)
                 Material(
-                  color: AppColors.bgSurface,
+                  color: colors.bgSurface,
                   borderRadius: BorderRadius.circular(16),
                   elevation: 12,
                   clipBehavior: Clip.antiAlias,
@@ -76,9 +78,10 @@ class _GlobalScreenSwitcherState extends State<GlobalScreenSwitcher> {
                     margin: const EdgeInsets.only(bottom: 10),
                     width: 280,
                     decoration: BoxDecoration(
-                      color: AppColors.bgSurface,
+                      color: colors.bgSurface,
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: AppColors.borderActive, width: 1.5),
+                      border: Border.all(color: colors.borderActive, width: 1.5),
+                      boxShadow: AppElevation.low,
                     ),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
@@ -86,16 +89,16 @@ class _GlobalScreenSwitcherState extends State<GlobalScreenSwitcher> {
                         // Header
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                          decoration: const BoxDecoration(
-                            border: Border(bottom: BorderSide(color: AppColors.borderSubtle)),
+                          decoration: BoxDecoration(
+                            border: Border(bottom: BorderSide(color: colors.borderSubtle)),
                           ),
                           child: Row(
-                            children: const [
-                              Icon(Icons.swap_calls_rounded, color: AppColors.accentEmerald, size: 18),
-                              SizedBox(width: 8),
+                            children: [
+                              Icon(Icons.swap_calls_rounded, color: colors.accentEmerald, size: 18),
+                              const SizedBox(width: 8),
                               Text(
                                 'Global Screen Switcher',
-                                style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.fgPrimary),
+                                style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: colors.fgPrimary),
                               ),
                             ],
                           ),
@@ -115,14 +118,14 @@ class _GlobalScreenSwitcherState extends State<GlobalScreenSwitcher> {
                             child: Container(
                               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                               decoration: BoxDecoration(
-                                color: isSelected ? AppColors.bgElevated : Colors.transparent,
-                                border: const Border(bottom: BorderSide(color: AppColors.borderSubtle, width: 0.5)),
+                                color: isSelected ? colors.bgSecondary : Colors.transparent,
+                                border: Border(bottom: BorderSide(color: colors.borderSubtle, width: 0.5)),
                               ),
                               child: Row(
                                 children: [
                                   CircleAvatar(
                                     radius: 4,
-                                    backgroundColor: isSelected ? AppColors.accentEmerald : AppColors.fgSecondary,
+                                    backgroundColor: isSelected ? colors.accentEmerald : colors.fgSecondary,
                                   ),
                                   const SizedBox(width: 10),
                                   Expanded(
@@ -131,12 +134,12 @@ class _GlobalScreenSwitcherState extends State<GlobalScreenSwitcher> {
                                       style: TextStyle(
                                         fontSize: 12,
                                         fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                                        color: isSelected ? AppColors.fgPrimary : AppColors.fgSecondary,
+                                        color: isSelected ? colors.fgPrimary : colors.fgSecondary,
                                       ),
                                     ),
                                   ),
                                   if (isSelected)
-                                    const Icon(Icons.check_rounded, size: 14, color: AppColors.accentEmerald),
+                                    Icon(Icons.check_rounded, size: 14, color: colors.accentEmerald),
                                 ],
                               ),
                             ),
@@ -167,21 +170,21 @@ class _GlobalScreenSwitcherState extends State<GlobalScreenSwitcher> {
                 child: Material(
                   elevation: 8,
                   shape: const CircleBorder(),
-                  color: AppColors.bgSurface,
+                  color: colors.bgSurface,
                   child: Container(
                     width: 48,
                     height: 48,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: _isMenuOpen ? AppColors.accentEmerald : AppColors.bgSurface,
+                      color: _isMenuOpen ? colors.accentEmerald : colors.bgSurface,
                       border: Border.all(
-                        color: _isMenuOpen ? AppColors.accentEmerald : AppColors.borderActive,
+                        color: _isMenuOpen ? colors.accentEmerald : colors.borderActive,
                         width: 2,
                       ),
                     ),
                     child: Icon(
                       _isMenuOpen ? Icons.close_rounded : Icons.layers_rounded,
-                      color: _isMenuOpen ? Colors.black : AppColors.accentPrimary,
+                      color: _isMenuOpen ? colors.fgInverse : colors.accentPrimary,
                       size: 22,
                     ),
                   ),

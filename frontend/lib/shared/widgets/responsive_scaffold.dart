@@ -37,17 +37,18 @@ class ResponsiveScaffold extends ConsumerWidget {
   // Desktop / Web Layout: Hallmark Modern-Minimal Activity Rail (Monochrome, No Purple)
   Widget _buildDesktopWorkbench(BuildContext context, WidgetRef ref) {
     final isOpen = ref.watch(workspacePanelOpenProvider);
+    final colors = context.colors;
 
     return Scaffold(
-      backgroundColor: AppColors.bgCanvas,
+      backgroundColor: colors.bgCanvas,
       body: Row(
         children: [
           // Left Vertical Activity Bar (Icon Rail Only)
           Container(
             width: 56,
-            decoration: const BoxDecoration(
-              color: AppColors.bgActivityBar,
-              border: Border(right: BorderSide(color: AppColors.borderSubtle, width: 0.8)),
+            decoration: BoxDecoration(
+              color: colors.bgActivityBar,
+              border: Border(right: BorderSide(color: colors.borderSubtle, width: 0.8)),
             ),
             child: Column(
               children: [
@@ -57,18 +58,18 @@ class ResponsiveScaffold extends ConsumerWidget {
                   width: 34,
                   height: 34,
                   decoration: BoxDecoration(
-                    color: AppColors.bgElevated,
+                    color: colors.bgElevated,
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: AppColors.borderSubtle),
+                    border: Border.all(color: colors.borderSubtle),
                   ),
-                  child: const Icon(Icons.auto_awesome, color: AppColors.accentPrimary, size: 18),
+                  child: Icon(Icons.auto_awesome, color: colors.accentPrimary, size: 18),
                 ),
                 const SizedBox(height: 16),
 
                 // NEW: Learning Spaces Explorer Icon (Top of Rail)
-                _buildWorkspaceRailButton(ref, isOpen),
+                _buildWorkspaceRailButton(context, ref, isOpen),
                 const SizedBox(height: 8),
-                const Divider(height: 1, color: AppColors.borderSubtle, indent: 8, endIndent: 8),
+                Divider(height: 1, color: colors.borderSubtle, indent: 8, endIndent: 8),
                 const SizedBox(height: 8),
 
                 // Nav Icons with Hover Tooltips (All 5 Existing Tabs Preserved Exactly)
@@ -81,7 +82,7 @@ class ResponsiveScaffold extends ConsumerWidget {
                 const Spacer(),
 
                 // NEW: Auto-save status indicator
-                _buildAutoSaveIndicator(ref),
+                _buildAutoSaveIndicator(context, ref),
                 const SizedBox(height: 12),
 
                 // Pinned Profile Section at Bottom Left
@@ -111,7 +112,7 @@ class ResponsiveScaffold extends ConsumerWidget {
               children: [
                 Positioned.fill(
                   child: Container(
-                    color: AppColors.bgCanvas,
+                    color: colors.bgCanvas,
                     child: child,
                   ),
                 ),
@@ -140,24 +141,25 @@ class ResponsiveScaffold extends ConsumerWidget {
   // Smartphone Layout: Top Bar + Bottom Navigation
   Widget _buildMobileApp(BuildContext context, WidgetRef ref) {
     final isOpen = ref.watch(workspacePanelOpenProvider);
+    final colors = context.colors;
 
     return Scaffold(
-      backgroundColor: AppColors.bgCanvas,
+      backgroundColor: colors.bgCanvas,
       appBar: AppBar(
-        backgroundColor: AppColors.bgActivityBar,
+        backgroundColor: colors.bgActivityBar,
         elevation: 0,
         title: Row(
-          children: const [
-            Icon(Icons.auto_awesome, color: AppColors.accentPrimary, size: 18),
-            SizedBox(width: 8),
-            Text('Oreo AI Tutor', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.fgPrimary)),
+          children: [
+            Icon(Icons.auto_awesome, color: colors.accentPrimary, size: 18),
+            const SizedBox(width: 8),
+            Text('Oreo AI Tutor', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: colors.fgPrimary)),
           ],
         ),
         actions: [
           IconButton(
             icon: Icon(
               Icons.workspaces_outlined,
-              color: isOpen ? AppColors.accentPrimary : AppColors.fgSecondary,
+              color: isOpen ? colors.accentPrimary : colors.fgSecondary,
               size: 20,
             ),
             tooltip: 'Learning Spaces',
@@ -197,9 +199,9 @@ class ResponsiveScaffold extends ConsumerWidget {
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: selectedIndex,
         onTap: onDestinationSelected,
-        backgroundColor: AppColors.bgActivityBar,
-        selectedItemColor: AppColors.accentPrimary,
-        unselectedItemColor: AppColors.fgSecondary,
+        backgroundColor: colors.bgActivityBar,
+        selectedItemColor: colors.accentPrimary,
+        unselectedItemColor: colors.fgSecondary,
         type: BottomNavigationBarType.fixed,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.dashboard_outlined), label: 'Center'),
@@ -211,7 +213,8 @@ class ResponsiveScaffold extends ConsumerWidget {
     );
   }
 
-  Widget _buildWorkspaceRailButton(WidgetRef ref, bool isOpen) {
+  Widget _buildWorkspaceRailButton(BuildContext context, WidgetRef ref, bool isOpen) {
+    final colors = context.colors;
     return Tooltip(
       message: 'Learning Spaces Explorer',
       preferBelow: false,
@@ -225,13 +228,13 @@ class ResponsiveScaffold extends ConsumerWidget {
           width: 44,
           height: 44,
           decoration: BoxDecoration(
-            color: isOpen ? AppColors.accentPrimary.withValues(alpha: 0.15) : Colors.transparent,
+            color: isOpen ? colors.accentPrimary.withValues(alpha: 0.15) : Colors.transparent,
             borderRadius: BorderRadius.circular(10),
-            border: isOpen ? Border.all(color: AppColors.accentPrimary.withValues(alpha: 0.4)) : null,
+            border: isOpen ? Border.all(color: colors.accentPrimary.withValues(alpha: 0.4)) : null,
           ),
           child: Icon(
             Icons.workspaces_outlined,
-            color: isOpen ? AppColors.accentPrimary : AppColors.fgSecondary,
+            color: isOpen ? colors.accentPrimary : colors.fgSecondary,
             size: 22,
           ),
         ),
@@ -239,9 +242,10 @@ class ResponsiveScaffold extends ConsumerWidget {
     );
   }
 
-  Widget _buildAutoSaveIndicator(WidgetRef ref) {
+  Widget _buildAutoSaveIndicator(BuildContext context, WidgetRef ref) {
     final status = ref.watch(autoSaveStatusProvider);
     final isSaving = status == 'Saving...';
+    final colors = context.colors;
     return Tooltip(
       message: 'Ponytail In-Memory Auto-Save: $status',
       preferBelow: false,
@@ -253,14 +257,14 @@ class ResponsiveScaffold extends ConsumerWidget {
             width: 6,
             height: 6,
             decoration: BoxDecoration(
-              color: isSaving ? AppColors.accentAmber : AppColors.accentEmerald,
+              color: isSaving ? colors.accentAmber : colors.accentEmerald,
               shape: BoxShape.circle,
             ),
           ),
           const SizedBox(width: 4),
           Text(
             isSaving ? '...' : '✓',
-            style: const TextStyle(fontSize: 10, color: AppColors.fgSecondary, fontWeight: FontWeight.bold),
+            style: TextStyle(fontSize: 10, color: colors.fgSecondary, fontWeight: FontWeight.bold),
           ),
         ],
       ),
@@ -303,6 +307,7 @@ class _RailNavButtonState extends State<_RailNavButton> {
   @override
   Widget build(BuildContext context) {
     final bool isSelected = widget.selectedIndex == widget.index;
+    final colors = context.colors;
 
     return Tooltip(
       message: widget.tooltip,
@@ -320,11 +325,11 @@ class _RailNavButtonState extends State<_RailNavButton> {
             height: 44,
             decoration: BoxDecoration(
               color: isSelected
-                  ? AppColors.accentPrimary.withValues(alpha: 0.15)
-                  : (_isHovered ? AppColors.bgElevated : Colors.transparent),
+                  ? colors.accentPrimary.withValues(alpha: 0.15)
+                  : (_isHovered ? colors.bgElevated : Colors.transparent),
               borderRadius: BorderRadius.circular(10),
               border: isSelected
-                  ? Border.all(color: AppColors.accentPrimary.withValues(alpha: 0.4))
+                  ? Border.all(color: colors.accentPrimary.withValues(alpha: 0.4))
                   : null,
             ),
             child: Stack(
@@ -337,11 +342,11 @@ class _RailNavButtonState extends State<_RailNavButton> {
                     child: Container(
                       width: 3,
                       decoration: BoxDecoration(
-                        color: AppColors.accentPrimary,
+                        color: colors.accentPrimary,
                         borderRadius: BorderRadius.circular(2),
                         boxShadow: [
                           BoxShadow(
-                            color: AppColors.accentPrimary.withValues(alpha: 0.5),
+                            color: colors.accentPrimary.withValues(alpha: 0.5),
                             blurRadius: 6,
                           )
                         ],
@@ -352,8 +357,8 @@ class _RailNavButtonState extends State<_RailNavButton> {
                   child: Icon(
                     widget.icon,
                     color: isSelected
-                        ? AppColors.accentPrimary
-                        : (_isHovered ? AppColors.fgPrimary : AppColors.fgSecondary),
+                        ? colors.accentPrimary
+                        : (_isHovered ? colors.fgPrimary : colors.fgSecondary),
                     size: 20,
                   ),
                 ),

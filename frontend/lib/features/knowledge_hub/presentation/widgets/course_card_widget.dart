@@ -21,6 +21,8 @@ class _CourseCardWidgetState extends State<CourseCardWidget> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
+
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovered = true),
       onExit: (_) => setState(() => _isHovered = false),
@@ -31,31 +33,29 @@ class _CourseCardWidgetState extends State<CourseCardWidget> {
           duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
-            color: _isHovered ? AppColors.bgElevated : AppColors.bgSurface,
+            color: _isHovered ? colors.bgSurfaceHover : colors.bgSurface,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: _isHovered ? AppColors.accentPrimary.withValues(alpha: 0.5) : AppColors.borderSubtle,
+              color: _isHovered ? colors.borderDefault : colors.borderSubtle,
               width: 1,
             ),
-            boxShadow: _isHovered
-                ? [
-                    BoxShadow(
-                      color: AppColors.accentPrimary.withValues(alpha: 0.05),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
-                    )
-                  ]
-                : [],
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: _isHovered ? 0.08 : 0.03),
+                blurRadius: _isHovered ? 12 : 4,
+                offset: const Offset(0, 4),
+              )
+            ],
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 widget.course.title,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
-                  color: AppColors.fgPrimary,
+                  color: colors.fgPrimary,
                   height: 1.2,
                 ),
                 maxLines: 2,
@@ -64,9 +64,9 @@ class _CourseCardWidgetState extends State<CourseCardWidget> {
               const Spacer(),
               Text(
                 widget.course.tags.join(' · '),
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 14,
-                  color: AppColors.fgSecondary,
+                  color: colors.fgSecondary,
                   height: 1.4,
                 ),
                 maxLines: 2,
@@ -75,14 +75,14 @@ class _CourseCardWidgetState extends State<CourseCardWidget> {
               const SizedBox(height: 16),
               Row(
                 children: [
-                  const Icon(Icons.schedule, size: 16, color: AppColors.fgAccent),
+                  Icon(Icons.schedule, size: 16, color: colors.fgAccent),
                   const SizedBox(width: 8),
                   Text(
                     '${widget.course.estimatedHours} Hours',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
-                      color: AppColors.fgPrimary,
+                      color: colors.fgPrimary,
                     ),
                   ),
                 ],

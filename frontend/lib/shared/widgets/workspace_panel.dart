@@ -44,13 +44,14 @@ class _WorkspacePanelState extends ConsumerState<WorkspacePanel> {
   Widget build(BuildContext context) {
     final workspaces = ref.watch(workspaceListProvider);
     final activeId = ref.watch(activeWorkspaceIdProvider);
+    final colors = context.colors;
 
     return Container(
       width: 300,
-      decoration: const BoxDecoration(
-        color: AppColors.bgSidebar,
-        border: Border(right: BorderSide(color: AppColors.borderSubtle, width: 1)),
-        boxShadow: [BoxShadow(color: Colors.black45, blurRadius: 15, offset: Offset(5, 0))],
+      decoration: BoxDecoration(
+        color: colors.bgSidebar,
+        border: Border(right: BorderSide(color: colors.borderSubtle, width: 1)),
+        boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 15, offset: Offset(5, 0))],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -61,12 +62,12 @@ class _WorkspacePanelState extends ConsumerState<WorkspacePanel> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
+                Text(
                   'Continue Learning',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.fgPrimary),
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: colors.fgPrimary),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.close_rounded, color: AppColors.fgSecondary, size: 18),
+                  icon: Icon(Icons.close_rounded, color: colors.fgSecondary, size: 18),
                   onPressed: () => ref.read(workspacePanelOpenProvider.notifier).state = false,
                   tooltip: 'Close Panel',
                   padding: EdgeInsets.zero,
@@ -88,12 +89,12 @@ class _WorkspacePanelState extends ConsumerState<WorkspacePanel> {
               child: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 4),
                 child: Row(
-                  children: const [
-                    Icon(Icons.add_rounded, color: AppColors.accentPrimary, size: 18),
-                    SizedBox(width: 8),
+                  children: [
+                    Icon(Icons.add_rounded, color: colors.accentPrimary, size: 18),
+                    const SizedBox(width: 8),
                     Text(
                       'New Learning Space',
-                      style: TextStyle(color: AppColors.accentPrimary, fontWeight: FontWeight.bold, fontSize: 13),
+                      style: TextStyle(color: colors.accentPrimary, fontWeight: FontWeight.bold, fontSize: 13),
                     ),
                   ],
                 ),
@@ -101,9 +102,9 @@ class _WorkspacePanelState extends ConsumerState<WorkspacePanel> {
             ),
           ),
 
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 20),
-            child: Divider(height: 24, color: AppColors.borderSubtle, thickness: 0.8),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Divider(height: 24, color: colors.borderSubtle, thickness: 0.8),
           ),
 
           // List of Workspaces
@@ -111,9 +112,9 @@ class _WorkspacePanelState extends ConsumerState<WorkspacePanel> {
             child: ListView.separated(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
               itemCount: workspaces.length,
-              separatorBuilder: (context, index) => const Divider(
+              separatorBuilder: (context, index) => Divider(
                 height: 28,
-                color: AppColors.borderSubtle,
+                color: colors.borderSubtle,
                 thickness: 0.5,
               ),
               itemBuilder: (context, index) {
@@ -132,7 +133,7 @@ class _WorkspacePanelState extends ConsumerState<WorkspacePanel> {
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.bold,
-                          color: isActive ? AppColors.accentPrimary : AppColors.fgPrimary,
+                          color: isActive ? colors.accentPrimary : colors.fgPrimary,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -141,7 +142,7 @@ class _WorkspacePanelState extends ConsumerState<WorkspacePanel> {
                       // Subtitle: Active Context
                       Text(
                         'Active Context: ${ws.activeLearningContext}',
-                        style: const TextStyle(fontSize: 12, color: AppColors.fgSecondary),
+                        style: TextStyle(fontSize: 12, color: colors.fgSecondary),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -149,7 +150,7 @@ class _WorkspacePanelState extends ConsumerState<WorkspacePanel> {
                       // Progress: 42% Complete
                       Text(
                         '${(ws.progressPercent * 100).toInt()}% Complete',
-                        style: const TextStyle(fontSize: 12, color: AppColors.fgSecondary),
+                        style: TextStyle(fontSize: 12, color: colors.fgSecondary),
                       ),
                       const SizedBox(height: 6),
                       // Footer: Time ago & Resume CTA
@@ -158,14 +159,14 @@ class _WorkspacePanelState extends ConsumerState<WorkspacePanel> {
                         children: [
                           Text(
                             _formatAgo(ws.lastOpened),
-                            style: const TextStyle(fontSize: 11, color: AppColors.fgSecondary),
+                            style: TextStyle(fontSize: 11, color: colors.fgSecondary),
                           ),
                           Text(
                             isActive ? 'Active' : 'Resume →',
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.bold,
-                              color: isActive ? AppColors.fgPrimary : AppColors.accentPrimary,
+                              color: isActive ? colors.fgPrimary : colors.accentPrimary,
                             ),
                           ),
                         ],

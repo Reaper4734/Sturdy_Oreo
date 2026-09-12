@@ -14,11 +14,15 @@ class ContinueLearningCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
+
     return Container(
-      padding: const EdgeInsets.all(32),
+      padding: AppSpacing.pXl,
       decoration: BoxDecoration(
-        color: AppColors.bgSurface,
-        borderRadius: BorderRadius.circular(16),
+        color: colors.bgSurface,
+        borderRadius: AppRadius.rXl,
+        border: Border.all(color: colors.borderSubtle, width: 1),
+        boxShadow: AppElevation.low,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -26,47 +30,46 @@ class ContinueLearningCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Workspace', style: TextStyle(fontSize: 13, color: AppColors.fgSecondary)),
-              Text(data.difficulty, style: const TextStyle(fontSize: 13, color: AppColors.fgTertiary)),
+              Text('Workspace', style: TextStyle(fontSize: 13, color: colors.fgSecondary)),
+              Text(data.difficulty, style: TextStyle(fontSize: 13, color: colors.fgTertiary)),
             ],
           ),
           const SizedBox(height: 8),
-          Text(data.workspaceName, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.fgPrimary)),
+          Text(data.workspaceName, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: colors.fgPrimary)),
           const SizedBox(height: 24),
           
-          const Text('Current Topic', style: TextStyle(fontSize: 13, color: AppColors.fgSecondary)),
+          Text('Current Topic', style: TextStyle(fontSize: 13, color: colors.fgSecondary)),
           const SizedBox(height: 8),
-          Text(data.currentTopic, style: const TextStyle(fontSize: 16, color: AppColors.fgPrimary)),
+          Text(data.currentTopic, style: TextStyle(fontSize: 16, color: colors.fgPrimary)),
           const SizedBox(height: 16),
           
-          const Text('Next Action', style: TextStyle(fontSize: 13, color: AppColors.fgSecondary)),
+          Text('Next Action', style: TextStyle(fontSize: 13, color: colors.fgSecondary)),
           const SizedBox(height: 8),
-          Text(data.nextAction, style: const TextStyle(fontSize: 16, color: AppColors.fgPrimary)),
+          Text(data.nextAction, style: TextStyle(fontSize: 16, color: colors.fgPrimary)),
           const SizedBox(height: 16),
           
-          const Text('Estimated Time', style: TextStyle(fontSize: 13, color: AppColors.fgSecondary)),
+          Text('Estimated Time', style: TextStyle(fontSize: 13, color: colors.fgSecondary)),
           const SizedBox(height: 8),
-          Text(data.estimatedTime, style: const TextStyle(fontSize: 16, color: AppColors.fgPrimary)),
+          Text(data.estimatedTime, style: TextStyle(fontSize: 16, color: colors.fgPrimary)),
           const SizedBox(height: 24),
 
           // Progress
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Overall Progress', style: TextStyle(fontSize: 13, color: AppColors.fgSecondary)),
-              Text('${(data.progressPercent * 100).toInt()}%', style: const TextStyle(fontSize: 13, color: AppColors.fgSecondary)),
+              Text('Overall Progress', style: TextStyle(fontSize: 13, color: colors.fgSecondary)),
+              Text('${(data.progressPercent * 100).toInt()}%', style: TextStyle(fontSize: 13, color: colors.fgSecondary)),
             ],
           ),
           const SizedBox(height: 8),
           LinearProgressIndicator(
             value: data.progressPercent,
-            backgroundColor: AppColors.bgSecondary,
-            color: AppColors.fgAccent,
+            backgroundColor: colors.bgSecondary,
+            color: colors.fgAccent,
             minHeight: 4,
             borderRadius: BorderRadius.circular(2),
           ),
-          const SizedBox(height: 32),
-          const Spacer(),
+          const SizedBox(height: 16),
 
           // Continue Button
           Container(
@@ -74,7 +77,7 @@ class ContinueLearningCard extends StatelessWidget {
             decoration: BoxDecoration(
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.fgAccent.withValues(alpha: 0.15),
+                  color: colors.fgAccent.withValues(alpha: 0.15),
                   blurRadius: 16,
                   offset: const Offset(0, 4),
                 )
@@ -83,8 +86,8 @@ class ContinueLearningCard extends StatelessWidget {
             child: ElevatedButton(
               onPressed: onContinue,
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.fgAccent,
-                foregroundColor: AppColors.bgCanvas,
+                backgroundColor: colors.fgAccent,
+                foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 elevation: 0,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
