@@ -2,9 +2,8 @@ package com.oreo.engine.orchestration.controller;
 
 
 import org.springframework.messaging.handler.annotation.MessageMapping;
-
 import org.springframework.stereotype.Controller;
-import com.oreo.engine.watchdog.WatchdogDaemon;
+
 
 
 import java.util.Map;
@@ -13,12 +12,9 @@ import java.util.Map;
 public class OrchestrationWebSocketController {
 
     private final com.oreo.engine.orchestration.pipelines.StreamingOrchestrationService streamingService;
-    private final WatchdogDaemon watchdogDaemon;
 
-    public OrchestrationWebSocketController(com.oreo.engine.orchestration.pipelines.StreamingOrchestrationService streamingService,
-                                            WatchdogDaemon watchdogDaemon) {
+    public OrchestrationWebSocketController(com.oreo.engine.orchestration.pipelines.StreamingOrchestrationService streamingService) {
         this.streamingService = streamingService;
-        this.watchdogDaemon = watchdogDaemon;
     }
 
     @MessageMapping("/interview/stream")
@@ -31,19 +27,17 @@ public class OrchestrationWebSocketController {
 
     @MessageMapping("/canvas/stream")
     public void streamCanvasTutor(Map<String, String> payload, java.security.Principal principal) {
-        if (principal == null) return;
+        String sessionId = payload.getOrDefault("sessionId", "default");
+        String userIdStr = (principal != null) ? principal.getName() : payload.get("userId");
+        if (userIdStr == null || userIdStr.isBlank()) {
+            streamingService.sendCanvasError(sessionId, "Unauthorized: Authentication required.");
+            return;
+        }
 
         String userMessage = payload.getOrDefault("message", "Can you explain this concept?");
-        String sessionId = payload.getOrDefault("sessionId", "default");
         String videoId = payload.get("videoId");
         String timestampStr = payload.get("timestamp");
 
-        streamingService.streamCanvasExplanation(sessionId, userMessage, videoId, timestampStr, principal.getName());
-    }
-
-    @MessageMapping("/session/heartbeat")
-    public void receiveHeartbeat(Map<String, String> payload) {
-        String sessionId = payload.getOrDefault("sessionId", "default");
-        watchdogDaemon.registerHeartbeat(sessionId);
+        streamingService.streamCanvasExplanation(sessionId, userMessage, videoId, timestampStr, userIdStr);
     }
 }

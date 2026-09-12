@@ -14,6 +14,7 @@ import '../../../shared/services/voice_assistant_service.dart';
 import 'dart:convert';
 import '../../workspace/data/http_workspace_repository.dart';
 import 'widgets/workspace_generation_interstitial.dart';
+import '../../../shared/services/stomp_chat_service.dart';
 
 class MicroInterviewScreen extends ConsumerStatefulWidget {
   final VoidCallback onInterviewComplete;
@@ -190,9 +191,80 @@ class _MicroInterviewScreenState extends ConsumerState<MicroInterviewScreen> {
     _scrollToBottom();
 
     final repo = ref.read(httpInterviewRepositoryProvider);
+    final stompService = ref.read(stompChatServiceProvider);
     final historyStr = _messages.map((m) => "${m.sender}: ${m.text}").join("\n");
 
     try {
+      if (widget.isWorkspaceMode && sentFiles.isEmpty) {
+        final sessionId = activeWs?.id ?? 'ws_${DateTime.now().millisecondsSinceEpoch}';
+        final aiMsgId = 'ai_${DateTime.now().millisecondsSinceEpoch}';
+        var accumulated = '';
+        var placeholderAdded = false;
+
+        try {
+          final stream = stompService.streamCanvasExplanation(
+            userMessage: text,
+            sessionId: sessionId,
+            timestamp: activeWs != null ? '${activeWs.lastVideoTimestampSeconds}' : null,
+          );
+
+          await for (final token in stream) {
+            accumulated += token;
+            if (mounted) {
+              setState(() {
+                if (!placeholderAdded) {
+                  _messages.add(ChatMessage(
+                    id: aiMsgId,
+                    sender: 'AI',
+                    text: accumulated,
+                  ));
+                  placeholderAdded = true;
+                } else {
+                  _messages[_messages.length - 1] = ChatMessage(
+                    id: aiMsgId,
+                    sender: 'AI',
+                    text: accumulated,
+                  );
+                }
+              });
+              _scrollToBottom();
+            }
+          }
+        } catch (streamErr) {
+          debugPrint('STOMP stream encountered issue, falling back to HTTP: $streamErr');
+          if (!placeholderAdded) {
+            String roadmapJson = "[]";
+            if (activeWs != null) {
+              roadmapJson = jsonEncode(activeWs.roadmap.map((e) => e.toJson()).toList());
+            }
+            final aiReply = await repo.sendWorkspaceChatMessage(
+              text,
+              historyStr,
+              roadmapJson,
+              files: sentFiles,
+            );
+            if (mounted) {
+              setState(() {
+                _messages.add(aiReply);
+              });
+            }
+          }
+        }
+
+        if (mounted) {
+          setState(() {
+            _lastMessageFinishedAnim = false;
+            _isSending = false;
+          });
+          if (activeWs != null) {
+            activeWs.chatHistory = List.from(_messages);
+            ref.read(workspaceListProvider.notifier).updateWorkspace(activeWs);
+          }
+          _scrollToBottom();
+        }
+        return;
+      }
+
       ChatMessage aiReply;
       if (widget.isWorkspaceMode) {
         String roadmapJson = "[]";

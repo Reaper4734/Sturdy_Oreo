@@ -18,16 +18,24 @@ public class IngestionController {
     }
 
     @PostMapping("/ingest")
-    public ResponseEntity<Map<String, String>> triggerIngestion(@RequestBody Map<String, String> payload) {
-        String videoId = payload.getOrDefault("videoId", "pnWINBJ3-yA");
-        UUID userId = UUID.randomUUID(); // mock
-        
-        autonomousIngestionService.ingestVideo(videoId, userId);
-        
+    public ResponseEntity<Map<String, String>> triggerIngestion(
+            @org.springframework.security.core.annotation.AuthenticationPrincipal String userId,
+            @RequestBody Map<String, String> payload) {
+        String videoId = payload.get("videoId");
+        if (videoId == null || videoId.trim().isEmpty()) {
+            throw new IllegalArgumentException("videoId is required for ingestion.");
+        }
+
+        UUID userUuid = (userId != null && !userId.isBlank())
+                ? UUID.fromString(userId)
+                : UUID.nameUUIDFromBytes(videoId.getBytes());
+
+        autonomousIngestionService.ingestVideo(videoId.trim(), userUuid);
+
         return ResponseEntity.accepted().body(Map.of(
-            "status", "Ingestion started", 
-            "videoId", videoId,
-            "topic", "/topic/ingestion/" + videoId
+            "status", "Ingestion started",
+            "videoId", videoId.trim(),
+            "topic", "/topic/ingestion/" + videoId.trim()
         ));
     }
 }

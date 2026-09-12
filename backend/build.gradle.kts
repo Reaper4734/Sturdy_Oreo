@@ -2,7 +2,6 @@ plugins {
     java
     id("org.springframework.boot") version "3.4.2"
     id("io.spring.dependency-management") version "1.1.7"
-    kotlin("jvm") version "1.9.25"
     jacoco
 }
 
@@ -52,17 +51,10 @@ dependencies {
     runtimeOnly("io.jsonwebtoken:jjwt-impl:0.12.6")
     runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.12.6")
 
-    // Google Auth ID Token Verifier
-    implementation("com.google.api-client:google-api-client:2.7.0")
-
-    // Kotlin reflect for Springdoc OpenAPI (fixed 500 error)
-    implementation("org.jetbrains.kotlin:kotlin-reflect")
-
     // LangChain4j for AI Orchestration
     implementation("dev.langchain4j:langchain4j:0.36.2")
     implementation("dev.langchain4j:langchain4j-google-ai-gemini:0.36.2")
     implementation("dev.langchain4j:langchain4j-pgvector:0.36.2")
-    implementation("dev.langchain4j:langchain4j-open-ai:0.36.2")
     implementation("dev.langchain4j:langchain4j-embeddings-all-minilm-l6-v2:0.36.2")
     implementation("dev.langchain4j:langchain4j-web-search-engine-google-custom:0.36.2")
 

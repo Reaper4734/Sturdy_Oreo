@@ -41,13 +41,10 @@ public class AutonomousIngestionService {
         try {
             // Step 1: Transcript
             messagingTemplate.convertAndSend(topic, Map.of("step", "TRANSCRIPT", "status", "Downloading..."));
-            // We fetch the full transcript for ingestion
             String transcript = transcriptService.getTranscriptBufferBeforeTimestamp(videoId, Integer.MAX_VALUE, Integer.MAX_VALUE).orElse("");
             messagingTemplate.convertAndSend(topic, Map.of("step", "TRANSCRIPT", "status", "Done", "length", transcript.length()));
 
-
-
-            // Step 3: Flashcards
+            // Step 2: Flashcards
             messagingTemplate.convertAndSend(topic, Map.of("step", "FLASHCARDS", "status", "Extracting..."));
             var cards = flashcardGenerator.generateFlashcards(transcript, Integer.MAX_VALUE);
             for (var c : cards) {

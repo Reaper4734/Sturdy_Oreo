@@ -38,6 +38,17 @@ class HttpSettingsRepository {
     }
     throw Exception('Failed to fetch settings');
   }
+
+  Future<void> updateUserProfile(UserProfile user) async {
+    final response = await _apiClient.put('/settings/profile', body: {
+      'displayName': user.displayName,
+      'bio': user.bio,
+      'country': user.country,
+    });
+    if (response.statusCode != 200) {
+      throw Exception('Failed to update profile: ${response.statusCode}');
+    }
+  }
 }
 
 final httpSettingsRepositoryProvider = Provider((ref) => HttpSettingsRepository());

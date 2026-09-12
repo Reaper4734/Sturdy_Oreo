@@ -67,6 +67,10 @@ public class StreamingOrchestrationService {
         );
     }
 
+    public void sendCanvasError(String sessionId, String error) {
+        messagingTemplate.convertAndSend("/topic/canvas/" + sessionId, Map.of("error", error));
+    }
+
     public void streamCanvasExplanation(String sessionId, String userMessageText, String videoId, String timestampStr, String userIdStr) {
         UUID threadId;
         try {
@@ -78,7 +82,14 @@ public class StreamingOrchestrationService {
         // Validate Ownership
         UUID requestUserId = UUID.fromString(userIdStr);
         com.oreo.engine.orchestration.model.ChatThread thread = chatThreadRepository.findById(threadId).orElse(null);
-        if (thread != null && !thread.getUserId().equals(requestUserId)) {
+        if (thread == null) {
+            thread = new com.oreo.engine.orchestration.model.ChatThread();
+            thread.setId(threadId);
+            thread.setUserId(requestUserId);
+            thread.setVideoId(videoId);
+            thread.setTitle("Canvas Chat " + sessionId.substring(0, Math.min(8, sessionId.length())));
+            chatThreadRepository.save(thread);
+        } else if (!thread.getUserId().equals(requestUserId)) {
             messagingTemplate.convertAndSend("/topic/canvas/" + sessionId, Map.of("error", "Unauthorized: Thread belongs to another user."));
             return;
         }

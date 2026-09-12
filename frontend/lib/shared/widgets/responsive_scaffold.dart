@@ -87,7 +87,7 @@ class ResponsiveScaffold extends ConsumerWidget {
 
                 // Pinned Profile Section at Bottom Left
                 Tooltip(
-                  message: 'User Profile & Settings (Priyaj Gawade)',
+                  message: 'User Profile & Settings',
                   preferBelow: false,
                   verticalOffset: 20,
                   child: InkWell(
@@ -97,7 +97,7 @@ class ResponsiveScaffold extends ConsumerWidget {
                       child: CircleAvatar(
                         radius: 15,
                         backgroundColor: Color(0xFFD97706),
-                        child: Text('PG', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white)),
+                        child: Icon(Icons.person_outline, size: 16, color: Colors.white),
                       ),
                     ),
                   ),

@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-
 import 'youtube_player_widget.dart';
 
-class VideoPlayerPanel extends StatefulWidget {
+class VideoPlayerPanel extends StatelessWidget {
   final String videoTitle;
   final String videoId;
   final int currentTimestampSeconds;
@@ -19,21 +18,10 @@ class VideoPlayerPanel extends StatefulWidget {
   });
 
   @override
-  State<VideoPlayerPanel> createState() => _VideoPlayerPanelState();
-}
-
-class _VideoPlayerPanelState extends State<VideoPlayerPanel> {
-
-  @override
   Widget build(BuildContext context) {
     return ClipRRect(
       borderRadius: BorderRadius.circular(12),
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          YoutubePlayerWidget(videoId: widget.videoId),
-        ],
-      ),
+      child: YoutubePlayerWidget(videoId: videoId),
     );
   }
 }

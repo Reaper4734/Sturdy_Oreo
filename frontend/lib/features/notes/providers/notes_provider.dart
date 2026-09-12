@@ -3,7 +3,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../shared/providers/workspace_providers.dart';
 import '../data/http_notes_repository.dart';
-import '../data/notes_repository.dart';
 import '../models/block_type.dart';
 import '../models/note_block_model.dart';
 import '../models/note_page_model.dart';
@@ -67,7 +66,7 @@ final notesNotifierProvider = StateNotifierProvider<NotesNotifier, NotesState>((
 });
 
 class NotesNotifier extends StateNotifier<NotesState> {
-  final NotesRepository _repository;
+  final HttpNotesRepository _repository;
   Timer? _debounceSaveTimer;
 
   NotesNotifier(this._repository, String? activeWorkspaceId)

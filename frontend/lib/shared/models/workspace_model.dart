@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'dashboard_model.dart';
 import 'flashcard_model.dart';
 import 'learning_lab_model.dart';
 import 'micro_interview_model.dart';
@@ -43,8 +42,6 @@ class WorkspaceModel {
   List<CanvasObject> canvasObjects;
   List<DrawingPath> drawingPaths;
   List<ChatMessage> chatHistory;
-  List<ActivityEntry> activityFeed;
-  List<DashboardTrack> tracks;
 
   // Resumption UI & state restoration
   String activeTabId;            // e.g., 'roadmap', 'mind_map', 'persona', etc.
@@ -76,8 +73,6 @@ class WorkspaceModel {
     List<CanvasObject>? canvasObjects,
     List<DrawingPath>? drawingPaths,
     List<ChatMessage>? chatHistory,
-    List<ActivityEntry>? activityFeed,
-    List<DashboardTrack>? tracks,
     this.activeTabId = 'roadmap',
     Map<String, bool>? expandedRoadmapNodes,
     this.lastVideoTimestampSeconds = 0,
@@ -88,8 +83,6 @@ class WorkspaceModel {
         canvasObjects = canvasObjects ?? [],
         drawingPaths = drawingPaths ?? [],
         chatHistory = chatHistory ?? [],
-        activityFeed = activityFeed ?? [],
-        tracks = tracks ?? [],
         expandedRoadmapNodes = expandedRoadmapNodes ?? {};
 
   /// Create a cloned copy of this workspace (for Duplication action)
@@ -118,11 +111,66 @@ class WorkspaceModel {
       canvasObjects: List.from(canvasObjects),
       drawingPaths: List.from(drawingPaths),
       chatHistory: List.from(chatHistory),
-      activityFeed: List.from(activityFeed),
-      tracks: List.from(tracks),
       activeTabId: activeTabId,
       expandedRoadmapNodes: Map.from(expandedRoadmapNodes),
       lastVideoTimestampSeconds: lastVideoTimestampSeconds,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'userId': userId,
+      'title': title,
+      'subject': subject,
+      'difficulty': difficulty,
+      'createdAt': createdAt.toIso8601String(),
+      'lastOpened': lastOpened.toIso8601String(),
+      'progressPercent': progressPercent,
+      'activeLearningContext': activeLearningContext,
+      'flashcardCount': flashcardCount,
+      'roadmapNodeCount': roadmapNodeCount,
+      'accentColor': accentColor.toARGB32(),
+      'isPinned': isPinned,
+      'isArchived': isArchived,
+      'isCourseConfirmed': isCourseConfirmed,
+      'activeTabId': activeTabId,
+      'lastVideoTimestampSeconds': lastVideoTimestampSeconds,
+      'persona': persona?.toJson(),
+      'subjectCluster': subjectCluster?.toJson(),
+      'roadmap': roadmap.map((e) => e.toJson()).toList(),
+      'flashcards': flashcards.map((e) => e.toJson()).toList(),
+      'chatHistory': chatHistory.map((e) => e.toJson()).toList(),
+    };
+  }
+
+  factory WorkspaceModel.fromJson(Map<String, dynamic> json) {
+    return WorkspaceModel(
+      id: json['id'] ?? '',
+      userId: json['userId'] ?? '',
+      title: json['title'] ?? '',
+      subject: json['subject'] ?? '',
+      difficulty: json['difficulty'] ?? 'Beginner',
+      createdAt: json['createdAt'] != null ? DateTime.parse(json['createdAt']) : DateTime.now(),
+      lastOpened: json['lastOpened'] != null ? DateTime.parse(json['lastOpened']) : DateTime.now(),
+      progressPercent: (json['progressPercent'] ?? 0.0).toDouble(),
+      activeLearningContext: json['activeLearningContext'] ?? '',
+      flashcardCount: json['flashcardCount'] ?? 0,
+      roadmapNodeCount: json['roadmapNodeCount'] ?? 0,
+      accentColor: json['accentColor'] != null ? Color(json['accentColor']) : const Color(0xFF67E8F9),
+      isPinned: json['isPinned'] ?? false,
+      isArchived: json['isArchived'] ?? false,
+      isCourseConfirmed: json['isCourseConfirmed'] ?? false,
+      activeTabId: json['activeTabId'] ?? 'roadmap',
+      lastVideoTimestampSeconds: json['lastVideoTimestampSeconds'] ?? 0,
+      persona: json['persona'] != null ? PersonaProfile.fromJson(json['persona']) : null,
+      subjectCluster: json['subjectCluster'] != null ? SubjectCluster.fromJson(json['subjectCluster']) : null,
+      roadmap: (json['roadmap'] as List<dynamic>?)?.map<RoadmapNode>((e) => RoadmapNode.fromJson(e as Map<String, dynamic>)).toList() ?? [],
+      flashcards: (json['flashcards'] as List<dynamic>?)?.map<FlashcardItem>((e) => FlashcardItem.fromJson(e as Map<String, dynamic>)).toList() ?? [],
+      chatHistory: (json['chatHistory'] as List<dynamic>?)
+              ?.map<ChatMessage>((e) => ChatMessage.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          [],
     );
   }
 }

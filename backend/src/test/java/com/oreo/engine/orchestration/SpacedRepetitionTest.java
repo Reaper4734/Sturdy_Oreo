@@ -1,6 +1,5 @@
-package com.oreo.engine.watchdog;
+package com.oreo.engine.orchestration;
 
-import com.oreo.engine.orchestration.SpacedRepetitionService;
 import com.oreo.engine.orchestration.model.Flashcard;
 import com.oreo.engine.orchestration.repository.FlashcardRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -18,7 +17,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-class SpacedRepetitionAndWatchdogTest {
+class SpacedRepetitionTest {
 
     @Mock
     private FlashcardRepository flashcardRepository;

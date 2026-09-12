@@ -56,10 +56,26 @@ class _PersonaRevealScreenState extends ConsumerState<PersonaRevealScreen> {
 
   Future<void> _loadData() async {
     final activeWs = ref.read(activeWorkspaceProvider);
-    if (activeWs != null && activeWs.persona != null) {
+    if (activeWs != null) {
+      final wsPersona = activeWs.persona ?? PersonaProfile(
+        renderMode: '3d_avatar',
+        title: '${activeWs.title} Specialist',
+        subtitle: 'Targeting ${activeWs.difficulty} Mastery',
+        summary: 'Adaptive learning path customized for ${activeWs.subject}.',
+        traits: [activeWs.difficulty, activeWs.subject],
+        metrics: CognitiveMetrics(
+          visualization: (0.70 + activeWs.progressPercent * 0.25).clamp(0.0, 1.0),
+          applied: (0.65 + activeWs.progressPercent * 0.30).clamp(0.0, 1.0),
+          theoretical: 0.70,
+          pacing: 0.80,
+          logic: 0.85,
+        ),
+        blueprintNodes: [],
+      );
+
       if (mounted) {
         setState(() {
-          _profile = activeWs.persona;
+          _profile = wsPersona;
           _cluster = activeWs.subjectCluster;
           _allFlashcards = activeWs.flashcards;
           _canvasCells = activeWs.canvasCells;
@@ -74,25 +90,11 @@ class _PersonaRevealScreenState extends ConsumerState<PersonaRevealScreen> {
 
     if (mounted) {
       setState(() {
-        _profile = PersonaProfile(
-          renderMode: '3d_avatar',
-          title: 'Curious Learner',
-          subtitle: 'Loves to explore',
-          summary: 'Generated summary',
-          traits: ['Visual'],
-          metrics: CognitiveMetrics(visualization: 0.8, applied: 0.8, theoretical: 0.6, pacing: 0.8, logic: 0.9),
-          blueprintNodes: [],
-        );
-        _cluster = SubjectCluster(subjectId: 's1', subjectTitle: 'Subject', rootNode: ConceptNode(id: 'root', label: 'root'));
+        _profile = null;
+        _cluster = null;
         _canvasCells = [];
         _allFlashcards = [];
-
-        // Initialize shared canvas objects (same instance used by Canvas tab + Lab)
-        _sharedCanvasObjects.addAll([
-          CanvasObject(id: 'note_1', label: '📌 Stack vs Heap\nNotes', position: const Offset(660, 50), size: const Size(140, 80)),
-          CanvasObject(id: 'note_2', label: '🔗 Pointer Safety\nReminder', position: const Offset(660, 160), size: const Size(140, 80)),
-        ]);
-
+        _sharedCanvasObjects.clear();
         _isLoading = false;
       });
     }

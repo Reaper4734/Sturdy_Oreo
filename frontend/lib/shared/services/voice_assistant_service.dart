@@ -1,9 +1,13 @@
 import 'dart:async';
 import 'dart:math';
+import 'package:flutter/foundation.dart';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
 
 class VoiceAssistantService {
+  final stt.SpeechToText _speech = stt.SpeechToText();
   bool _isListening = false;
   bool _isSpeaking = false;
+  bool _isInitialized = false;
   Timer? _waveformTimer;
   final _waveformController = StreamController<List<double>>.broadcast();
 
@@ -11,22 +15,49 @@ class VoiceAssistantService {
   bool get isSpeaking => _isSpeaking;
   Stream<List<double>> get waveformStream => _waveformController.stream;
 
-  void startListening({required Function(String text) onRecognizedText}) {
+  Future<void> startListening({required Function(String text) onRecognizedText}) async {
     _isListening = true;
     _startWaveformSimulation();
 
-    // Simulated speech recognition updates
-    Timer(const Duration(seconds: 2), () {
-      if (_isListening) {
-        onRecognizedText('I want to build a real-time portfolio dashboard with Python and Flutter');
-        stopListening();
+    try {
+      if (!_isInitialized) {
+        _isInitialized = await _speech.initialize(
+          onError: (val) {
+            debugPrint('Speech recognition error: $val');
+            stopListening();
+          },
+          onStatus: (status) {
+            if (status == 'done' || status == 'notListening') {
+              _isListening = false;
+              _stopWaveformSimulation();
+            }
+          },
+        );
       }
-    });
+
+      if (_isInitialized) {
+        await _speech.listen(
+          onResult: (val) {
+            if (val.recognizedWords.isNotEmpty) {
+              onRecognizedText(val.recognizedWords);
+            }
+          },
+        );
+      } else {
+        debugPrint('Speech recognition not available on this device');
+      }
+    } catch (e) {
+      debugPrint('Speech recognition initialization failed: $e');
+      stopListening();
+    }
   }
 
   void stopListening() {
     _isListening = false;
     _stopWaveformSimulation();
+    try {
+      _speech.stop();
+    } catch (_) {}
   }
 
   void startSpeaking(String text) {
@@ -57,5 +88,8 @@ class VoiceAssistantService {
   void dispose() {
     _waveformTimer?.cancel();
     _waveformController.close();
+    try {
+      _speech.stop();
+    } catch (_) {}
   }
 }

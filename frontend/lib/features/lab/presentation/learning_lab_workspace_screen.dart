@@ -1,13 +1,15 @@
+import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../shared/services/stomp_chat_service.dart';
 import '../../../app/theme/app_theme.dart';
 import '../../../shared/models/roadmap_model.dart';
 import '../../../shared/models/flashcard_model.dart';
 import '../../../shared/models/mastery_test_model.dart';
 import '../../../shared/models/learning_lab_model.dart';
 import '../../../shared/providers/workspace_providers.dart';
-import '../../../shared/repositories/http_mastery_test_repository.dart';
+import '../../survey/data/http_assessment_repository.dart';
 import '../../survey/presentation/widgets/long_mcq_survey_layout.dart';
 import '../../survey/presentation/widgets/code_terminal_challenge_layout.dart';
 import '../../survey/presentation/widgets/popup_questionnaire_layout.dart';
@@ -18,6 +20,7 @@ import 'widgets/flashcard_deck_panel.dart';
 import 'widgets/learning_lab_sidebar.dart';
 import 'widgets/video_player_panel.dart';
 import '../../../shared/repositories/http_ingestion_repository.dart';
+import '../../../shared/repositories/http_challenge_repository.dart';
 
 class LearningLabWorkspaceScreen extends ConsumerStatefulWidget {
   final String? activeNodeTitle;
@@ -43,6 +46,7 @@ class LearningLabWorkspaceScreen extends ConsumerStatefulWidget {
 
 class _LearningLabWorkspaceScreenState extends ConsumerState<LearningLabWorkspaceScreen> {
   List<QuestionItem>? _topicAssessments;
+  QuestionItem? _topicChallenge;
 
   List<FlashcardItem> _topicFlashcards = [];
   List<Map<String, dynamic>> _topicVideos = [];
@@ -54,6 +58,14 @@ class _LearningLabWorkspaceScreenState extends ConsumerState<LearningLabWorkspac
   bool _isScrollMode = false; // false = split view (resizable), true = full scroll view
   double _chatPanelWidth = 360.0;
   double _videoFraction = 0.70; // Video takes 70%, flashcards/canvas takes 30% in split mode
+  StreamSubscription<Map<String, dynamic>>? _ingestionSubscription;
+  String? _ingestionStatus;
+
+  @override
+  void dispose() {
+    _ingestionSubscription?.cancel();
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -117,6 +129,20 @@ class _LearningLabWorkspaceScreenState extends ConsumerState<LearningLabWorkspac
         final videoId = videos.first['id'] as String?;
         if (videoId != null && videoId.isNotEmpty) {
           try {
+            _ingestionSubscription?.cancel();
+            _ingestionSubscription = ref.read(stompChatServiceProvider).streamIngestionProgress(videoId).listen((event) {
+              if (mounted) {
+                setState(() {
+                  final step = event['step'] as String? ?? '';
+                  final status = event['status'] as String? ?? '';
+                  if (step == 'COMPLETE' || step == 'ERROR') {
+                    _ingestionStatus = null;
+                  } else {
+                    _ingestionStatus = 'AI Analysis: $status';
+                  }
+                });
+              }
+            });
             await ref.read(httpIngestionRepositoryProvider).ingestVideo(videoId);
           } catch (e) {
             debugPrint('Ingestion failed: $e');
@@ -130,14 +156,47 @@ class _LearningLabWorkspaceScreenState extends ConsumerState<LearningLabWorkspac
 
     final activityType = activeNode?.activityType ?? '';
     final isLongQuiz = activityType == 'Long Quiz' || activityType == 'LONG_QUIZ' || activityType == 'Mastery Assessment' || activityType == 'Mastery Survey';
+    final isCodeChallenge = activityType == 'Coding Exercise' || activityType == 'CODE_CHALLENGE' || activityType == 'Mini Project' || activityType == 'Capstone Project' || activityType == 'Interview Challenge';
     
     List<QuestionItem>? assessments;
     if (isLongQuiz) {
       try {
-        final mRepo = ref.read(httpMasteryTestRepositoryProvider);
+        final mRepo = ref.read(httpAssessmentRepositoryProvider);
         assessments = await mRepo.generateAssessment(activeWs.activeLearningContext);
       } catch (e) {
         debugPrint('Mastery generation failed: $e');
+      }
+    }
+
+    QuestionItem? challengeItem;
+    if (isCodeChallenge) {
+      try {
+        final challengeRepo = ref.read(httpChallengeRepositoryProvider);
+        final targetLang = activeWs.subject.isNotEmpty ? activeWs.subject : 'Python';
+        final challengeData = await challengeRepo.generateChallenge(
+          language: targetLang,
+          topic: contextTopic,
+          videoId: videos.isNotEmpty ? (videos.first['id'] as String? ?? '') : '',
+          videoTimestamp: _currentTimestampSeconds,
+        );
+        final rawCases = (challengeData['testCases'] as List<dynamic>?) ?? [];
+        challengeItem = QuestionItem(
+          id: 'ch_${DateTime.now().millisecondsSinceEpoch}',
+          questionText: challengeData['problemStatement']?.toString() ?? 'Solve the challenge for $contextTopic.',
+          topicTag: contextTopic,
+          type: QuestionType.codeTerminal,
+          codeInitialTemplate: challengeData['starterCode']?.toString(),
+          language: targetLang,
+          testCases: rawCases.map((tc) => CodeTestCase(
+            id: 'tc_${rawCases.indexOf(tc)}',
+            description: tc.toString(),
+            expectedOutput: '',
+            userOutput: '',
+            isPassed: false,
+          )).toList(),
+        );
+      } catch (e) {
+        debugPrint('Dynamic challenge generation failed: $e');
       }
     }
 
@@ -146,6 +205,7 @@ class _LearningLabWorkspaceScreenState extends ConsumerState<LearningLabWorkspac
         _topicFlashcards = topicCards;
         _topicVideos = videos;
         if (assessments != null) _topicAssessments = assessments;
+        if (challengeItem != null) _topicChallenge = challengeItem;
         _isLoading = false;
       });
     }
@@ -267,6 +327,31 @@ class _LearningLabWorkspaceScreenState extends ConsumerState<LearningLabWorkspac
                 child: Column(
                   children: [
                     if (widget.isEmbedded) _buildModeToggle(context),
+                    if (_ingestionStatus != null)
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: colors.accentPrimary.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: colors.accentPrimary.withValues(alpha: 0.3)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            SizedBox(
+                              width: 12,
+                              height: 12,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: colors.accentPrimary),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              _ingestionStatus!,
+                              style: TextStyle(color: colors.accentPrimary, fontSize: 12, fontWeight: FontWeight.w600),
+                            ),
+                          ],
+                        ),
+                      ),
                     // Video Player
                     Expanded(
                       flex: (_videoFraction * 1000).toInt(),
@@ -364,15 +449,17 @@ class _LearningLabWorkspaceScreenState extends ConsumerState<LearningLabWorkspac
         },
       );
     } else if (isCodeChallenge && _dismissedQuizForContext != currentContext) {
-      activityStageContent = CodeTerminalChallengeLayout(
-        question: QuestionItem(id: 'c1', topicTag: 'code', questionText: 'Write a Python program', type: QuestionType.subjective, options: []),
-        onCompleteTest: () {
-          setState(() {
-            _dismissedQuizForContext = currentContext;
-            if (activeNode != null) activeNode.status = 'Completed';
-          });
-        },
-      );
+      activityStageContent = _topicChallenge == null
+        ? Center(child: CircularProgressIndicator(color: colors.accentPrimary))
+        : CodeTerminalChallengeLayout(
+            question: _topicChallenge!,
+            onCompleteTest: () {
+              setState(() {
+                _dismissedQuizForContext = currentContext;
+                if (activeNode != null) activeNode.status = 'Completed';
+              });
+            },
+          );
     } else {
       if (isMicroQuiz && _dismissedQuizForContext != currentContext) {
         activityStageContent = Stack(

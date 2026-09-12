@@ -6,9 +6,10 @@ import 'package:frontend/shared/models/workspace_model.dart';
 import 'package:frontend/shared/models/roadmap_model.dart';
 import 'package:frontend/shared/models/micro_interview_model.dart';
 import 'package:frontend/shared/models/mind_map_model.dart';
-import 'package:frontend/shared/models/workspace_model_ext.dart';
+
 import 'package:frontend/shared/models/persona_model.dart';
 import 'package:frontend/shared/models/flashcard_model.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class HttpWorkspaceRepository {
   final ApiClient _apiClient = ApiClient();
@@ -46,9 +47,12 @@ class HttpWorkspaceRepository {
         ));
       }
 
+      final prefs = await SharedPreferences.getInstance();
+      final currentUserId = prefs.getString('auth_user_id') ?? 'user_active';
+
       final workspace = WorkspaceModel(
         id: data['subjectId'] ?? 'ws_${DateTime.now().millisecondsSinceEpoch}',
-        userId: 'user_priyaj', // Dummy user
+        userId: currentUserId,
         title: data['subjectTitle'] ?? courseTitle,
         subject: courseTitle,
         difficulty: 'Intermediate',
@@ -101,11 +105,7 @@ class HttpWorkspaceRepository {
     }
   }
 
-  Future<WorkspaceModel> updateRoadmap(WorkspaceModel currentWs, String userRequest) async {
-    // The backend roadmap update endpoint was deleted in favor of MindMaps
-    // MindMap updates are not yet supported in the backend migration guide.
-    throw UnimplementedError('MindMap updates are not yet supported');
-  }
+
 
   Future<List<Map<String, dynamic>>> searchVideos(String workspaceId, String topic, {String context = ''}) async {
     final response = await _apiClient.get('/search/videos?workspaceId=${Uri.encodeComponent(workspaceId)}&topic=${Uri.encodeComponent(topic)}&context=${Uri.encodeComponent(context)}');
@@ -121,7 +121,7 @@ class HttpWorkspaceRepository {
     final response = await _apiClient.get('/workspaces');
     if (response.statusCode == 200) {
       final List<dynamic> data = jsonDecode(response.body);
-      return data.map((json) => WorkspaceModelSerialization.fromJson(json)).toList();
+      return data.map((json) => WorkspaceModel.fromJson(json)).toList();
     }
     return [];
   }
@@ -130,32 +130,49 @@ class HttpWorkspaceRepository {
     final response = await _apiClient.post('/workspaces', body: ws.toJson());
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
-      return WorkspaceModelSerialization.fromJson(data);
+      return WorkspaceModel.fromJson(data);
     }
     return ws;
   }
 
   Future<void> delete(String id) async {
-    await _apiClient.get('/workspaces/$id'); // delete is not exposed on ApiClient yet, so we could implement delete, but for now we skip or just print.
+    final response = await _apiClient.delete('/workspaces/$id');
+    if (response.statusCode != 200 && response.statusCode != 204) {
+      debugPrint('Failed to delete workspace on backend: ${response.statusCode}');
+    }
   }
 
   Future<WorkspaceModel> duplicate(String id) async {
-    throw UnimplementedError('duplicate not implemented on backend');
+    final original = await getById(id);
+    if (original == null) throw Exception('Workspace not found: $id');
+    final cloned = original.clone(
+      newId: 'ws_${DateTime.now().millisecondsSinceEpoch}',
+      newTitle: '${original.title} (Copy)',
+    );
+    return await create(cloned);
   }
 
   Future<void> archive(String id, {required bool isArchived}) async {
-    // Ignore for now
+    final ws = await getById(id);
+    if (ws != null) {
+      ws.isArchived = isArchived;
+      await update(ws);
+    }
   }
 
   Future<void> pin(String id, {required bool isPinned}) async {
-    // Ignore for now
+    final ws = await getById(id);
+    if (ws != null) {
+      ws.isPinned = isPinned;
+      await update(ws);
+    }
   }
 
   Future<WorkspaceModel?> getById(String id) async {
     final response = await _apiClient.get('/workspaces/$id');
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
-      return WorkspaceModelSerialization.fromJson(data);
+      return WorkspaceModel.fromJson(data);
     }
     return null;
   }

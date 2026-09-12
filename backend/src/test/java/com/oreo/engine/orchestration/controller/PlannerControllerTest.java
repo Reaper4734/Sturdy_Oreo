@@ -34,9 +34,6 @@ class PlannerControllerTest {
 
     @Mock
     private LearningPlanRepository learningPlanRepository;
-    
-    @Mock
-    private SimpMessagingTemplate messagingTemplate;
 
     @InjectMocks
     private PlannerController plannerController;
@@ -100,36 +97,30 @@ class PlannerControllerTest {
     }
 
     @Test
-    void testAdaptPlan_AsyncExecution_InjectsRemedialTask() throws InterruptedException {
+    void testAdaptPlan_SynchronousExecution_InjectsRemedialTask() {
         // Arrange
         String failedTaskId = "task-1";
-        
+
         when(learningPlanRepository.findByUserId(any(UUID.class))).thenReturn(Optional.of(mockPlan));
         when(learningPlanRepository.save(any(LearningPlan.class))).thenAnswer(i -> i.getArgument(0));
-        
+
         LearningPlan.Task aiGeneratedTask = new LearningPlan.Task();
-        aiGeneratedTask.setTitle("AI Generated Video");
+        aiGeneratedTask.setTitle("AI Generated Remedial Concept");
         when(plannerAssistant.generateRemedialTask(anyString())).thenReturn(aiGeneratedTask);
-        
+
         Map<String, String> payload = new HashMap<>();
         payload.put("failedTaskId", failedTaskId);
         payload.put("failedQuestion", "What is Java?");
         payload.put("userAnswer", "A type of coffee.");
-        
+
         // Act
-        ResponseEntity<Map<String, String>> response = plannerController.adaptPlan(mockPlan.getUserId().toString(), payload);
-        
-        // Assert the HTTP response is 202 Accepted instantly
-        assertEquals(202, response.getStatusCode().value());
-        assertEquals("processing", response.getBody().get("status"));
-        
-        // Wait briefly for the CompletableFuture to run in the background
-        Thread.sleep(500); 
-        
-        // Assert that the WebSocket template was called with the modified plan
-        verify(messagingTemplate, times(1)).convertAndSend(
-            eq("/topic/session/user/" + mockPlan.getUserId().toString() + "/plan"), 
-            any(LearningPlan.class)
-        );
+        ResponseEntity<LearningPlan> response = plannerController.adaptPlan(mockPlan.getUserId().toString(), payload);
+
+        // Assert the HTTP response is 200 OK directly
+        assertEquals(200, response.getStatusCode().value());
+        assertNotNull(response.getBody());
+        LearningPlan adaptedPlan = response.getBody();
+        assertTrue(adaptedPlan.getPlanData().getMilestones().get(0).getTasks().size() > 2,
+                "Remedial task should be injected into the milestone");
     }
 }

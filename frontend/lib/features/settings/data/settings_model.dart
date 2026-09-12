@@ -13,12 +13,12 @@ class UserProfile {
     required this.avatarInitials,
   });
 
-  static UserProfile defaultUser() => UserProfile(
-        displayName: 'Anjali Gupta',
-        email: 'anjali.g@example.com',
-        bio: 'AI Researcher & Distributed Systems Engineer. Exploring the intersection of edge computing and LLMs.',
-        country: 'India',
-        avatarInitials: 'AG',
+  static UserProfile empty() => UserProfile(
+        displayName: '',
+        email: '',
+        bio: '',
+        country: '',
+        avatarInitials: '',
       );
 }
 

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../app/theme/app_theme.dart';
 import '../../../../shared/models/mastery_test_model.dart';
+import '../../../../shared/repositories/http_challenge_repository.dart';
 
 class CodeTerminalChallengeLayout extends StatefulWidget {
   final QuestionItem question;
@@ -17,16 +18,23 @@ class CodeTerminalChallengeLayout extends StatefulWidget {
 }
 
 class _CodeTerminalChallengeLayoutState extends State<CodeTerminalChallengeLayout> {
+  final HttpChallengeRepository _challengeRepo = HttpChallengeRepository();
   late TextEditingController _codeController;
   bool _isExecuted = false;
   bool _isAutoTyping = false;
+  bool _isRunning = false;
   String _liveOutput = '';
   bool _allPassed = false;
+
+  late String _selectedLanguage;
 
   @override
   void initState() {
     super.initState();
     _codeController = TextEditingController(text: widget.question.codeInitialTemplate ?? '');
+    _selectedLanguage = (widget.question.language != null && widget.question.language!.trim().isNotEmpty)
+        ? widget.question.language!.trim()
+        : (widget.question.topicTag.trim().isNotEmpty ? widget.question.topicTag.trim() : 'Python');
   }
 
   @override
@@ -53,12 +61,43 @@ class _CodeTerminalChallengeLayoutState extends State<CodeTerminalChallengeLayou
     setState(() => _isAutoTyping = false);
   }
 
-  void _handleRunCode() {
+  Future<void> _handleRunCode() async {
+    if (_isRunning) return;
     setState(() {
+      _isRunning = true;
       _isExecuted = true;
-      _liveOutput = widget.question.expectedOutput ?? '';
-      _allPassed = true;
+      _liveOutput = 'Sending submission to AI Code Grader for $_selectedLanguage...\n';
     });
+
+    try {
+      final submittedCode = _codeController.text;
+      final result = await _challengeRepo.gradeChallenge(
+        problemStatement: widget.question.questionText,
+        code: submittedCode,
+        language: _selectedLanguage,
+      );
+
+      final bool passed = result['passed'] == true;
+      final String feedback = result['feedback']?.toString() ?? '';
+      final String? optimized = result['optimizedCode']?.toString();
+
+      setState(() {
+        _allPassed = passed;
+        final optSuffix = (optimized != null && optimized.isNotEmpty) ? '\n\nSuggested Optimization:\n$optimized' : '';
+        if (passed) {
+          _liveOutput = '✓ Challenge passed successfully!\n\nFeedback:\n$feedback$optSuffix';
+        } else {
+          _liveOutput = '✗ Challenge did not pass.\n\nFeedback:\n$feedback$optSuffix';
+        }
+        _isRunning = false;
+      });
+    } catch (e) {
+      setState(() {
+        _allPassed = false;
+        _liveOutput = 'Code evaluation failed: $e';
+        _isRunning = false;
+      });
+    }
   }
 
   // --- Universal IDE Syntax Highlighter parser for All Programming Languages ---
@@ -136,7 +175,7 @@ class _CodeTerminalChallengeLayoutState extends State<CodeTerminalChallengeLayou
                         color: AppColors.accentEmerald.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(6),
                       ),
-                      child: const Text('Universal Code Sandbox', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.accentEmerald)),
+                      child: Text('$_selectedLanguage Sandbox', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.accentEmerald)),
                     ),
                   ],
                 ),
@@ -326,9 +365,11 @@ class _CodeTerminalChallengeLayoutState extends State<CodeTerminalChallengeLayou
             child: Row(
               children: [
                 OutlinedButton.icon(
-                  onPressed: _handleRunCode,
-                  icon: const Icon(Icons.play_arrow_rounded, size: 16),
-                  label: const Text('Run Code', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                  onPressed: (_isRunning || _isAutoTyping) ? null : _handleRunCode,
+                  icon: _isRunning 
+                      ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.accentPrimary))
+                      : const Icon(Icons.play_arrow_rounded, size: 16),
+                  label: Text(_isRunning ? 'Evaluating...' : 'Run Code', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppColors.accentPrimary,
                     side: const BorderSide(color: AppColors.accentPrimary),

@@ -27,20 +27,33 @@ public class ChallengeController {
         String videoId = (String) payload.getOrDefault("videoId", "");
         Double vt = payload.containsKey("videoTimestamp") ? Double.parseDouble(payload.get("videoTimestamp").toString()) : -1.0;
         int timeInSeconds = (int) Math.max(0, Math.round(vt));
-        String doubtContext = (String) payload.getOrDefault("doubtContext", "I want to practice concepts taught here.");
-        String language = (String) payload.getOrDefault("language", "Python");
+        String doubtContext = (String) payload.getOrDefault("doubtContext", payload.getOrDefault("topic", "Practice core concepts."));
+        String language = (String) payload.get("language");
+        if (language == null || language.trim().isEmpty()) {
+            throw new IllegalArgumentException("Target programming language is required for challenge generation.");
+        }
 
-        CodingChallengePipeline.ExtractedChallenge challenge = codingChallengePipeline.generate(videoId, timeInSeconds, doubtContext, language);
+        CodingChallengePipeline.ExtractedChallenge challenge = codingChallengePipeline.generate(videoId, timeInSeconds, doubtContext, language.trim());
         return ResponseEntity.ok(challenge);
     }
 
     @PostMapping("/grade")
     public ResponseEntity<CodeGraderPipeline.GradingResult> gradeChallenge(@RequestBody Map<String, String> payload) {
-        String problemStatement = payload.getOrDefault("problemStatement", "");
-        String language = payload.getOrDefault("language", "Python");
-        String code = payload.getOrDefault("code", "");
+        String problemStatement = payload.get("problemStatement");
+        String language = payload.get("language");
+        String code = payload.get("code");
 
-        CodeGraderPipeline.GradingResult result = codeGraderPipeline.evaluate(problemStatement, language, code);
+        if (problemStatement == null || problemStatement.trim().isEmpty()) {
+            throw new IllegalArgumentException("Problem statement is required for grading.");
+        }
+        if (language == null || language.trim().isEmpty()) {
+            throw new IllegalArgumentException("Language is required for grading.");
+        }
+        if (code == null || code.trim().isEmpty()) {
+            throw new IllegalArgumentException("Submitted code is required for grading.");
+        }
+
+        CodeGraderPipeline.GradingResult result = codeGraderPipeline.evaluate(problemStatement.trim(), language.trim(), code);
         return ResponseEntity.ok(result);
     }
 }

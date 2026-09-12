@@ -38,6 +38,12 @@ public class User {
     private String iqLogic;
     private String eqResilience;
 
+    @Column(columnDefinition = "TEXT")
+    private String bio;
+
+    @Column(name = "country", length = 100)
+    private String country;
+
     // Gamification
     private int totalPoints = 0;
     private int currentStreak = 0;
@@ -96,6 +102,12 @@ public class User {
 
     public String getEqResilience() { return eqResilience; }
     public void setEqResilience(String eqResilience) { this.eqResilience = eqResilience; }
+
+    public String getBio() { return bio; }
+    public void setBio(String bio) { this.bio = bio; }
+
+    public String getCountry() { return country; }
+    public void setCountry(String country) { this.country = country; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../app/theme/app_theme.dart';
 import '../../../../shared/models/persona_model.dart';
 import '../../../../shared/models/workspace_model.dart';
+import '../../../../shared/models/roadmap_model.dart';
 
 class MoreWorkspaceHubWidget extends ConsumerStatefulWidget {
   final WorkspaceModel workspace;
@@ -337,36 +338,42 @@ class _MoreWorkspaceHubWidgetState extends ConsumerState<MoreWorkspaceHubWidget>
     );
   }
 
-  Widget _buildProjectsGrid(BuildContext context, String subject, AppColorsExtension colors) {
-    final projects = [
-      {
-        'title': 'High-Throughput Concurrent Engine',
-        'desc': 'Build a non-blocking queue and thread pool worker model.',
-        'difficulty': 'Advanced',
-        'status': 'In Progress',
-        'topic': 'Concurrency',
-      },
-      {
-        'title': 'Custom LRU Cache with Generics',
-        'desc': 'Design an efficient hash map + doubly linked list cache.',
-        'difficulty': 'Intermediate',
-        'status': 'Available',
-        'topic': 'Data Structures',
-      },
-      {
-        'title': 'REST Microservice & JSON Parser',
-        'desc': 'Construct an HTTP service with strict schema validation.',
-        'difficulty': 'Intermediate',
-        'status': 'Available',
-        'topic': 'Networking',
-      },
-    ];
+  List<RoadmapNode> _flattenRoadmap(List<RoadmapNode> nodes) {
+    final List<RoadmapNode> flat = [];
+    void walk(List<RoadmapNode> list) {
+      for (final n in list) {
+        flat.add(n);
+        if (n.children.isNotEmpty) {
+          walk(n.children);
+        }
+      }
+    }
+    walk(nodes);
+    return flat;
+  }
 
-    return Row(
-      children: projects.map((p) {
-        return Expanded(
+  Widget _buildProjectsGrid(BuildContext context, String subject, AppColorsExtension colors) {
+    final allNodes = _flattenRoadmap(widget.workspace.roadmap);
+    final projects = allNodes.where((n) {
+      final act = (n.activityType ?? '').toLowerCase();
+      return n.type == NodeType.project ||
+             n.type == NodeType.capstone ||
+             act.contains('project') ||
+             act.contains('coding') ||
+             act.contains('challenge');
+    }).toList();
+
+    if (projects.isEmpty) {
+      return _buildEmptyNotice('No practical project modules defined in this curriculum yet.', colors);
+    }
+
+    return Wrap(
+      spacing: 12,
+      runSpacing: 12,
+      children: projects.take(6).map((node) {
+        return SizedBox(
+          width: 280,
           child: Container(
-            margin: const EdgeInsets.only(right: 12),
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: colors.bgSurface,
@@ -385,27 +392,27 @@ class _MoreWorkspaceHubWidgetState extends ConsumerState<MoreWorkspaceHubWidget>
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
-                        p['difficulty']!,
+                        node.difficulty ?? widget.workspace.difficulty,
                         style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: colors.accentPrimary),
                       ),
                     ),
                     const Spacer(),
                     Text(
-                      p['status']!,
+                      node.status,
                       style: TextStyle(fontSize: 10, color: colors.fgSecondary),
                     ),
                   ],
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  p['title']!,
+                  node.title,
                   style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: colors.fgPrimary),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  p['desc']!,
+                  node.subtitle ?? (node.activityType ?? 'Hands-on practice task'),
                   style: TextStyle(fontSize: 11, color: colors.fgSecondary, height: 1.3),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
@@ -414,7 +421,7 @@ class _MoreWorkspaceHubWidgetState extends ConsumerState<MoreWorkspaceHubWidget>
                 InkWell(
                   onTap: () {
                     if (widget.onOpenLabTopic != null) {
-                      widget.onOpenLabTopic!(p['topic']!);
+                      widget.onOpenLabTopic!(node.title);
                     }
                   },
                   child: Row(
@@ -437,32 +444,73 @@ class _MoreWorkspaceHubWidgetState extends ConsumerState<MoreWorkspaceHubWidget>
   }
 
   Widget _buildResourcesGrid(BuildContext context, String subject, AppColorsExtension colors) {
-    final resources = [
-      {
-        'title': '$subject Specification & Standards',
-        'type': 'Official Spec',
-        'icon': Icons.menu_book_rounded,
-        'badge': 'Core Doc',
-      },
-      {
-        'title': 'Concurrency & Memory Model Reference',
-        'type': 'Deep Dive',
-        'icon': Icons.memory_rounded,
-        'badge': 'Architecture',
-      },
-      {
-        'title': 'Best Practices & Design Patterns Catalog',
-        'type': 'Guide',
-        'icon': Icons.schema_outlined,
-        'badge': 'Patterns',
-      },
-    ];
+    final allNodes = _flattenRoadmap(widget.workspace.roadmap);
+    final resources = allNodes.where((n) => n.resources.isNotEmpty).expand((n) => n.resources).toSet().toList();
 
-    return Row(
-      children: resources.map((r) {
-        return Expanded(
+    if (resources.isEmpty) {
+      final topics = allNodes.take(4).toList();
+      if (topics.isEmpty) {
+        return _buildEmptyNotice('No documentation resources attached yet.', colors);
+      }
+      return Wrap(
+        spacing: 12,
+        runSpacing: 12,
+        children: topics.map((t) {
+          return SizedBox(
+            width: 280,
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: colors.bgSurface,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: colors.borderSubtle),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: colors.bgActivityBar,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: colors.borderSubtle),
+                    ),
+                    child: Icon(Icons.menu_book_rounded, size: 18, color: colors.accentPrimary),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          t.title,
+                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: colors.fgPrimary),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '$subject Reference Module',
+                          style: TextStyle(fontSize: 11, color: colors.fgSecondary),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }).toList(),
+      );
+    }
+
+    return Wrap(
+      spacing: 12,
+      runSpacing: 12,
+      children: resources.take(6).map((res) {
+        return SizedBox(
+          width: 280,
           child: Container(
-            margin: const EdgeInsets.only(right: 12),
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: colors.bgSurface,
@@ -470,34 +518,15 @@ class _MoreWorkspaceHubWidgetState extends ConsumerState<MoreWorkspaceHubWidget>
               border: Border.all(color: colors.borderSubtle),
             ),
             child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: colors.bgActivityBar,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: colors.borderSubtle),
-                  ),
-                  child: Icon(r['icon'] as IconData, size: 18, color: colors.accentPrimary),
-                ),
-                const SizedBox(width: 12),
+                Icon(Icons.link_rounded, size: 18, color: colors.accentPrimary),
+                const SizedBox(width: 10),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        r['title'] as String,
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: colors.fgPrimary),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        r['type'] as String,
-                        style: TextStyle(fontSize: 11, color: colors.fgSecondary),
-                      ),
-                    ],
+                  child: Text(
+                    res,
+                    style: TextStyle(fontSize: 12, color: colors.fgPrimary, fontWeight: FontWeight.w500),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
@@ -509,32 +538,26 @@ class _MoreWorkspaceHubWidgetState extends ConsumerState<MoreWorkspaceHubWidget>
   }
 
   Widget _buildAssessmentsGrid(BuildContext context, String subject, AppColorsExtension colors) {
-    final assessments = [
-      {
-        'title': '$subject Core Mastery Survey',
-        'questions': '10 Questions',
-        'time': '~8 mins',
-        'score': '95% Passed',
-      },
-      {
-        'title': 'Advanced Memory Management Quiz',
-        'questions': '8 Questions',
-        'time': '~6 mins',
-        'score': 'Ready',
-      },
-      {
-        'title': 'System Design & Algorithms Checkpoint',
-        'questions': '12 Questions',
-        'time': '~12 mins',
-        'score': 'Ready',
-      },
-    ];
+    final allNodes = _flattenRoadmap(widget.workspace.roadmap);
+    final assessments = allNodes.where((n) {
+      final act = (n.activityType ?? '').toLowerCase();
+      return n.type == NodeType.assessment ||
+             act.contains('quiz') ||
+             act.contains('assessment') ||
+             act.contains('survey');
+    }).toList();
 
-    return Row(
-      children: assessments.map((a) {
-        return Expanded(
+    if (assessments.isEmpty) {
+      return _buildEmptyNotice('No assessment checkpoints defined in this curriculum yet.', colors);
+    }
+
+    return Wrap(
+      spacing: 12,
+      runSpacing: 12,
+      children: assessments.take(6).map((node) {
+        return SizedBox(
+          width: 280,
           child: Container(
-            margin: const EdgeInsets.only(right: 12),
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: colors.bgSurface,
@@ -549,22 +572,40 @@ class _MoreWorkspaceHubWidgetState extends ConsumerState<MoreWorkspaceHubWidget>
                     Icon(Icons.quiz_outlined, size: 16, color: colors.accentEmerald),
                     const SizedBox(width: 6),
                     Text(
-                      a['score']!,
+                      node.status,
                       style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: colors.accentEmerald),
                     ),
                   ],
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  a['title']!,
+                  node.title,
                   style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: colors.fgPrimary),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '${a['questions']} • ${a['time']}',
+                  node.activityType ?? 'Mastery Checkpoint',
                   style: TextStyle(fontSize: 11, color: colors.fgSecondary),
+                ),
+                const SizedBox(height: 14),
+                InkWell(
+                  onTap: () {
+                    if (widget.onOpenLabTopic != null) {
+                      widget.onOpenLabTopic!(node.title);
+                    }
+                  },
+                  child: Row(
+                    children: [
+                      Text(
+                        'Start Assessment',
+                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: colors.accentEmerald),
+                      ),
+                      const SizedBox(width: 4),
+                      Icon(Icons.arrow_forward_rounded, size: 12, color: colors.accentEmerald),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -573,6 +614,7 @@ class _MoreWorkspaceHubWidgetState extends ConsumerState<MoreWorkspaceHubWidget>
       }).toList(),
     );
   }
+
 
   Widget _buildEmptyNotice(String msg, AppColorsExtension colors) {
     return Container(

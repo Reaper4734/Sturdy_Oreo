@@ -19,6 +19,26 @@ class ChatMessage {
     DateTime? timestamp,
   }) : timestamp = timestamp ?? DateTime.now();
 
+  ChatMessage copyWith({
+    String? id,
+    String? sender,
+    String? text,
+    List<String>? options,
+    List<AttachedFileModel>? attachments,
+    Map<String, dynamic>? metadata,
+    DateTime? timestamp,
+  }) {
+    return ChatMessage(
+      id: id ?? this.id,
+      sender: sender ?? this.sender,
+      text: text ?? this.text,
+      options: options ?? this.options,
+      attachments: attachments ?? this.attachments,
+      metadata: metadata ?? this.metadata,
+      timestamp: timestamp ?? this.timestamp,
+    );
+  }
+
   Map<String, dynamic> toJson() {
     return {
       'id': id,

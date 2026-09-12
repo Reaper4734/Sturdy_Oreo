@@ -36,21 +36,4 @@ public class AuthController {
     public ResponseEntity<AuthDto.AuthResponse> googleAuth(@Valid @RequestBody AuthDto.GoogleAuthRequest req) {
         return ResponseEntity.ok(authService.authenticateGoogle(req));
     }
-
-    @GetMapping("/profile")
-    @Operation(summary = "Get current user profile stats")
-    @io.swagger.v3.oas.annotations.security.SecurityRequirement(name = "bearerAuth")
-    public ResponseEntity<AuthDto.UserProfileResponse> getProfile(org.springframework.security.core.Authentication authentication) {
-        java.util.UUID userId = java.util.UUID.fromString(authentication.getPrincipal().toString());
-        User user = userRepository.findById(userId).orElseThrow();
-        return ResponseEntity.ok(new AuthDto.UserProfileResponse(
-                userId,
-                user.getDisplayName(),
-                user.getEmail(),
-                "Welcome back, " + user.getDisplayName() + "!",
-                user.getTotalPoints() / 100,
-                user.getTotalPoints(),
-                user.getCurrentStreak()
-        ));
-    }
 }

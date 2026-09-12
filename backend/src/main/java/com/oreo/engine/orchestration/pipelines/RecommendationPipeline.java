@@ -34,11 +34,35 @@ public class RecommendationPipeline {
     @Cacheable("recommendations")
     public List<String> getRecommendations(String domain) {
         String rawOutput = recommendationAiService.recommendSubjects("My domain is: " + domain);
-        
-        // Very lazy parser for JSON array string
-        rawOutput = rawOutput.replace("[", "").replace("]", "").replace("\"", "").trim();
-        String[] subjects = rawOutput.split(",");
-        
-        return List.of(subjects[0].trim(), subjects[1].trim(), subjects[2].trim());
+        if (rawOutput == null || rawOutput.isBlank()) {
+            return List.of(domain + " Fundamentals", domain + " Core Patterns", "Applied " + domain);
+        }
+
+        try {
+            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            // Clean code fences if present
+            String cleaned = rawOutput.replaceAll("```json", "").replaceAll("```", "").trim();
+            int startIdx = cleaned.indexOf('[');
+            int endIdx = cleaned.lastIndexOf(']');
+            if (startIdx != -1 && endIdx != -1 && endIdx > startIdx) {
+                cleaned = cleaned.substring(startIdx, endIdx + 1);
+                List<String> list = mapper.readValue(cleaned, new com.fasterxml.jackson.core.type.TypeReference<List<String>>() {});
+                if (!list.isEmpty()) {
+                    return list;
+                }
+            }
+        } catch (Exception ignored) {
+        }
+
+        // Safe fallback tokenization
+        String[] subjects = rawOutput.replace("[", "").replace("]", "").replace("\"", "").split(",");
+        java.util.List<String> result = new java.util.ArrayList<>();
+        for (String s : subjects) {
+            String trimmed = s.trim();
+            if (!trimmed.isEmpty()) {
+                result.add(trimmed);
+            }
+        }
+        return result.isEmpty() ? List.of(domain + " Foundations") : result;
     }
 }

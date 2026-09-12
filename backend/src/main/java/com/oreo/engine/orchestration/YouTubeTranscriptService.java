@@ -57,48 +57,7 @@ public class YouTubeTranscriptService {
             // fallback below
         }
 
-        if ("pnWINBJ3-yA".equals(videoId)) {
-            StringBuilder sb = new StringBuilder();
-            sb.append("--- CUMULATIVE VIDEO TRANSCRIPT & CODE (0s to ").append(timeInSeconds).append("s) ---\n");
-            
-            sb.append("[00:05] Instructor: Welcome! Today we are learning Python Object-Oriented Programming (OOP).\n");
-            sb.append("[00:30] Instructor: A class is our blueprint for creating custom objects.\n");
-            
-            if (timeInSeconds >= 60) {
-                sb.append("[01:05] Instructor: Let's write our first class code:\n");
-                sb.append("        class Cookie:\n");
-                sb.append("            # Blueprint for creating cookie objects\n");
-            }
-            if (timeInSeconds >= 120) {
-                sb.append("[02:10] Instructor: Now let's add the __init__ constructor to set up properties:\n");
-                sb.append("        class Cookie:\n");
-                sb.append("            def __init__(self, flavor, weight):\n");
-                sb.append("                self.flavor = flavor\n");
-                sb.append("                self.weight = weight\n");
-            }
-            if (timeInSeconds >= 210) {
-                sb.append("[03:30] Instructor: Now let's instantiate objects and add an instance method:\n");
-                sb.append("            def eat(self):\n");
-                sb.append("                return f'Eating a delicious {self.flavor} cookie!'\n");
-                sb.append("        # Instantiating objects in memory:\n");
-                sb.append("        my_cookie = Cookie('Chocolate Chip', 50)\n");
-            }
-            if (timeInSeconds >= 320) {
-                sb.append("[05:20] Instructor: Now let's demonstrate class inheritance:\n");
-                sb.append("        class SpecialCookie(Cookie):\n");
-                sb.append("            def __init__(self, flavor, weight, topping):\n");
-                sb.append("                super().__init__(flavor, weight)\n");
-                sb.append("                self.topping = topping\n");
-            }
-            return Optional.of(sb.toString());
-        }
-
-        String snippet = String.format(
-            "--- CUMULATIVE TRANSCRIPT FOR LECTURE VIDEO [%s] UP TO %d SECONDS ---\n" +
-            "[00:00 - %02d:%02d] Lecture topic explanation, core theoretical principles, key terminology, and step-by-step concepts presented up to timestamp %ds.",
-            videoId, timeInSeconds, timeInSeconds / 60, timeInSeconds % 60, timeInSeconds
-        );
-
-        return Optional.of(snippet);
+        // If external transcript could not be fetched, return empty so callers handle absence gracefully
+        return Optional.empty();
     }
 }

@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 
 class ApiClient {
   static const String baseUrl = 'http://localhost:8080/api';
+  static const String wsUrl = 'ws://localhost:8080/ws/orchestration';
   
   // Singleton pattern so token is shared across instances
   static final ApiClient _instance = ApiClient._internal();
@@ -10,6 +11,7 @@ class ApiClient {
   ApiClient._internal();
 
   String? _token;
+  String? get token => _token;
 
   final http.Client _client = http.Client();
 

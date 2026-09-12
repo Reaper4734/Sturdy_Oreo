@@ -19,8 +19,8 @@ public class YouTubeSearchTool {
 
     @Tool("Searches YouTube for real educational videos on a given topic and returns the top 3 results with URLs.")
     public String searchEducationalVideos(String topic) {
-        if ("NONE".equals(apiKey)) {
-            return "Error: YouTube API Key is missing. Return mock URLs like https://youtube.com/watch?v=mock123 for now.";
+        if (apiKey == null || "NONE".equals(apiKey) || apiKey.trim().isEmpty()) {
+            return "Title: Search for " + topic + " on YouTube, URL: https://www.youtube.com/results?search_query=" + topic.replace(" ", "+");
         }
 
         int maxRetries = 3;

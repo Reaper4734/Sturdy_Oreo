@@ -40,6 +40,7 @@ class QuestionItem {
   final String? codeSolution;
   final String? expectedOutput;
   final List<CodeTestCase> testCases;
+  final String? language;
   final String? hint;
 
   const QuestionItem({
@@ -52,6 +53,7 @@ class QuestionItem {
     this.codeSolution,
     this.expectedOutput,
     this.testCases = const [],
+    this.language,
     this.hint,
   });
 }

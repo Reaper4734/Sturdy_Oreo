@@ -77,7 +77,7 @@ class _CommandCenterScreenState extends ConsumerState<CommandCenterScreen> {
     }
 
     // Determine learner name
-    final learnerName = _profile?.learnerName.isNotEmpty == true ? _profile!.learnerName : 'Priyaj';
+    final learnerName = _profile?.learnerName.isNotEmpty == true ? _profile!.learnerName : 'Learner';
 
     // If there are no workspaces at all, show clean onboarding state
     if (workspaceList.isEmpty && activeWs == null) {

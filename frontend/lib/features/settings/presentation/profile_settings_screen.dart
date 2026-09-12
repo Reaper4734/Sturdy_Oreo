@@ -16,9 +16,9 @@ class ProfileSettingsScreen extends ConsumerStatefulWidget {
 
 class _ProfileSettingsScreenState extends ConsumerState<ProfileSettingsScreen> {
   int _activeSectionIndex = 0;
-  late UserProfile _user;
-  late AppThemeSettings _settings;
-  late NotificationPreferences _notifications;
+  UserProfile _user = UserProfile.empty();
+  AppThemeSettings _settings = AppThemeSettings.defaults();
+  NotificationPreferences _notifications = NotificationPreferences.defaults();
   final AboutInformation _about = AboutInformation.data;
 
   final List<_NavItem> _navItems = const [
@@ -43,15 +43,24 @@ class _ProfileSettingsScreenState extends ConsumerState<ProfileSettingsScreen> {
       final data = await repo.fetchSettingsProfile();
       if (mounted) {
         setState(() {
-          _user = data['user'];
-          _settings = data['settings'];
-          _notifications = data['notifications'];
+          _user = data['user'] ?? UserProfile.empty();
+          _settings = data['settings'] ?? AppThemeSettings.defaults();
+          _notifications = data['notifications'] ?? NotificationPreferences.defaults();
           _isLoading = false;
         });
       }
     } catch (e) {
       debugPrint('Error loading settings: $e');
       if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _persistProfile() async {
+    try {
+      await ref.read(httpSettingsRepositoryProvider).updateUserProfile(_user);
+      _showSaveSnackbar('Profile updated successfully');
+    } catch (e) {
+      _showSaveSnackbar('Failed to update profile: $e');
     }
   }
 
@@ -224,8 +233,13 @@ class _ProfileSettingsScreenState extends ConsumerState<ProfileSettingsScreen> {
           label: 'DISPLAY NAME',
           value: _user.displayName,
           onSave: (v) {
-            setState(() => _user.displayName = v);
-            _showSaveSnackbar('Profile Updated Successfully');
+            setState(() {
+              _user.displayName = v;
+              if (v.trim().isNotEmpty) {
+                _user.avatarInitials = v.trim().substring(0, v.trim().length.clamp(1, 2)).toUpperCase();
+              }
+            });
+            _persistProfile();
           },
         ),
         // Email — not editable
@@ -262,7 +276,7 @@ class _ProfileSettingsScreenState extends ConsumerState<ProfileSettingsScreen> {
           value: _user.bio,
           onSave: (v) {
             setState(() => _user.bio = v);
-            _showSaveSnackbar('Profile Updated Successfully');
+            _persistProfile();
           },
         ),
         InlineEditField(
@@ -270,7 +284,7 @@ class _ProfileSettingsScreenState extends ConsumerState<ProfileSettingsScreen> {
           value: _user.country,
           onSave: (v) {
             setState(() => _user.country = v);
-            _showSaveSnackbar('Profile Updated Successfully');
+            _persistProfile();
           },
         ),
       ],

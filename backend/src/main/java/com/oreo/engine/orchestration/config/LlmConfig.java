@@ -25,6 +25,9 @@ public class LlmConfig {
     @Value("${oreo.llm.gemini-api-keys}")
     private List<String> apiKeys;
 
+    @Value("${oreo.llm.model-name:gemini-3.5-flash-lite}")
+    private String modelName;
+
     @Value("${oreo.search.google-api-key:dummy-key}")
     private String googleSearchApiKey;
 
@@ -45,7 +48,7 @@ public class LlmConfig {
         List<ChatLanguageModel> models = apiKeys.stream()
                 .map(key -> GoogleAiGeminiChatModel.builder()
                         .apiKey(key)
-                        .modelName("gemini-3.5-flash-lite")
+                        .modelName(modelName)
                         .temperature(0.7)
                         .maxRetries(3) // Increased retries for rate limits
                         .maxOutputTokens(8192)
@@ -72,7 +75,7 @@ public class LlmConfig {
         List<StreamingChatLanguageModel> models = apiKeys.stream()
                 .map(key -> GoogleAiGeminiStreamingChatModel.builder()
                         .apiKey(key)
-                        .modelName("gemini-3.5-flash-lite")
+                        .modelName(modelName)
                         .temperature(0.7)
                         .build())
                 .collect(Collectors.toList());

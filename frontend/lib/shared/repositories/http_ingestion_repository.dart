@@ -14,11 +14,7 @@ class HttpIngestionRepository {
     }
   }
 
-  // Not implemented in backend yet, but ready for RAG document upload
-  Future<void> uploadDocument(String filePath) async {
-    // Requires multipart upload support in ApiClient
-    throw UnimplementedError('Multipart upload not yet supported in ApiClient');
-  }
+
 }
 
 final httpIngestionRepositoryProvider = Provider((ref) => HttpIngestionRepository());

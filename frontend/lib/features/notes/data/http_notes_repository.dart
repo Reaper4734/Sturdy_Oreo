@@ -3,16 +3,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/api_client.dart';
 import '../models/note_page_model.dart';
 import '../models/note_block_model.dart';
-import 'notes_repository.dart';
 
-final notesRepositoryProvider = Provider<NotesRepository>((ref) {
+final notesRepositoryProvider = Provider<HttpNotesRepository>((ref) {
   return HttpNotesRepository();
 });
 
-class HttpNotesRepository implements NotesRepository {
+class HttpNotesRepository {
   final ApiClient _apiClient = ApiClient();
 
-  @override
+
   Future<List<NotePage>> fetchPages(String workspaceId) async {
     final response = await _apiClient.get('/v1/workspaces/$workspaceId/notes/pages');
     if (response.statusCode == 200) {
@@ -22,7 +21,6 @@ class HttpNotesRepository implements NotesRepository {
     throw Exception('Failed to fetch note pages: ${response.statusCode}');
   }
 
-  @override
   Future<NotePage> createPage(
     String workspaceId, {
     String? title,
@@ -48,7 +46,6 @@ class HttpNotesRepository implements NotesRepository {
     throw Exception('Failed to create note page: ${response.statusCode}');
   }
 
-  @override
   Future<NotePage> fetchPage(String workspaceId, String pageId) async {
     final response = await _apiClient.get('/v1/workspaces/$workspaceId/notes/pages/$pageId');
     if (response.statusCode == 200) {
@@ -57,7 +54,6 @@ class HttpNotesRepository implements NotesRepository {
     throw Exception('Failed to fetch note page: ${response.statusCode}');
   }
 
-  @override
   Future<NotePage> updatePage(
     String workspaceId,
     String pageId, {
@@ -84,7 +80,6 @@ class HttpNotesRepository implements NotesRepository {
     throw Exception('Failed to update note page: ${response.statusCode}');
   }
 
-  @override
   Future<void> deletePage(String workspaceId, String pageId) async {
     final response = await _apiClient.delete('/v1/workspaces/$workspaceId/notes/pages/$pageId');
     if (response.statusCode != 200 && response.statusCode != 204) {
@@ -92,7 +87,6 @@ class HttpNotesRepository implements NotesRepository {
     }
   }
 
-  @override
   Future<NotePage> saveBlocks(String workspaceId, String pageId, List<NoteBlock> blocks) async {
     final payload = {
       'blocks': blocks.map((b) => b.toJson()).toList(),
