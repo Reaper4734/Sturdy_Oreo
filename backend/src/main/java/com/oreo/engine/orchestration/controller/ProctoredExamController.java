@@ -298,13 +298,17 @@ public class ProctoredExamController {
 
         if (payload != null) {
             if (payload.get("trustScore") instanceof Number num) {
-                session.trustScore = num.doubleValue();
+                session.trustScore = Math.max(0.0, Math.min(100.0, num.doubleValue()));
             }
             if (payload.get("strikeCount") instanceof Number num) {
-                session.strikeCount = num.intValue();
+                session.strikeCount = Math.max(0, num.intValue());
             }
             if (payload.containsKey("violation")) {
                 session.violations.add(payload.get("violation"));
+            } else if (payload.containsKey("status") && !"LOCKED_SINGLE".equals(payload.get("status")) && !"BLINKING".equals(payload.get("status"))) {
+                Map<String, Object> auditRecord = new HashMap<>(payload);
+                auditRecord.put("serverRecordedAt", Instant.now().toString());
+                session.violations.add(auditRecord);
             }
         }
 
@@ -314,6 +318,24 @@ public class ProctoredExamController {
         res.put("strikeCount", session.strikeCount);
         res.put("trustScore", session.trustScore);
         res.put("isDisqualified", session.strikeCount >= 3);
+        res.put("auditIncidentCount", session.violations.size());
+        return ResponseEntity.ok(res);
+    }
+
+    @GetMapping("/{sessionId}/audit-logs")
+    public ResponseEntity<Map<String, Object>> getAuditLogs(@PathVariable String sessionId) {
+        ExamSessionState session = sessions.get(sessionId);
+        if (session == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        Map<String, Object> res = new HashMap<>();
+        res.put("sessionId", sessionId);
+        res.put("trustScore", session.trustScore);
+        res.put("strikeCount", session.strikeCount);
+        res.put("isDisqualified", session.strikeCount >= 3);
+        res.put("totalAuditIncidents", session.violations.size());
+        res.put("violations", session.violations);
         return ResponseEntity.ok(res);
     }
 

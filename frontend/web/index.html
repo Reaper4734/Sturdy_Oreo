@@ -33,25 +33,54 @@
   <title>frontend</title>
   <link rel="manifest" href="manifest.json">
 
-  <!-- MediaPipe Face Mesh CDN -->
+  <!-- MediaPipe Tasks Vision & Face Mesh CDNs -->
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/vision_bundle.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
 
   <script>
     window.OreoFaceMesh = {
+      landmarker: null,
       faceMesh: null,
-      camera: null,
       isInitialized: false,
       isRunning: false,
+      useTasksVision: false,
       onBiometricsUpdate: null,
 
-      init: function() {
-        if (this.isInitialized) return Promise.resolve(true);
+      init: async function() {
+        if (this.isInitialized) return true;
         var self = this;
+
+        // 1. Try MediaPipe Tasks Vision FaceLandmarker (Neural Blendshapes)
+        try {
+          if (typeof window.FaceLandmarker !== 'undefined' && typeof window.FilesetResolver !== 'undefined') {
+            var fileset = await window.FilesetResolver.forVisionTasks(
+              "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm"
+            );
+            self.landmarker = await window.FaceLandmarker.createFromOptions(fileset, {
+              baseOptions: {
+                modelAssetPath: "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task",
+                delegate: "GPU"
+              },
+              outputFaceBlendshapes: true,
+              outputFacialTransformationMatrixes: true,
+              runningMode: "VIDEO",
+              numFaces: 3
+            });
+            self.useTasksVision = true;
+            self.isInitialized = true;
+            console.log('[OreoVision] MediaPipe Tasks Vision FaceLandmarker with 52 Neural Blendshapes initialized (GPU).');
+            return true;
+          }
+        } catch (errTasks) {
+          console.warn('[OreoVision] TasksVision init fallback:', errTasks);
+        }
+
+        // 2. Fallback to classic MediaPipe FaceMesh
         return new Promise(function(resolve) {
           try {
             if (typeof FaceMesh === 'undefined') {
-              console.warn('[OreoFaceMesh] FaceMesh library not loaded. Using fallback.');
+              console.warn('[OreoVision] FaceMesh library not loaded. Using fallback.');
               self.isInitialized = false;
               resolve(false);
               return;
@@ -65,7 +94,7 @@
 
             self.faceMesh.setOptions({
               maxNumFaces: 3,
-              refineLandmarks: true, // Enables iris tracking
+              refineLandmarks: true,
               minDetectionConfidence: 0.5,
               minTrackingConfidence: 0.5
             });
@@ -75,10 +104,10 @@
             });
 
             self.isInitialized = true;
-            console.log('[OreoFaceMesh] MediaPipe 468-point 3D FaceMesh initialized successfully.');
+            console.log('[OreoVision] MediaPipe 468-point 3D FaceMesh initialized.');
             resolve(true);
           } catch (e) {
-            console.error('[OreoFaceMesh] Init error:', e);
+            console.error('[OreoVision] Init error:', e);
             self.isInitialized = false;
             resolve(false);
           }
@@ -89,16 +118,25 @@
         this.onBiometricsUpdate = callback;
         var self = this;
         this.init().then(function(ok) {
-          if (!ok || !self.faceMesh) return;
+          if (!ok && !self.landmarker && !self.faceMesh) return;
           self.isRunning = true;
+          var lastVideoTime = -1;
 
-          // Continuous Frame Pipeline
           function processFrame() {
             if (!self.isRunning || !videoElement) return;
             if (videoElement.readyState >= 2 && !videoElement.paused && !videoElement.ended) {
-              self.faceMesh.send({ image: videoElement }).catch(function(err) {
-                // Ignore transient frame send errors
-              });
+              if (self.useTasksVision && self.landmarker) {
+                try {
+                  var nowMs = performance.now();
+                  if (videoElement.currentTime !== lastVideoTime) {
+                    lastVideoTime = videoElement.currentTime;
+                    var results = self.landmarker.detectForVideo(videoElement, nowMs);
+                    self.processTasksVisionResults(results);
+                  }
+                } catch (e) {}
+              } else if (self.faceMesh) {
+                self.faceMesh.send({ image: videoElement }).catch(function(err) {});
+              }
             }
             if (self.isRunning) {
               requestAnimationFrame(processFrame);
@@ -108,8 +146,176 @@
         });
       },
 
-      stop: function() {
-        this.isRunning = false;
+      processTasksVisionResults: function(results) {
+        if (!this.onBiometricsUpdate) return;
+
+        if (!results || !results.faceLandmarks || results.faceLandmarks.length === 0) {
+          this.closedEyesStartTime = null;
+          this.onBiometricsUpdate({
+            status: 'NO_FACE',
+            faceCount: 0,
+            confidence: 0.0,
+            yaw: 0.0,
+            pitch: 0.0,
+            gaze: 0.0,
+            verticalGaze: 0.0,
+            ear: 0.0,
+            isBlinking: false,
+            box: null,
+            landmarks: []
+          });
+          return;
+        }
+
+        var faceCount = results.faceLandmarks.length;
+        if (faceCount > 1) {
+          this.closedEyesStartTime = null;
+          this.onBiometricsUpdate({
+            status: 'MULTIPLE_FACES',
+            faceCount: faceCount,
+            confidence: 0.99,
+            yaw: 0.0,
+            pitch: 0.0,
+            gaze: 0.0,
+            verticalGaze: 0.0,
+            ear: 0.28,
+            isBlinking: false,
+            box: null,
+            landmarks: []
+          });
+          return;
+        }
+
+        var lm = results.faceLandmarks[0];
+        var minX = 1.0, maxX = 0.0, minY = 1.0, maxY = 0.0;
+        for (var i = 0; i < lm.length; i++) {
+          var p = lm[i];
+          if (p.x < minX) minX = p.x;
+          if (p.x > maxX) maxX = p.x;
+          if (p.y < minY) minY = p.y;
+          if (p.y > maxY) maxY = p.y;
+        }
+
+        var boxLeft = 1.0 - maxX;
+        var boxTop = minY;
+        var boxWidth = maxX - minX;
+        var boxHeight = maxY - minY;
+
+        // Neural Blendshapes from Vision Model
+        var blendshapes = {};
+        if (results.faceBlendshapes && results.faceBlendshapes.length > 0) {
+          var cats = results.faceBlendshapes[0].categories;
+          for (var c = 0; c < cats.length; c++) {
+            blendshapes[cats[c].categoryName] = cats[c].score;
+          }
+        }
+
+        var blinkL = blendshapes['eyeBlinkLeft'] || 0.0;
+        var blinkR = blendshapes['eyeBlinkRight'] || 0.0;
+        var avgBlink = (blinkL + blinkR) / 2.0;
+        var isBlinking = avgBlink > 0.42;
+
+        var lookInL = blendshapes['eyeLookInLeft'] || 0.0;
+        var lookOutL = blendshapes['eyeLookOutLeft'] || 0.0;
+        var lookInR = blendshapes['eyeLookInRight'] || 0.0;
+        var lookOutR = blendshapes['eyeLookOutRight'] || 0.0;
+        var lookUp = ((blendshapes['eyeLookUpLeft'] || 0.0) + (blendshapes['eyeLookUpRight'] || 0.0)) / 2.0;
+        var lookDown = ((blendshapes['eyeLookDownLeft'] || 0.0) + (blendshapes['eyeLookDownRight'] || 0.0)) / 2.0;
+
+        var gazeH = (lookOutL + lookInR) - (lookInL + lookOutR);
+        var gazeV = lookUp - lookDown;
+
+        var rawYaw = 0.0, rawPitch = 0.0;
+        if (results.facialTransformationMatrixes && results.facialTransformationMatrixes.length > 0) {
+          var m = results.facialTransformationMatrixes[0].data;
+          rawYaw = Math.atan2(m[2], m[10]) * 180 / Math.PI;
+          rawPitch = Math.atan2(-m[6], Math.hypot(m[2], m[10])) * 180 / Math.PI;
+        } else {
+          var midEyeX = (lm[33].x + lm[263].x) / 2.0;
+          var eyeDist = Math.abs(lm[263].x - lm[33].x) || 0.1;
+          rawYaw = ((lm[1].x - midEyeX) / eyeDist) * 75.0;
+          rawPitch = (((lm[1].y - (lm[33].y + lm[263].y)/2.0) / (Math.abs(lm[152].y - lm[10].y) || 0.2)) - 0.38) * 90.0;
+        }
+
+        if (this.smoothedYaw === undefined) {
+          this.smoothedYaw = rawYaw;
+          this.smoothedPitch = rawPitch;
+          this.smoothedGazeH = gazeH;
+          this.smoothedGazeV = gazeV;
+        } else {
+          this.smoothedYaw = this.smoothedYaw * 0.7 + rawYaw * 0.3;
+          this.smoothedPitch = this.smoothedPitch * 0.7 + rawPitch * 0.3;
+          this.smoothedGazeH = this.smoothedGazeH * 0.7 + gazeH * 0.3;
+          this.smoothedGazeV = this.smoothedGazeV * 0.7 + gazeV * 0.3;
+        }
+
+        var nowMs = Date.now();
+        if (isBlinking) {
+          if (!this.closedEyesStartTime) this.closedEyesStartTime = nowMs;
+        } else {
+          this.closedEyesStartTime = null;
+        }
+        var closedDuration = this.closedEyesStartTime ? (nowMs - this.closedEyesStartTime) : 0;
+
+        var isHeadAway = Math.abs(this.smoothedYaw) > 22.0 || Math.abs(this.smoothedPitch) > 20.0;
+        var isEyesAway = Math.abs(this.smoothedGazeH) > 0.35 || Math.abs(this.smoothedGazeV) > 0.40;
+
+        var status = 'LOCKED_SINGLE';
+        if (isBlinking) {
+          if (closedDuration > 2500) {
+            status = 'EYES_CLOSED_SUSTAINED';
+          } else {
+            status = 'BLINKING';
+          }
+        } else if (isHeadAway) {
+          status = 'HEAD_TURNED_AWAY';
+        } else if (isEyesAway) {
+          status = 'EYES_LOOKING_AWAY';
+        } else {
+          status = 'LOCKED_SINGLE';
+        }
+
+        var sampleIndices = [
+          10, 338, 297, 332, 284, 251, 389, 356, 454, 323, 361, 288, 397, 365, 379, 378,
+          152, 148, 176, 149, 150, 136, 172, 58, 132, 93, 234, 127, 162, 21, 54, 103,
+          1, 468, 473, 13, 33, 263
+        ];
+        var sampledPoints = [];
+        for (var j = 0; j < sampleIndices.length; j++) {
+          var pt = lm[sampleIndices[j]];
+          if (pt) {
+            sampledPoints.push({
+              x: 1.0 - pt.x,
+              y: pt.y,
+              z: pt.z || 0.0
+            });
+          }
+        }
+
+        this.onBiometricsUpdate({
+          status: status,
+          faceCount: 1,
+          confidence: 0.994,
+          yaw: this.smoothedYaw,
+          pitch: this.smoothedPitch,
+          gaze: this.smoothedGazeH,
+          verticalGaze: this.smoothedGazeV,
+          ear: (1.0 - avgBlink) * 0.35,
+          isBlinking: isBlinking,
+          box: {
+            x: boxLeft,
+            y: boxTop,
+            w: boxWidth,
+            h: boxHeight
+          },
+          leftEye: { x: 1.0 - lm[33].x, y: lm[33].y },
+          rightEye: { x: 1.0 - lm[263].x, y: lm[263].y },
+          leftIris: { x: 1.0 - (lm[468] ? lm[468].x : lm[33].x), y: lm[468] ? lm[468].y : lm[33].y },
+          rightIris: { x: 1.0 - (lm[473] ? lm[473].x : lm[263].x), y: lm[473] ? lm[473].y : lm[263].y },
+          nose: { x: 1.0 - lm[1].x, y: lm[1].y },
+          mouth: { x: 1.0 - lm[13].x, y: lm[13].y },
+          landmarks: sampledPoints
+        });
       },
 
       processResults: function(results) {
