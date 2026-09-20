@@ -28,79 +28,72 @@ class WorkspaceListNotifier extends StateNotifier<List<WorkspaceModel>> {
 
   Future<WorkspaceModel> createWorkspace(WorkspaceModel ws) async {
     final created = await _repository.create(ws);
-    await loadWorkspaces();
+    state = [...state, created];
     return created;
   }
 
   Future<void> deleteWorkspace(String id) async {
     await _repository.delete(id);
-    await loadWorkspaces();
+    state = state.where((w) => w.id != id).toList();
   }
 
   Future<WorkspaceModel> duplicateWorkspace(String id) async {
     final dup = await _repository.duplicate(id);
-    await loadWorkspaces();
+    state = [...state, dup];
     return dup;
   }
 
+  /// Optimistic local update: mutate, re-emit new list with fresh reference, fire-and-forget PUT.
+  /// Eliminates the GET→PUT→GET cascade and ensures Riverpod providers trigger re-renders.
+  void _optimisticUpdate(String id, void Function(WorkspaceModel ws) mutate) {
+    try {
+      final index = state.indexWhere((w) => w.id == id);
+      if (index != -1) {
+        final ws = state[index];
+        mutate(ws);
+        final freshWs = ws.copyWith();
+        state = [
+          for (int i = 0; i < state.length; i++)
+            if (i == index) freshWs else state[i]
+        ];
+        _repository.update(freshWs); // fire-and-forget
+      }
+    } catch (_) {
+      debugPrint('Workspace not found in local state: $id');
+    }
+  }
+
   Future<void> archiveWorkspace(String id, bool isArchived) async {
-    await _repository.archive(id, isArchived: isArchived);
-    await loadWorkspaces();
+    _optimisticUpdate(id, (ws) => ws.isArchived = isArchived);
   }
 
   Future<void> pinWorkspace(String id, bool isPinned) async {
-    await _repository.pin(id, isPinned: isPinned);
-    await loadWorkspaces();
+    _optimisticUpdate(id, (ws) => ws.isPinned = isPinned);
   }
 
   Future<void> renameWorkspace(String id, String newTitle) async {
-    final ws = await _repository.getById(id);
-    if (ws != null) {
-      ws.title = newTitle;
-      await _repository.update(ws);
-      await loadWorkspaces();
-    }
+    _optimisticUpdate(id, (ws) => ws.title = newTitle);
   }
 
   Future<void> touchWorkspace(String id) async {
-    final ws = await _repository.getById(id);
-    if (ws != null) {
-      ws.lastOpened = DateTime.now();
-      await _repository.update(ws);
-      await loadWorkspaces();
-    }
+    _optimisticUpdate(id, (ws) => ws.lastOpened = DateTime.now());
   }
 
   Future<void> updateActiveLearningContext(String id, String newContext) async {
-    final ws = await _repository.getById(id);
-    if (ws != null) {
-      ws.activeLearningContext = newContext;
-      await _repository.update(ws);
-      await loadWorkspaces();
-    }
+    _optimisticUpdate(id, (ws) => ws.activeLearningContext = newContext);
   }
 
   Future<void> updateActiveTab(String id, String newTabId) async {
-    final ws = await _repository.getById(id);
-    if (ws != null) {
-      ws.activeTabId = newTabId;
-      await _repository.update(ws);
-      await loadWorkspaces();
-    }
+    _optimisticUpdate(id, (ws) => ws.activeTabId = newTabId);
   }
 
   Future<void> confirmCourse(String id) async {
-    final ws = await _repository.getById(id);
-    if (ws != null) {
-      ws.isCourseConfirmed = true;
-      await _repository.update(ws);
-      await loadWorkspaces();
-    }
+    _optimisticUpdate(id, (ws) => ws.isCourseConfirmed = true);
   }
 
   Future<void> updateWorkspace(WorkspaceModel ws) async {
-    await _repository.update(ws);
-    await loadWorkspaces();
+    state = [...state];
+    _repository.update(ws); // fire-and-forget
   }
 }
 
@@ -157,3 +150,9 @@ void triggerAutoSaveFeedback(WidgetRef ref) {
     ref.read(autoSaveStatusProvider.notifier).state = 'Saved';
   });
 }
+
+/// Global provider to prefill or attach text to the chat input
+final chatPrefillInputProvider = StateProvider<String?>((ref) => null);
+
+/// Global provider to switch LearningLabSidebar tab (0 = Oreo AI, 1 = Roadmap)
+final sidebarSelectedTabProvider = StateProvider<int>((ref) => 0);

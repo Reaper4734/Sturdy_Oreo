@@ -67,7 +67,14 @@ class AuthNotifier extends StateNotifier<AuthState> {
               final data = jsonDecode(response.body);
               await _saveAuthData(data);
             } else {
-              state = state.copyWith(isLoading: false, error: 'Google auth failed on server');
+              String errorMsg = 'Google auth failed on server';
+              try {
+                final errorData = jsonDecode(response.body);
+                if (errorData is Map && errorData['detail'] != null) {
+                  errorMsg = errorData['detail'].toString();
+                }
+              } catch (_) {}
+              state = state.copyWith(isLoading: false, error: errorMsg);
             }
           }
         }
@@ -158,7 +165,14 @@ class AuthNotifier extends StateNotifier<AuthState> {
         final data = jsonDecode(response.body);
         await _saveAuthData(data);
       } else {
-        state = state.copyWith(isLoading: false, error: 'Google auth failed on server');
+        String errorMsg = 'Google auth failed on server';
+        try {
+          final errorData = jsonDecode(response.body);
+          if (errorData is Map && errorData['detail'] != null) {
+            errorMsg = errorData['detail'].toString();
+          }
+        } catch (_) {}
+        state = state.copyWith(isLoading: false, error: errorMsg);
       }
     } catch (e) {
       state = state.copyWith(isLoading: false, error: 'Google login failed: $e');

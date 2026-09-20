@@ -34,8 +34,14 @@ class _LearningLabSidebarState extends ConsumerState<LearningLabSidebar> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<int>(sidebarSelectedTabProvider, (previous, next) {
+      if (previous != next && mounted) {
+        setState(() => _selectedTabIndex = next);
+      }
+    });
+
     final activeWs = ref.watch(activeWorkspaceProvider);
-    final currentContext = activeWs?.activeLearningContext ?? 'Heap Memory';
+    final currentContext = activeWs?.activeLearningContext ?? activeWs?.subject ?? 'Getting Started';
     final currentRoadmap = activeWs?.roadmap ?? [];
     final colors = context.colors;
 
@@ -81,8 +87,10 @@ class _LearningLabSidebarState extends ConsumerState<LearningLabSidebar> {
                   },
                   onLaunchInLab: (nodeTitle) {
                     if (activeWs != null) {
+                      ref.read(workspaceListProvider.notifier).updateActiveLearningContext(activeWs.id, nodeTitle);
                       ref.read(workspaceListProvider.notifier).updateActiveTab(activeWs.id, 'lab');
                     }
+                    widget.onSelectNode?.call(nodeTitle);
                   },
                   onGenerateFlashcards: (subtopic) async {
                     if (activeWs != null) {

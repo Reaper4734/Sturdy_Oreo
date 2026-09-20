@@ -33,7 +33,7 @@ class HttpAssessmentRepository {
         );
       }).toList();
     } else {
-      throw Exception('Failed to generate assessment: ${response.statusCode}');
+      return [];
     }
   }
 

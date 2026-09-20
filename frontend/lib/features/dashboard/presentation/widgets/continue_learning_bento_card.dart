@@ -135,7 +135,7 @@ class ContinueLearningBentoCard extends StatelessWidget {
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(4),
                             child: LinearProgressIndicator(
-                              value: progressPercent > 0 ? progressPercent.clamp(0.0, 1.0) : 0.05,
+                              value: progressPercent.clamp(0.0, 1.0),
                               minHeight: 6,
                               backgroundColor: colors.borderSubtle,
                               valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF38BDF8)),

@@ -8,15 +8,16 @@ import dev.langchain4j.service.UserMessage;
 public interface AssessmentAiService {
 
     @SystemMessage("""
-            You are an expert tutor creating a micro-assessment for a student.
-            Given the topic or context, generate exactly 3 Multiple Choice Questions (MCQs) and 2 Subjective Questions.
+            You are an expert university professor and examination board author creating a formal proctored examination.
+            Given the topic, duration, and target question count, generate the requested number of Multiple Choice Questions (MCQs) and Subjective Architecture & Problem-Solving Questions.
             
             Rules:
             - Set `type` to "mcq" for multiple choice questions, and provide exactly 4 options with only 1 correct option. Include explanations for the correct option.
             - Set `type` to "subjective" for open-ended questions, and leave the `options` array empty.
+            - Follow the exact question distribution requested in the user prompt.
             - Provide output matching the JSON schema precisely.
             """)
-    AssessmentGenerationSchema generateAssessment(@UserMessage String topic);
+    AssessmentGenerationSchema generateAssessment(@UserMessage String prompt);
 
     @SystemMessage("""
             You are an expert tutor grading a student's answer to a subjective question.

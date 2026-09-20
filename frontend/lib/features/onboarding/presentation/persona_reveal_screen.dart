@@ -237,7 +237,7 @@ class _PersonaRevealScreenState extends ConsumerState<PersonaRevealScreen> {
 
   Widget _buildLeftPaneContent(BuildContext context) {
     final activeWs = ref.watch(activeWorkspaceProvider);
-    final currentContext = activeWs?.activeLearningContext ?? 'Heap Memory';
+    final currentContext = activeWs?.activeLearningContext ?? activeWs?.subject ?? 'Getting Started';
     final currentRoadmap = activeWs?.roadmap ?? [];
     final colors = context.colors;
 
@@ -260,6 +260,12 @@ class _PersonaRevealScreenState extends ConsumerState<PersonaRevealScreen> {
         content = FlashcardCanvasWidget(
           cards: _allFlashcards,
           onAttachCardToChat: (card) {
+            final prompt = 'Can you explain this flashcard: "${card.front}"? (Expected answer: "${card.back}")';
+            ref.read(sidebarSelectedTabProvider.notifier).state = 0;
+            ref.read(chatPrefillInputProvider.notifier).state = prompt;
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Attached flashcard to chat: "${card.front}"')),
+            );
           },
         );
         break;
@@ -339,7 +345,17 @@ class _PersonaRevealScreenState extends ConsumerState<PersonaRevealScreen> {
                     foregroundColor: colors.fgInverse,
                   ),
                   onPressed: () {
+                    setState(() {
+                      activeWs.isCourseConfirmed = true;
+                    });
                     ref.read(workspaceListProvider.notifier).confirmCourse(activeWs.id);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Curriculum confirmed! Studio unlocked.'),
+                        backgroundColor: Color(0xFF10B981),
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
                   },
                   child: const Text('Confirm Curriculum', style: TextStyle(fontWeight: FontWeight.bold)),
                 ),

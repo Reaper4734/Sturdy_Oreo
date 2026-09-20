@@ -77,6 +77,7 @@ class ResponsiveScaffold extends ConsumerWidget {
                 _buildRailIconButton(1, Icons.chat_bubble_outline, 'Interview'),
                 _buildRailIconButton(2, Icons.radar_outlined, 'Studio'),
                 _buildRailIconButton(3, Icons.assignment_turned_in_outlined, 'Quizzes'),
+                _buildRailIconButton(6, Icons.verified_user_outlined, 'AI Proctored Exam'),
                 _buildRailIconButton(4, Icons.explore_outlined, 'Hub'),
 
                 const Spacer(),

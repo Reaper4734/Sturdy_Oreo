@@ -26,18 +26,21 @@ public class YouTubeTranscriptService {
     }
 
     public Optional<String> getTranscriptBufferBeforeTimestamp(String videoId, int timeInSeconds, int maxWords) {
-        if (videoId == null || videoId.isEmpty()) {
+        if (videoId == null || !videoId.matches("^[a-zA-Z0-9_-]{11}$")) {
             return Optional.empty();
         }
+
+        int safeWords = Math.max(10, Math.min(maxWords, 5000));
+        int safeTime = Math.max(0, timeInSeconds);
 
         try {
             // Fetch transcript, filter by start time <= timeInSeconds, and grab the last maxWords
             ProcessBuilder pb = new ProcessBuilder("python", "-c", 
                 "from youtube_transcript_api import YouTubeTranscriptApi; " +
                 "t = YouTubeTranscriptApi.get_transcript('" + videoId + "', languages=['hi', 'en', 'hi-IN', 'es', 'fr', 'de']); " +
-                "t_filtered = [x['text'] for x in t if x['start'] <= " + timeInSeconds + "]; " +
+                "t_filtered = [x['text'] for x in t if x['start'] <= " + safeTime + "]; " +
                 "text = ' '.join(t_filtered).split(); " +
-                "print(' '.join(text[-" + maxWords + ":]))"
+                "print(' '.join(text[-" + safeWords + ":]))"
             );
             pb.redirectErrorStream(true);
             Process process = pb.start();
@@ -47,7 +50,11 @@ public class YouTubeTranscriptService {
             while ((line = reader.readLine()) != null) {
                 builder.append(line).append(" ");
             }
-            process.waitFor();
+            boolean finished = process.waitFor(10, java.util.concurrent.TimeUnit.SECONDS);
+            if (!finished) {
+                process.destroyForcibly();
+                return Optional.empty();
+            }
             
             String fullText = builder.toString().trim();
             if (fullText.length() > 0 && !fullText.contains("No module named")) {

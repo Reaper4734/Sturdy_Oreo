@@ -21,6 +21,8 @@ import 'widgets/learning_lab_sidebar.dart';
 import 'widgets/video_player_panel.dart';
 import '../../../shared/repositories/http_ingestion_repository.dart';
 import '../../../shared/repositories/http_challenge_repository.dart';
+import '../../exam/presentation/proctored_exam_screen.dart';
+import '../../exam/presentation/widgets/exam_configuration_dialog.dart';
 
 class LearningLabWorkspaceScreen extends ConsumerStatefulWidget {
   final String? activeNodeTitle;
@@ -51,6 +53,7 @@ class _LearningLabWorkspaceScreenState extends ConsumerState<LearningLabWorkspac
   List<FlashcardItem> _topicFlashcards = [];
   List<Map<String, dynamic>> _topicVideos = [];
   bool _isLoading = true;
+  bool _isLoadingInProgress = false;
   String? _dismissedQuizForContext;
 
   int _currentTimestampSeconds = 342;
@@ -77,10 +80,24 @@ class _LearningLabWorkspaceScreenState extends ConsumerState<LearningLabWorkspac
     }
   }
 
+  @override
+  void didUpdateWidget(covariant LearningLabWorkspaceScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.activeNodeTitle != oldWidget.activeNodeTitle && widget.activeNodeTitle != null) {
+      setState(() {
+        _isLoading = true;
+      });
+      _loadData();
+    }
+  }
+
   Future<void> _loadData() async {
+    if (_isLoadingInProgress) return;
+    _isLoadingInProgress = true;
     final activeWs = ref.read(activeWorkspaceProvider);
 
     if (activeWs == null) {
+      _isLoadingInProgress = false;
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -95,88 +112,116 @@ class _LearningLabWorkspaceScreenState extends ConsumerState<LearningLabWorkspac
             ? activeWs.activeLearningContext 
             : (activeWs.subject.isNotEmpty ? activeWs.subject : activeWs.title));
 
-    // 1. Flashcards: use cached if available, else generate
-    List<FlashcardItem> workspaceCards = activeWs.flashcards;
-    List<FlashcardItem> topicCards = workspaceCards.where((c) => c.topicTag == contextTopic).toList();
-    
-    if (topicCards.isEmpty) {
-      try {
-        final flashRepo = ref.read(httpFlashcardRepositoryProvider);
-        final newCards = await flashRepo.generateFlashcards(contextTopic);
-        workspaceCards.addAll(newCards);
-        activeWs.flashcards = workspaceCards;
-        await ref.read(workspaceListProvider.notifier).updateWorkspace(activeWs);
-        topicCards = newCards;
-      } catch (e) {
-        debugPrint('Flashcard generation failed: $e');
-        topicCards = [];
-      }
-    }
-
     final activeNode = _findNodeByTitle(activeWs.roadmap, contextTopic);
-    final String subtopicsContext = activeNode != null 
-        ? activeNode.children.map((c) => c.title).join(", ") 
-        : "";
+    final activityType = activeNode?.activityType ?? '';
+    final isMicroQuiz = activityType == 'Micro Quiz' || activityType == 'MICRO_QUIZ';
+    final isLongQuiz = activityType == 'Long Quiz' || activityType == 'LONG_QUIZ' || activityType == 'Mastery Assessment' || activityType == 'Mastery Survey';
+    final isQuiz = isMicroQuiz || isLongQuiz;
+    final isCodeChallenge = activityType == 'Coding Exercise' || activityType == 'CODE_CHALLENGE' || activityType == 'Mini Project' || activityType == 'Capstone Project' || activityType == 'Interview Challenge';
 
-    List<Map<String, dynamic>> videos = [];
-    try {
-      final repo = ref.read(httpWorkspaceRepositoryProvider);
-      final enhancedContext = activeWs.subject.isNotEmpty && activeWs.subject != contextTopic
-          ? "${activeWs.subject} $contextTopic $subtopicsContext tutorial".trim()
-          : "$contextTopic $subtopicsContext tutorial".trim();
-      videos = await repo.searchVideos(activeWs.id, contextTopic, context: enhancedContext);
-      if (videos.isNotEmpty) {
-        final videoId = videos.first['id'] as String?;
-        if (videoId != null && videoId.isNotEmpty) {
-          try {
-            _ingestionSubscription?.cancel();
-            _ingestionSubscription = ref.read(stompChatServiceProvider).streamIngestionProgress(videoId).listen((event) {
-              if (mounted) {
-                setState(() {
-                  final step = event['step'] as String? ?? '';
-                  final status = event['status'] as String? ?? '';
-                  if (step == 'COMPLETE' || step == 'ERROR') {
-                    _ingestionStatus = null;
-                  } else {
-                    _ingestionStatus = 'AI Analysis: $status';
-                  }
-                });
-              }
-            });
-            await ref.read(httpIngestionRepositoryProvider).ingestVideo(videoId);
-          } catch (e) {
-            debugPrint('Ingestion failed: $e');
-          }
+    // 1. Parallel Task A: Flashcards fetch / generation
+    Future<List<FlashcardItem>> fetchFlashcards() async {
+      final workspaceCards = activeWs.flashcards;
+      final target = contextTopic.toLowerCase().replaceAll(RegExp(r'^module\s*\d+:\s*'), '').trim();
+      List<FlashcardItem> topicCards = workspaceCards.where((c) {
+        final tag = c.topicTag.toLowerCase().replaceAll(RegExp(r'^module\s*\d+:\s*'), '').trim();
+        return tag == target || (tag.isNotEmpty && target.contains(tag)) || (target.isNotEmpty && tag.contains(target));
+      }).toList();
+
+      if (topicCards.isEmpty) {
+        try {
+          final flashRepo = ref.read(httpFlashcardRepositoryProvider);
+          final newCards = await flashRepo.generateFlashcards(contextTopic);
+          workspaceCards.addAll(newCards);
+          activeWs.flashcards = workspaceCards;
+          ref.read(workspaceListProvider.notifier).updateWorkspace(activeWs);
+          return newCards;
+        } catch (e) {
+          debugPrint('Flashcard generation failed: $e');
+          return workspaceCards;
         }
       }
-      debugPrint('Loaded videos count: ${videos.length} for context: $contextTopic');
-    } catch (e) {
-      debugPrint('Video search failed: $e');
+      return topicCards;
     }
 
-    final activityType = activeNode?.activityType ?? '';
-    final isLongQuiz = activityType == 'Long Quiz' || activityType == 'LONG_QUIZ' || activityType == 'Mastery Assessment' || activityType == 'Mastery Survey';
-    final isCodeChallenge = activityType == 'Coding Exercise' || activityType == 'CODE_CHALLENGE' || activityType == 'Mini Project' || activityType == 'Capstone Project' || activityType == 'Interview Challenge';
-    
-    List<QuestionItem>? assessments;
-    if (isLongQuiz) {
+    // 2. Parallel Task B: YouTube Video Search
+    Future<List<Map<String, dynamic>>> fetchVideos() async {
       try {
-        final mRepo = ref.read(httpAssessmentRepositoryProvider);
-        assessments = await mRepo.generateAssessment(activeWs.activeLearningContext);
+        final repo = ref.read(httpWorkspaceRepositoryProvider);
+        final cleanSubject = activeWs.subject.toLowerCase().replaceAll(RegExp(r'^module\s*\d+:\s*'), '').trim();
+        final cleanTopic = contextTopic.toLowerCase().replaceAll(RegExp(r'^module\s*\d+:\s*'), '').trim();
+        final enhancedContext = cleanSubject.isNotEmpty && cleanSubject != cleanTopic
+            ? "${activeWs.subject} tutorial"
+            : "tutorial";
+        return await repo.searchVideos(activeWs.id, contextTopic, context: enhancedContext);
       } catch (e) {
-        debugPrint('Mastery generation failed: $e');
+        debugPrint('Video search failed: $e');
+        return [];
       }
     }
 
+    // 3. Parallel Task C: Assessment (if quiz)
+    Future<List<QuestionItem>?> fetchAssessment() async {
+      if (!isQuiz) return null;
+      try {
+        final mRepo = ref.read(httpAssessmentRepositoryProvider);
+        return await mRepo.generateAssessment(activeWs.activeLearningContext);
+      } catch (e) {
+        debugPrint('Mastery generation failed: $e');
+        return null;
+      }
+    }
+
+    // Execute independent tasks concurrently via Future.wait
+    final results = await Future.wait([
+      fetchFlashcards(),
+      fetchVideos(),
+      fetchAssessment(),
+    ]);
+
+    final topicCards = results[0] as List<FlashcardItem>;
+    final videos = results[1] as List<Map<String, dynamic>>;
+    final assessments = results[2] as List<QuestionItem>?;
+
+    // Asynchronously kick off video ingestion in background without blocking UI
+    if (videos.isNotEmpty) {
+      final videoId = videos.first['id'] as String?;
+      if (videoId != null && videoId.isNotEmpty) {
+        try {
+          _ingestionSubscription?.cancel();
+          _ingestionSubscription = ref.read(stompChatServiceProvider).streamIngestionProgress(videoId).listen((event) {
+            if (mounted) {
+              setState(() {
+                final step = event['step'] as String? ?? '';
+                final status = event['status'] as String? ?? '';
+                if (step == 'COMPLETE' || step == 'ERROR') {
+                  _ingestionStatus = null;
+                } else {
+                  _ingestionStatus = 'AI Analysis: $status';
+                }
+              });
+            }
+          });
+          ref.read(httpIngestionRepositoryProvider).ingestVideo(videoId).catchError((e) {
+            debugPrint('Background video ingestion error: $e');
+          });
+        } catch (e) {
+          debugPrint('Ingestion stream listener error: $e');
+        }
+      }
+    }
+
+    // 4. Code Challenge generation (passes videoId from video result if available)
     QuestionItem? challengeItem;
     if (isCodeChallenge) {
       try {
         final challengeRepo = ref.read(httpChallengeRepositoryProvider);
         final targetLang = activeWs.subject.isNotEmpty ? activeWs.subject : 'Python';
+        final videoId = videos.isNotEmpty ? (videos.first['id'] as String? ?? '') : '';
         final challengeData = await challengeRepo.generateChallenge(
           language: targetLang,
           topic: contextTopic,
-          videoId: videos.isNotEmpty ? (videos.first['id'] as String? ?? '') : '',
+          videoId: videoId,
           videoTimestamp: _currentTimestampSeconds,
         );
         final rawCases = (challengeData['testCases'] as List<dynamic>?) ?? [];
@@ -200,6 +245,7 @@ class _LearningLabWorkspaceScreenState extends ConsumerState<LearningLabWorkspac
       }
     }
 
+    _isLoadingInProgress = false;
     if (mounted) {
       setState(() {
         _topicFlashcards = topicCards;
@@ -211,20 +257,73 @@ class _LearningLabWorkspaceScreenState extends ConsumerState<LearningLabWorkspac
     }
   }
 
-  void _handleAttachVideoToChat() {}
+  void _handleAttachVideoToChat() {
+    final videoTitle = _topicVideos.isNotEmpty ? (_topicVideos.first['title'] as String? ?? 'Current Video') : 'Current Video';
+    final timestamp = _currentTimestampSeconds > 0
+        ? ' [at ${_currentTimestampSeconds ~/ 60}:${(_currentTimestampSeconds % 60).toString().padLeft(2, '0')}]'
+        : '';
+    final prompt = 'Can you explain the key concepts demonstrated in "$videoTitle"$timestamp?';
 
-  void _handleAttachCardToChat(FlashcardItem card) {}
+    ref.read(sidebarSelectedTabProvider.notifier).state = 0;
+    ref.read(chatPrefillInputProvider.notifier).state = prompt;
 
-  void _handleAttachDiagramToChat(CanvasGridCell cell) {}
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Attached video context to chat: $videoTitle'),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  void _handleAttachCardToChat(FlashcardItem card) {
+    final prompt = 'Can you explain this flashcard: "${card.front}"? (Expected answer: "${card.back}")';
+
+    ref.read(sidebarSelectedTabProvider.notifier).state = 0;
+    ref.read(chatPrefillInputProvider.notifier).state = prompt;
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Attached flashcard to chat: "${card.front}"'),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  void _handleAttachDiagramToChat(CanvasGridCell cell) {
+    final prompt = 'Can you explain the architecture diagram block: "${cell.title}" (${cell.diagramType})?';
+
+    ref.read(sidebarSelectedTabProvider.notifier).state = 0;
+    ref.read(chatPrefillInputProvider.notifier).state = prompt;
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Attached diagram node to chat: ${cell.title}'),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+  }
 
   void _handleReviewCard(String cardId, int quality) {
-    setState(() {});
+    ref.read(httpFlashcardRepositoryProvider).reviewFlashcard(cardId, quality);
   }
 
   RoadmapNode? _findNodeByTitle(List<RoadmapNode>? nodes, String title) {
-    if (nodes == null) return null;
+    if (nodes == null || title.isEmpty) return null;
+    final cleanTitle = title.toLowerCase().replaceAll(RegExp(r'^module\s*\d+:\s*'), '').trim();
     for (final n in nodes) {
-      if (n.title == title) return n;
+      final nodeTitle = n.title.toLowerCase().replaceAll(RegExp(r'^module\s*\d+:\s*'), '').trim();
+      if (n.title.toLowerCase() == title.toLowerCase() || 
+          nodeTitle == cleanTitle || 
+          (cleanTitle.isNotEmpty && nodeTitle.contains(cleanTitle)) || 
+          (nodeTitle.isNotEmpty && cleanTitle.contains(nodeTitle))) {
+        return n;
+      }
       final found = _findNodeByTitle(n.children, title);
       if (found != null) return found;
     }
@@ -237,9 +336,10 @@ class _LearningLabWorkspaceScreenState extends ConsumerState<LearningLabWorkspac
 
     ref.listen(activeWorkspaceProvider, (previous, next) {
       final contextChanged = previous?.activeLearningContext != next?.activeLearningContext;
+      final workspaceChanged = previous != null && next != null && previous.id != next.id;
       final confirmationChanged = (previous?.isCourseConfirmed != true) && (next?.isCourseConfirmed == true);
       
-      if (next != null && (contextChanged || confirmationChanged)) {
+      if (next != null && (contextChanged || workspaceChanged || confirmationChanged)) {
         setState(() {
           _isLoading = true;
         });
@@ -254,7 +354,7 @@ class _LearningLabWorkspaceScreenState extends ConsumerState<LearningLabWorkspac
     });
 
     final activeWs = ref.watch(activeWorkspaceProvider);
-    final currentContext = widget.activeNodeTitle ?? activeWs?.activeLearningContext ?? 'Heap Memory';
+    final currentContext = widget.activeNodeTitle ?? activeWs?.activeLearningContext ?? activeWs?.subject ?? 'Getting Started';
     final videoTitle = _topicVideos.isNotEmpty 
         ? _topicVideos.first['title'] as String 
         : (activeWs != null ? '${activeWs.title}: $currentContext Walkthrough' : 'Module Walkthrough');
@@ -262,7 +362,15 @@ class _LearningLabWorkspaceScreenState extends ConsumerState<LearningLabWorkspac
         ? _topicVideos.first['id'] as String 
         : '';
     final topicTag = currentContext;
-    final currentCards = (activeWs?.flashcards ?? _topicFlashcards).where((c) => c.topicTag == topicTag).toList();
+    final allCards = (activeWs?.flashcards != null && activeWs!.flashcards.isNotEmpty) 
+        ? activeWs.flashcards 
+        : _topicFlashcards;
+    final cleanTopicTag = topicTag.toLowerCase().replaceAll(RegExp(r'^module\s*\d+:\s*'), '').trim();
+    final currentCards = allCards.where((c) {
+      final tag = c.topicTag.toLowerCase().replaceAll(RegExp(r'^module\s*\d+:\s*'), '').trim();
+      return tag == cleanTopicTag || (tag.isNotEmpty && cleanTopicTag.contains(tag)) || (cleanTopicTag.isNotEmpty && tag.contains(cleanTopicTag));
+    }).toList();
+    final displayedCards = currentCards.isNotEmpty ? currentCards : allCards;
     final currentCells = activeWs?.canvasCells ?? widget.sharedCanvasCells;
     final currentObjects = activeWs?.canvasObjects ?? widget.sharedCanvasObjects;
 
@@ -297,7 +405,7 @@ class _LearningLabWorkspaceScreenState extends ConsumerState<LearningLabWorkspac
                           height: 550,
                           child: _showFlashcards
                               ? FlashcardDeckPanel(
-                                  cards: currentCards,
+                                  cards: displayedCards,
                                   topicTag: topicTag,
                                   isScrollMode: true,
                                   onAttachCardToChat: _handleAttachCardToChat,
@@ -399,7 +507,7 @@ class _LearningLabWorkspaceScreenState extends ConsumerState<LearningLabWorkspac
                       flex: ((1.0 - _videoFraction) * 1000).toInt(),
                       child: _showFlashcards
                           ? FlashcardDeckPanel(
-                              cards: currentCards,
+                              cards: displayedCards,
                               topicTag: topicTag,
                               isScrollMode: false,
                               onAttachCardToChat: _handleAttachCardToChat,
@@ -434,8 +542,8 @@ class _LearningLabWorkspaceScreenState extends ConsumerState<LearningLabWorkspac
     if (_isLoading) {
       activityStageContent = Center(child: CircularProgressIndicator(color: colors.accentPrimary));
     } else if (isLongQuiz && _dismissedQuizForContext != currentContext) {
-      activityStageContent = _topicAssessments == null 
-        ? Center(child: CircularProgressIndicator(color: colors.accentPrimary))
+      activityStageContent = (_topicAssessments == null || _topicAssessments!.isEmpty)
+        ? stageContent
         : LongMcqSurveyLayout(
         questions: _topicAssessments!,
         onCompleteTest: () {
@@ -450,7 +558,7 @@ class _LearningLabWorkspaceScreenState extends ConsumerState<LearningLabWorkspac
       );
     } else if (isCodeChallenge && _dismissedQuizForContext != currentContext) {
       activityStageContent = _topicChallenge == null
-        ? Center(child: CircularProgressIndicator(color: colors.accentPrimary))
+        ? stageContent
         : CodeTerminalChallengeLayout(
             question: _topicChallenge!,
             onCompleteTest: () {
@@ -461,7 +569,7 @@ class _LearningLabWorkspaceScreenState extends ConsumerState<LearningLabWorkspac
             },
           );
     } else {
-      if (isMicroQuiz && _dismissedQuizForContext != currentContext) {
+      if (isMicroQuiz && _dismissedQuizForContext != currentContext && _topicAssessments != null && _topicAssessments!.isNotEmpty) {
         activityStageContent = Stack(
           children: [
             stageContent,
@@ -474,7 +582,7 @@ class _LearningLabWorkspaceScreenState extends ConsumerState<LearningLabWorkspac
                   child: SingleChildScrollView(
                     padding: const EdgeInsets.all(24),
                     child: PopupQuestionnaireLayout(
-                      questions: const [],
+                      questions: _topicAssessments!,
                       onCompleteTest: () {
                         setState(() {
                           _dismissedQuizForContext = currentContext;
@@ -646,6 +754,50 @@ class _LearningLabWorkspaceScreenState extends ConsumerState<LearningLabWorkspac
             child: Text('Active: $currentContext', style: TextStyle(fontSize: 11, color: colors.accentEmerald, fontWeight: FontWeight.bold)),
           ),
           const Spacer(),
+          // Launch Proctored Exam Capstone Button
+          InkWell(
+            onTap: () {
+              ExamConfigurationDialog.show(
+                context,
+                courseTitle: currentContext,
+                onStartExam: (dur, scheme) {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (ctx) => ProctoredExamScreen(
+                        durationMinutes: dur,
+                        markingScheme: scheme,
+                        onExit: () => Navigator.of(ctx).pop(),
+                      ),
+                    ),
+                  );
+                },
+              );
+            },
+            borderRadius: BorderRadius.circular(8),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: colors.accentCyan.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: colors.accentCyan.withValues(alpha: 0.5)),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.verified_user_outlined, size: 14, color: colors.accentCyan),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Take Proctored Exam',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: colors.accentCyan,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
 
           // Layout Mode Toggle Button (Scroll Mode vs Split Mode)
           InkWell(

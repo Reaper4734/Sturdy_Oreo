@@ -23,14 +23,18 @@ class DashboardEncouragementBanner extends StatelessWidget {
       ),
       child: Row(
         children: [
-          // Rocket container
+          // Insight vector badge (rocket emoji removed)
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
               color: const Color(0xFF6366F1).withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: const Text('🚀', style: TextStyle(fontSize: 16)),
+            child: const Icon(
+              Icons.auto_awesome_rounded,
+              size: 16,
+              color: Color(0xFF6366F1),
+            ),
           ),
           const SizedBox(width: 14),
 

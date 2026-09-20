@@ -9,6 +9,9 @@ import 'features/dashboard/presentation/command_center_screen.dart';
 import 'features/survey/presentation/mastery_survey_screen.dart';
 import 'features/knowledge_hub/presentation/knowledge_hub_screen.dart';
 import 'features/settings/presentation/profile_settings_screen.dart';
+import 'features/exam/presentation/proctored_exam_screen.dart';
+import 'features/exam/models/proctored_exam_model.dart';
+import 'features/exam/presentation/widgets/exam_configuration_dialog.dart';
 // Removed LearningLabScreen
 import 'shared/providers/workspace_providers.dart';
 import 'shared/providers/theme_provider.dart';
@@ -31,6 +34,9 @@ class OreoApp extends ConsumerStatefulWidget {
 
 class _OreoAppState extends ConsumerState<OreoApp> {
   int _selectedIndex = 0;
+  int _examDurationMinutes = 30;
+  MarkingScheme _examMarkingScheme = MarkingScheme.hybridUniversity;
+  bool _examConfigured = false;
 
   bool _hasCheckedWorkspaces = false;
 
@@ -142,6 +148,38 @@ class _OreoAppState extends ConsumerState<OreoApp> {
         );
       case 5:
         return const ProfileSettingsScreen();
+      case 6:
+        final activeWs = ref.watch(activeWorkspaceProvider);
+        final courseTitle = (activeWs?.title.isNotEmpty == true)
+            ? activeWs!.title
+            : ((activeWs?.subject.isNotEmpty == true) ? activeWs!.subject : 'Software Architecture Capstone');
+        if (!_examConfigured) {
+          return Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              child: ExamConfigurationDialog(
+                courseTitle: courseTitle,
+                onStartExam: (duration, scheme) {
+                  setState(() {
+                    _examDurationMinutes = duration;
+                    _examMarkingScheme = scheme;
+                    _examConfigured = true;
+                  });
+                },
+              ),
+            ),
+          );
+        }
+        return ProctoredExamScreen(
+          durationMinutes: _examDurationMinutes,
+          markingScheme: _examMarkingScheme,
+          onExit: () {
+            setState(() {
+              _selectedIndex = 0;
+              _examConfigured = false;
+            });
+          },
+        );
 
       default:
         return Center(

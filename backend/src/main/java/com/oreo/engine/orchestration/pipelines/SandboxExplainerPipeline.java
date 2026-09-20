@@ -107,7 +107,25 @@ public class SandboxExplainerPipeline {
             } else {
                 answer = tutor.answerDoubt(userId, doubt, videoTranscript, difficultyInstructions, videoTimestampStr, videoId, language);
             }
-            return Map.of("explanation", answer);
+
+            String cleanExplanation = answer;
+            String diagramJson = null;
+
+            if (answer != null) {
+                java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("```(?:canvas-diagram|json)?\\s*([\\s\\S]*?\\{[\\s\\S]*?\"nodes\"[\\s\\S]*?\\})\\s*```", java.util.regex.Pattern.CASE_INSENSITIVE);
+                java.util.regex.Matcher matcher = pattern.matcher(answer);
+                if (matcher.find()) {
+                    diagramJson = matcher.group(1).trim();
+                    cleanExplanation = (answer.substring(0, matcher.start()).trim() + "\n" + answer.substring(matcher.end()).trim()).trim();
+                }
+            }
+
+            Map<String, String> result = new java.util.HashMap<>();
+            result.put("explanation", (cleanExplanation != null && !cleanExplanation.isEmpty()) ? cleanExplanation : answer);
+            if (diagramJson != null && !diagramJson.isEmpty()) {
+                result.put("diagram", diagramJson);
+            }
+            return result;
         } catch (Exception e) {
             return fallbackRun(e);
         }
@@ -117,6 +135,9 @@ public class SandboxExplainerPipeline {
         // Fallback response when Gemini API is down, rate-limited, or timing out.
         System.err.println("Circuit Breaker triggered in SandboxExplainerPipeline: " + t.getMessage());
         t.printStackTrace();
-        return Map.of("explanation", "The AI Tutor is currently experiencing high traffic and is taking a quick break to recharge! Please try again in a few moments.");
+        return Map.of(
+            "explanation", "The AI Tutor is currently experiencing high traffic and is taking a quick break to recharge! Please try again in a few moments.",
+            "isFallback", "true"
+        );
     }
 }

@@ -94,16 +94,51 @@ public class CourseCatalogController {
         }
 
         String q = query.toLowerCase().trim();
+        String[] tokens = q.split("\\s+");
         List<Workspace> workspaces = workspaceRepository.findAll();
+
+        record ScoredWorkspace(Workspace ws, int score) {}
+
         List<Map<String, Object>> matches = workspaces.stream()
-                .filter(w -> {
+                .map(w -> {
                     String title = w.getTitle() != null ? w.getTitle().toLowerCase() : "";
                     Map<String, Object> data = w.getData() != null ? w.getData() : Map.of();
                     String subject = data.getOrDefault("subject", "").toString().toLowerCase();
                     String domain = data.getOrDefault("domain", "").toString().toLowerCase();
-                    return title.contains(q) || subject.contains(q) || domain.contains(q);
+
+                    int score = 0;
+                    if (title.equals(q)) score += 60;
+                    else if (title.contains(q)) score += 35;
+
+                    if (subject.contains(q) || domain.contains(q)) score += 25;
+
+                    for (String token : tokens) {
+                        if (token.length() < 2) continue;
+                        if (title.contains(token)) score += 12;
+                        if (subject.contains(token) || domain.contains(token)) score += 8;
+                    }
+
+                    // Deep Search: Inspect roadmap node titles and topics
+                    Object roadmapObj = data.get("roadmap");
+                    if (roadmapObj instanceof List<?> roadmapList) {
+                        for (Object nodeObj : roadmapList) {
+                            if (nodeObj instanceof Map<?, ?> nodeMap) {
+                                Object titleObj = nodeMap.get("title");
+                                String nodeTitle = titleObj != null ? titleObj.toString().toLowerCase() : "";
+                                if (nodeTitle.contains(q)) score += 20;
+                                for (String token : tokens) {
+                                    if (token.length() >= 2 && nodeTitle.contains(token)) score += 6;
+                                }
+                            }
+                        }
+                    }
+
+                    return new ScoredWorkspace(w, score);
                 })
-                .map(ws -> {
+                .filter(sw -> sw.score() > 0)
+                .sorted((a, b) -> Integer.compare(b.score(), a.score()))
+                .map(sw -> {
+                    Workspace ws = sw.ws();
                     Map<String, Object> data = ws.getData() != null ? ws.getData() : Map.of();
                     Map<String, Object> entry = new HashMap<>();
                     entry.put("id", ws.getId());

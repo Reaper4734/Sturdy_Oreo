@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../app/theme/app_theme.dart';
+import '../../../shared/models/roadmap_model.dart';
 import '../../../shared/providers/workspace_providers.dart';
 import '../data/dashboard_model.dart';
 import '../data/http_dashboard_repository.dart';
@@ -27,7 +28,6 @@ class CommandCenterScreen extends ConsumerStatefulWidget {
 class _CommandCenterScreenState extends ConsumerState<CommandCenterScreen> {
   final HttpDashboardRepository _dashboardRepo = HttpDashboardRepository();
   DashboardProfile? _profile;
-  bool _isLoading = true;
 
   @override
   void initState() {
@@ -40,65 +40,75 @@ class _CommandCenterScreenState extends ConsumerState<CommandCenterScreen> {
 
   Future<void> _loadData({String? workspaceId}) async {
     try {
-      final profile = await _dashboardRepo.fetchDashboardProfile(workspaceId: workspaceId);
-      if (mounted) {
-        setState(() {
-          _profile = profile;
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+      final profile = await _dashboardRepo
+          .fetchDashboardProfile(workspaceId: workspaceId)
+          .timeout(const Duration(seconds: 4));
+      if (!mounted) return;
+      setState(() {
+        _profile = profile;
+      });
+    } catch (_) {
+      // Safe fallback handled within repository
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    final activeWs = ref.watch(activeWorkspaceProvider);
-    final workspaceList = ref.watch(workspaceListProvider);
+    final currentWs = ref.watch(activeWorkspaceProvider);
 
-    // Listen for workspace switches to reload profile seamlessly
-    ref.listen<String?>(activeWorkspaceIdProvider, (previous, next) {
-      if (previous != next) {
-        _loadData(workspaceId: next);
-      }
-    });
-
-    if (_isLoading && activeWs == null && workspaceList.isEmpty) {
-      return Scaffold(
-        backgroundColor: colors.bgCanvas,
-        body: Center(child: CircularProgressIndicator(color: colors.accentPrimary)),
-      );
-    }
-
-    // Determine learner name
-    final learnerName = _profile?.learnerName.isNotEmpty == true ? _profile!.learnerName : 'Learner';
-
-    // If there are no workspaces at all, show clean onboarding state
-    if (workspaceList.isEmpty && activeWs == null) {
+    if (currentWs == null) {
+      final learnerName = _profile?.learnerName ?? 'Scholar';
       return _buildEmptyWorkspaceView(context, learnerName, colors);
     }
 
-    // Compute metrics from active workspace
-    final currentWs = activeWs ?? workspaceList.first;
-    final subject = currentWs.subject.isNotEmpty ? currentWs.subject : currentWs.title;
+    // Derive Dynamic Dashboard State from current active workspace
+    final learnerName = _profile?.learnerName ?? 'Scholar';
+    final subject = currentWs.title.isNotEmpty ? currentWs.title : currentWs.subject;
     final currentTopic = currentWs.activeLearningContext.isNotEmpty
         ? currentWs.activeLearningContext
         : 'Core Fundamentals';
 
-    // Compute concept counts from SubjectCluster
+    // Compute concept counts from active course Roadmap
     int masteredConcepts = 0;
     int totalConcepts = 0;
     List<String> focusTags = [];
     String nextModuleTitle = 'Advanced Applications';
     String nextModuleDesc = 'Explore deeper patterns and practical integrations.';
 
-    if (currentWs.subjectCluster != null) {
+    if (currentWs.roadmap.isNotEmpty) {
+      final visitedIds = <String>{};
+      void traverse(RoadmapNode node) {
+        if (!visitedIds.add(node.id)) return;
+        totalConcepts++;
+        if (node.status.toLowerCase() == 'completed' || node.progressPercent >= 1.0) {
+          masteredConcepts++;
+        }
+        if (focusTags.length < 4 && node.title.isNotEmpty) {
+          focusTags.add(node.title.replaceAll(RegExp(r'^Module \d+:\s*'), ''));
+        }
+        for (final child in node.children) {
+          traverse(child);
+        }
+      }
+
+      for (final rootNode in currentWs.roadmap) {
+        traverse(rootNode);
+      }
+
+      final upcoming = currentWs.roadmap.where((n) => n.status.toLowerCase() != 'completed').toList();
+      if (upcoming.length > 1) {
+        nextModuleTitle = upcoming[1].title.replaceAll(RegExp(r'^Module \d+:\s*'), '');
+        if (upcoming[1].children.isNotEmpty) {
+          nextModuleDesc = upcoming[1].children.map((c) => c.title).take(3).join(', ');
+        }
+      } else if (upcoming.isNotEmpty) {
+        nextModuleTitle = upcoming[0].title.replaceAll(RegExp(r'^Module \d+:\s*'), '');
+        if (upcoming[0].children.isNotEmpty) {
+          nextModuleDesc = upcoming[0].children.map((c) => c.title).take(3).join(', ');
+        }
+      }
+    } else if (currentWs.subjectCluster != null) {
       final root = currentWs.subjectCluster!.rootNode;
       for (final module in root.children) {
         totalConcepts++;
@@ -138,10 +148,10 @@ class _CommandCenterScreenState extends ConsumerState<CommandCenterScreen> {
 
     final double progress = totalConcepts > 0
         ? (masteredConcepts / totalConcepts).clamp(0.0, 1.0)
-        : (currentWs.progressPercent > 0 ? currentWs.progressPercent : 0.45);
+        : (currentWs.progressPercent > 0 ? currentWs.progressPercent : 0.0);
 
     final int streak = _profile?.journey.streakDays ?? 7;
-    final int completedSessions = masteredConcepts > 0 ? masteredConcepts : 4;
+    final int completedSessions = masteredConcepts;
     final int weeklyTarget = 5;
 
     return Scaffold(
@@ -178,8 +188,8 @@ class _CommandCenterScreenState extends ConsumerState<CommandCenterScreen> {
                             subject: subject,
                             currentTopic: currentTopic,
                             progressPercent: progress,
-                            completedNodes: masteredConcepts > 0 ? masteredConcepts : 3,
-                            totalNodes: totalConcepts > 0 ? totalConcepts : 5,
+                            completedNodes: masteredConcepts,
+                            totalNodes: totalConcepts > 0 ? totalConcepts : 1,
                             estimatedMinutesRemaining: 28,
                             onContinue: widget.onNavigateToStudio,
                           ),
@@ -187,7 +197,7 @@ class _CommandCenterScreenState extends ConsumerState<CommandCenterScreen> {
                           TodaysFocusBentoCard(
                             focusTopic: subject,
                             estimatedMinutes: 35,
-                            sessionProgress: 0.70,
+                            sessionProgress: progress,
                             focusTags: focusTags,
                             onStartSession: widget.onNavigateToStudio,
                           ),
@@ -204,8 +214,8 @@ class _CommandCenterScreenState extends ConsumerState<CommandCenterScreen> {
                             subject: subject,
                             currentTopic: currentTopic,
                             progressPercent: progress,
-                            completedNodes: masteredConcepts > 0 ? masteredConcepts : 3,
-                            totalNodes: totalConcepts > 0 ? totalConcepts : 5,
+                            completedNodes: masteredConcepts,
+                            totalNodes: totalConcepts > 0 ? totalConcepts : 1,
                             estimatedMinutesRemaining: 28,
                             onContinue: widget.onNavigateToStudio,
                           ),
@@ -216,7 +226,7 @@ class _CommandCenterScreenState extends ConsumerState<CommandCenterScreen> {
                           child: TodaysFocusBentoCard(
                             focusTopic: subject,
                             estimatedMinutes: 35,
-                            sessionProgress: 0.70,
+                            sessionProgress: progress,
                             focusTags: focusTags,
                             onStartSession: widget.onNavigateToStudio,
                           ),
@@ -236,6 +246,7 @@ class _CommandCenterScreenState extends ConsumerState<CommandCenterScreen> {
                           LearningJourneyBentoCard(
                             cluster: currentWs.subjectCluster,
                             blueprintNodes: currentWs.persona?.blueprintNodes ?? [],
+                            roadmap: currentWs.roadmap,
                             activeTopic: currentTopic,
                             onViewRoadmap: widget.onNavigateToStudio,
                           ),
@@ -258,6 +269,7 @@ class _CommandCenterScreenState extends ConsumerState<CommandCenterScreen> {
                           child: LearningJourneyBentoCard(
                             cluster: currentWs.subjectCluster,
                             blueprintNodes: currentWs.persona?.blueprintNodes ?? [],
+                            roadmap: currentWs.roadmap,
                             activeTopic: currentTopic,
                             onViewRoadmap: widget.onNavigateToStudio,
                           ),
@@ -283,8 +295,8 @@ class _CommandCenterScreenState extends ConsumerState<CommandCenterScreen> {
                   streakDays: streak,
                   completedSessions: completedSessions,
                   weeklyTarget: weeklyTarget,
-                  masteredConcepts: masteredConcepts > 0 ? masteredConcepts : 10,
-                  totalConcepts: totalConcepts > 0 ? totalConcepts : 15,
+                  masteredConcepts: masteredConcepts,
+                  totalConcepts: totalConcepts > 0 ? totalConcepts : 1,
                   flashcardCount: currentWs.flashcardCount,
                   persona: currentWs.persona,
                 ),

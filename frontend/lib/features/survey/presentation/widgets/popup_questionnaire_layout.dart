@@ -54,6 +54,39 @@ class _PopupQuestionnaireLayoutState extends State<PopupQuestionnaireLayout> {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
+
+    if (widget.questions.isEmpty) {
+      return Center(
+        child: Container(
+          width: 450,
+          margin: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: colors.bgSurface,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: colors.borderSubtle),
+            boxShadow: AppElevation.medium,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.quiz_outlined, size: 40, color: colors.fgSecondary),
+              const SizedBox(height: 12),
+              Text(
+                'No micro quiz questions available.',
+                style: TextStyle(color: colors.fgPrimary, fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: widget.onClose ?? widget.onCompleteTest,
+                child: const Text('Continue to Lab'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     final question = _currentQuestion;
 
     return Center(

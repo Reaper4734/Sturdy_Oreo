@@ -3,6 +3,8 @@ import '../../../../app/theme/app_theme.dart';
 import '../../../../shared/models/mind_map_model.dart';
 import '../../../../shared/models/persona_model.dart';
 
+import '../../../../shared/models/roadmap_model.dart';
+
 class JourneyStageItem {
   final String title;
   final String status; // 'completed', 'active', 'locked'
@@ -13,6 +15,7 @@ class JourneyStageItem {
 class LearningJourneyBentoCard extends StatelessWidget {
   final SubjectCluster? cluster;
   final List<BlueprintNode> blueprintNodes;
+  final List<RoadmapNode> roadmap;
   final String activeTopic;
   final VoidCallback onViewRoadmap;
 
@@ -20,6 +23,7 @@ class LearningJourneyBentoCard extends StatelessWidget {
     super.key,
     this.cluster,
     this.blueprintNodes = const [],
+    this.roadmap = const [],
     required this.activeTopic,
     required this.onViewRoadmap,
   });
@@ -171,7 +175,29 @@ class LearningJourneyBentoCard extends StatelessWidget {
   }
 
   List<JourneyStageItem> _deriveStages() {
-    // 1. Prefer SubjectCluster child modules
+    // 1. Prefer actual course roadmap nodes if present
+    if (roadmap.isNotEmpty) {
+      List<JourneyStageItem> list = [];
+      bool foundActive = false;
+
+      for (int i = 0; i < roadmap.length; i++) {
+        final node = roadmap[i];
+        final label = node.title.replaceAll(RegExp(r'^Module \d+:\s*'), '');
+        final s = node.status.toLowerCase();
+
+        if (s == 'completed') {
+          list.add(JourneyStageItem(title: label, status: 'completed'));
+        } else if (!foundActive) {
+          list.add(JourneyStageItem(title: label, status: 'active'));
+          foundActive = true;
+        } else {
+          list.add(JourneyStageItem(title: label, status: 'locked'));
+        }
+      }
+      return list.take(5).toList();
+    }
+
+    // 2. Prefer SubjectCluster child modules
     if (cluster != null && cluster!.rootNode.children.isNotEmpty) {
       final children = cluster!.rootNode.children;
       List<JourneyStageItem> list = [];

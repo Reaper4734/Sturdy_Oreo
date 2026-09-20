@@ -213,7 +213,7 @@ class GamificationBentoRow extends StatelessWidget {
               ClipRRect(
                 borderRadius: BorderRadius.circular(4),
                 child: LinearProgressIndicator(
-                  value: progress > 0 ? progress : 0.05,
+                  value: progress.clamp(0.0, 1.0),
                   minHeight: 6,
                   backgroundColor: colors.borderSubtle,
                   valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF38BDF8)),
@@ -265,17 +265,27 @@ class GamificationBentoRow extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                totalConcepts > 0
-                    ? '$masteredConcepts / $totalConcepts mastered'
-                    : '$flashcardCount flashcards ready',
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: colors.fgPrimary),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    totalConcepts > 0
+                        ? '$masteredConcepts / $totalConcepts mastered'
+                        : '$flashcardCount flashcards ready',
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: colors.fgPrimary),
+                  ),
+                  if (totalConcepts > 0)
+                    Text(
+                      '${(masteryPct * 100).toInt()}%',
+                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF10B981)),
+                    ),
+                ],
               ),
               const SizedBox(height: 6),
               ClipRRect(
                 borderRadius: BorderRadius.circular(4),
                 child: LinearProgressIndicator(
-                  value: masteryPct > 0 ? masteryPct : 0.1,
+                  value: masteryPct.clamp(0.0, 1.0),
                   minHeight: 6,
                   backgroundColor: colors.borderSubtle,
                   valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF10B981)),

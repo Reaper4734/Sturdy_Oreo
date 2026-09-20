@@ -79,12 +79,11 @@ class HttpWorkspaceRepository {
         ],
       );
 
-      // Fetch dynamic initial flashcards from backend
-      try {
-        final fcResponse = await _apiClient.post('/orchestration/generate-flashcards', body: {'topic': courseTitle});
+      // Prefetch flashcards in background without blocking course creation latency
+      _apiClient.post('/orchestration/generate-flashcards', body: {'topic': courseTitle}).then((fcResponse) {
         if (fcResponse.statusCode == 200) {
           final List<dynamic> fcData = jsonDecode(fcResponse.body);
-          workspace.flashcards = fcData.asMap().entries.map((entry) {
+          final fetchedCards = fcData.asMap().entries.map((entry) {
             final json = entry.value;
             return FlashcardItem(
               id: 'fc_init_${entry.key}',
@@ -93,11 +92,12 @@ class HttpWorkspaceRepository {
               topicTag: courseTitle,
             );
           }).toList();
-          workspace.flashcardCount = workspace.flashcards.length;
+          workspace.flashcards = fetchedCards;
+          workspace.flashcardCount = fetchedCards.length;
         }
-      } catch (e) {
-        debugPrint('Failed to generate initial flashcards: $e');
-      }
+      }).catchError((e) {
+        debugPrint('Non-critical background flashcard prefetch error: $e');
+      });
 
       return workspace;
     } else {

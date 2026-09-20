@@ -191,8 +191,18 @@ class _MicroInterviewScreenState extends ConsumerState<MicroInterviewScreen> {
     _scrollToBottom();
 
     final repo = ref.read(httpInterviewRepositoryProvider);
+    // Sanitize conversation history to prevent prompt leakage and fallback leakage into LLM context
+    final historyStr = _messages
+        .where((m) => !m.text.startsWith('The AI Tutor is currently experiencing high traffic') && 
+                      !m.text.startsWith('Error:') &&
+                      !m.text.startsWith('Unauthorized:'))
+        .map((m) {
+          final cleanText = m.text.replaceAll(RegExp(r'```(?:canvas-diagram|json)?[\s\S]*?```', caseSensitive: false), '').trim();
+          return "${m.sender}: ${cleanText.isNotEmpty ? cleanText : m.text}";
+        })
+        .join("\n");
+
     final stompService = ref.read(stompChatServiceProvider);
-    final historyStr = _messages.map((m) => "${m.sender}: ${m.text}").join("\n");
 
     try {
       if (widget.isWorkspaceMode && sentFiles.isEmpty) {
@@ -205,7 +215,8 @@ class _MicroInterviewScreenState extends ConsumerState<MicroInterviewScreen> {
           final stream = stompService.streamCanvasExplanation(
             userMessage: text,
             sessionId: sessionId,
-            timestamp: activeWs != null ? '${activeWs.lastVideoTimestampSeconds}' : null,
+            timestamp: activeWs != null ? '${activeWs.videoTimestampSeconds}' : null,
+            userId: activeWs?.userId ?? 'user_active',
           );
 
           await for (final token in stream) {
@@ -355,6 +366,14 @@ class _MicroInterviewScreenState extends ConsumerState<MicroInterviewScreen> {
         setState(() {
           _messages = List.from(next.chatHistory);
         });
+      }
+    });
+
+    ref.listen<String?>(chatPrefillInputProvider, (previous, next) {
+      if (next != null && next.isNotEmpty && mounted) {
+        _inputController.text = next;
+        _inputFocusNode.requestFocus();
+        Future.microtask(() => ref.read(chatPrefillInputProvider.notifier).state = null);
       }
     });
 
@@ -617,14 +636,27 @@ class _MicroInterviewScreenState extends ConsumerState<MicroInterviewScreen> {
                               spacing: 8,
                               runSpacing: 8,
                               children: msg.options!.map((opt) {
-                                final isNavCTA = opt.contains('➔');
+                                final isNavCTA = opt.contains('➔') || opt.toLowerCase().contains('generate curriculum');
+                                final activeWs = ref.watch(activeWorkspaceProvider);
+                                final isConfirmed = activeWs?.isCourseConfirmed == true;
+                                final hasCurriculum = activeWs != null && activeWs.roadmap.isNotEmpty;
+
+                                // If confirmed, hide the generate curriculum button completely
+                                if (isNavCTA && isConfirmed) {
+                                  return const SizedBox.shrink();
+                                }
+
+                                final label = (isNavCTA && hasCurriculum)
+                                    ? '✨ Ask to update/edit curriculum'
+                                    : opt;
+
                                 return ActionChip(
                                   backgroundColor: isNavCTA ? colors.accentEmerald.withValues(alpha: 0.15) : colors.bgSurface,
                                   side: BorderSide(
                                     color: isNavCTA ? colors.accentEmerald : colors.borderSubtle,
                                   ),
                                   label: Text(
-                                    opt,
+                                    label,
                                     style: TextStyle(
                                       color: isNavCTA ? colors.accentEmerald : colors.fgPrimary,
                                       fontWeight: isNavCTA ? FontWeight.bold : FontWeight.normal,
@@ -632,10 +664,12 @@ class _MicroInterviewScreenState extends ConsumerState<MicroInterviewScreen> {
                                     ),
                                   ),
                                   onPressed: () {
-                                    if (isNavCTA) {
+                                    if (isNavCTA && !hasCurriculum) {
                                       setState(() {
                                         _isGeneratingWorkspace = true;
                                       });
+                                    } else if (isNavCTA && hasCurriculum) {
+                                      _handleUserMessage('Please help me update and refine the curriculum modules.');
                                     } else {
                                       _handleUserMessage(opt);
                                     }

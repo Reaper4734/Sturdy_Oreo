@@ -5,13 +5,36 @@ services:
     image: pgvector/pgvector:pg16
     container_name: oreo_postgres
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: oreo_db
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-oreo_db}
     ports:
       - "5432:5432"
     volumes:
       - oreo_postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    # ponytail: shared_buffers=128MB keeps pg under ~200MB on t2.micro
+    command: postgres -c shared_buffers=128MB -c max_connections=50
+
+  backend:
+    build: .
+    container_name: oreo_backend
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      POSTGRES_URL: jdbc:postgresql://db:5432/oreo_db
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      JWT_SECRET: ${JWT_SECRET}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.5-flash-lite}
+      GOOGLE_SEARCH_API_KEY: ${GOOGLE_SEARCH_API_KEY}
+      GOOGLE_CSX_ID: ${GOOGLE_CSX_ID}
+      YOUTUBE_API_KEY: ${YOUTUBE_API_KEY}
     restart: unless-stopped
 
 volumes:

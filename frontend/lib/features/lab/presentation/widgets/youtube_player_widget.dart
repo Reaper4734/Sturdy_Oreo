@@ -4,8 +4,9 @@ import '../../../../app/theme/app_theme.dart';
 
 class YoutubePlayerWidget extends StatefulWidget {
   final String videoId;
+  final int? seekToSeconds;
 
-  const YoutubePlayerWidget({super.key, required this.videoId});
+  const YoutubePlayerWidget({super.key, required this.videoId, this.seekToSeconds});
 
   @override
   State<YoutubePlayerWidget> createState() => _YoutubePlayerWidgetState();
@@ -47,6 +48,9 @@ class _YoutubePlayerWidgetState extends State<YoutubePlayerWidget> {
           _controller!.loadVideoById(videoId: widget.videoId);
         }
       }
+    }
+    if (widget.seekToSeconds != null && widget.seekToSeconds != oldWidget.seekToSeconds) {
+      _controller?.seekTo(seconds: widget.seekToSeconds!.toDouble(), allowSeekAhead: true);
     }
   }
 

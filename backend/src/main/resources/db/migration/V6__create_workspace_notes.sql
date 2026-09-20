@@ -1,6 +1,17 @@
 -- V6__create_workspace_notes.sql
 -- Creates relational schema for AFFiNE-inspired workspace notes and block-based pages
 
+CREATE TABLE IF NOT EXISTS workspaces (
+    id VARCHAR(255) PRIMARY KEY,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    title VARCHAR(255) NOT NULL,
+    data JSONB,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_workspaces_user ON workspaces(user_id);
+
 CREATE TABLE IF NOT EXISTS workspace_note_pages (
     id VARCHAR(255) PRIMARY KEY,
     workspace_id VARCHAR(255) NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,

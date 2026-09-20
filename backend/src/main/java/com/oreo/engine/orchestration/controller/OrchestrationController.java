@@ -66,8 +66,22 @@ public class OrchestrationController {
             @AuthenticationPrincipal String userId,
             @RequestBody Map<String, String> payload) {
         
-        User user = userRepository.findById(UUID.fromString(userId))
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        UUID uid;
+        try {
+            uid = (userId != null && !userId.isBlank() && !"anonymousUser".equalsIgnoreCase(userId)) 
+                    ? UUID.fromString(userId) 
+                    : UUID.fromString("00000000-0000-0000-0000-000000000001");
+        } catch (IllegalArgumentException e) {
+            uid = UUID.nameUUIDFromBytes((userId != null ? userId : "user_active").getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        }
+
+        User user = userRepository.findById(uid).orElse(null);
+        if (user == null) {
+            user = new User();
+            user.setId(uid);
+            user.setDisplayName("Learner");
+            user.setEmail("learner@oreo.local");
+        }
                 
         user.setDomain(payload.get("domain"));
         user.setIqLogic(payload.get("iqLogic"));

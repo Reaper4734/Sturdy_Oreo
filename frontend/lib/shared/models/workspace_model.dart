@@ -117,6 +117,47 @@ class WorkspaceModel {
     );
   }
 
+  /// Create a shallow copy with updated fields for Riverpod state updates
+  WorkspaceModel copyWith({
+    bool? isCourseConfirmed,
+    String? activeLearningContext,
+    String? activeTabId,
+    double? progressPercent,
+    String? title,
+    bool? isPinned,
+    bool? isArchived,
+  }) {
+    return WorkspaceModel(
+      id: id,
+      userId: userId,
+      title: title ?? this.title,
+      subject: subject,
+      difficulty: difficulty,
+      createdAt: createdAt,
+      lastOpened: DateTime.now(),
+      progressPercent: progressPercent ?? this.progressPercent,
+      activeLearningContext: activeLearningContext ?? this.activeLearningContext,
+      flashcardCount: flashcardCount,
+      roadmapNodeCount: roadmapNodeCount,
+      accentColor: accentColor,
+      isPinned: isPinned ?? this.isPinned,
+      isArchived: isArchived ?? this.isArchived,
+      isCourseConfirmed: isCourseConfirmed ?? this.isCourseConfirmed,
+      persona: persona,
+      subjectCluster: subjectCluster,
+      roadmap: roadmap,
+      edges: edges,
+      flashcards: flashcards,
+      canvasCells: canvasCells,
+      canvasObjects: canvasObjects,
+      drawingPaths: drawingPaths,
+      chatHistory: chatHistory,
+      activeTabId: activeTabId ?? this.activeTabId,
+      expandedRoadmapNodes: expandedRoadmapNodes,
+      lastVideoTimestampSeconds: lastVideoTimestampSeconds,
+    );
+  }
+
   Map<String, dynamic> toJson() {
     return {
       'id': id,

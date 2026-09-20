@@ -25,6 +25,17 @@ public class PlannerController {
         this.learningPlanRepository = learningPlanRepository;
     }
 
+    private UUID resolveUserId(String userId) {
+        if (userId != null && !userId.isBlank() && !"anonymousUser".equalsIgnoreCase(userId)) {
+            try {
+                return UUID.fromString(userId);
+            } catch (IllegalArgumentException e) {
+                return UUID.nameUUIDFromBytes(userId.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            }
+        }
+        return UUID.fromString("00000000-0000-0000-0000-000000000001");
+    }
+
     @PostMapping("/generate")
     public ResponseEntity<LearningPlan> generatePlan(
             @AuthenticationPrincipal String userId,
@@ -39,7 +50,7 @@ public class PlannerController {
         LearningPlan.PlanData planData = plannerAssistant.generatePlan(goalSummary);
 
         // 2. Wrap it in the Entity and Save
-        UUID userUuid = UUID.fromString(userId);
+        UUID userUuid = resolveUserId(userId);
         LearningPlan plan = learningPlanRepository.findByUserId(userUuid)
                 .orElseGet(() -> {
                     LearningPlan newPlan = new LearningPlan();
@@ -56,7 +67,8 @@ public class PlannerController {
 
     @GetMapping("/")
     public ResponseEntity<LearningPlan> getPlan(@AuthenticationPrincipal String userId) {
-        return learningPlanRepository.findByUserId(UUID.fromString(userId))
+        UUID userUuid = resolveUserId(userId);
+        return learningPlanRepository.findByUserId(userUuid)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
@@ -67,8 +79,12 @@ public class PlannerController {
             @PathVariable String taskId,
             @RequestBody Map<String, Integer> payload) {
 
-        LearningPlan plan = learningPlanRepository.findByUserId(UUID.fromString(userId))
-                .orElseThrow(() -> new RuntimeException("Plan not found"));
+        UUID userUuid = resolveUserId(userId);
+        LearningPlan plan = learningPlanRepository.findByUserId(userUuid)
+                .orElse(null);
+        if (plan == null) {
+            return ResponseEntity.notFound().build();
+        }
 
         int timeSpent = payload.getOrDefault("actualTimeSpentMinutes", 0);
 
@@ -93,8 +109,12 @@ public class PlannerController {
             @AuthenticationPrincipal String userId,
             @RequestBody Map<String, String> payload) {
 
-        LearningPlan plan = learningPlanRepository.findByUserId(UUID.fromString(userId))
-                .orElseThrow(() -> new RuntimeException("Plan not found"));
+        UUID userUuid = resolveUserId(userId);
+        LearningPlan plan = learningPlanRepository.findByUserId(userUuid)
+                .orElse(null);
+        if (plan == null) {
+            return ResponseEntity.notFound().build();
+        }
 
         String failedQuestion = payload.get("failedQuestion");
         String userAnswer = payload.get("userAnswer");
@@ -158,10 +178,14 @@ public class PlannerController {
 
     @PostMapping("/reschedule")
     public ResponseEntity<LearningPlan> reschedulePlan(@AuthenticationPrincipal String userId) {
-        LearningPlan plan = learningPlanRepository.findByUserId(UUID.fromString(userId))
-                .orElseThrow(() -> new RuntimeException("Plan not found"));
+        UUID userUuid = resolveUserId(userId);
+        LearningPlan plan = learningPlanRepository.findByUserId(userUuid)
+                .orElse(null);
+        if (plan == null) {
+            return ResponseEntity.notFound().build();
+        }
 
-        // MVP Hackathon Logic: Shift all incomplete task deadlines forward by 2 days.
+        // Shift all incomplete task deadlines forward by 2 days.
         java.util.Optional.ofNullable(plan.getPlanData())
                 .map(LearningPlan.PlanData::getMilestones)
                 .ifPresent(milestones -> milestones.stream()

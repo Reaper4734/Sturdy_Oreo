@@ -5,6 +5,8 @@ import '../../../shared/providers/workspace_providers.dart';
 import '../../../shared/models/mastery_test_model.dart';
 import '../../survey/data/http_assessment_repository.dart';
 import 'widgets/assessment_survey_layout.dart';
+import '../../exam/presentation/proctored_exam_screen.dart';
+import '../../exam/presentation/widgets/exam_configuration_dialog.dart';
 
 class MasterySurveyScreen extends ConsumerStatefulWidget {
   final VoidCallback? onReturnToDashboard;
@@ -87,6 +89,50 @@ class _MasterySurveyScreenState extends ConsumerState<MasterySurveyScreen> {
                   style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: colors.fgPrimary),
                 ),
                 const Spacer(),
+                InkWell(
+                  onTap: () {
+                    final activeWs = ref.read(activeWorkspaceProvider);
+                    final topic = activeWs?.activeLearningContext ?? 'Computer Science Capstone';
+                    ExamConfigurationDialog.show(
+                      context,
+                      courseTitle: topic,
+                      onStartExam: (dur, scheme) {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (ctx) => ProctoredExamScreen(
+                              durationMinutes: dur,
+                              markingScheme: scheme,
+                              onExit: () => Navigator.of(ctx).pop(),
+                            ),
+                          ),
+                        );
+                      },
+                    );
+                  },
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: colors.accentCyan.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: colors.accentCyan.withValues(alpha: 0.5)),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.verified_user_outlined, size: 14, color: colors.accentCyan),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Launch AI Proctored Exam',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: colors.accentCyan,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -95,10 +141,38 @@ class _MasterySurveyScreenState extends ConsumerState<MasterySurveyScreen> {
           Expanded(
             child: _isLoading 
                 ? Center(child: CircularProgressIndicator(color: colors.accentPrimary))
-                : AssessmentSurveyLayout(
-                    questions: _dynamicQuestions,
-                    onCompleteTest: _handleCompleteTest,
-                  ),
+                : _dynamicQuestions.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.quiz_outlined, size: 48, color: colors.fgSecondary),
+                            const SizedBox(height: 12),
+                            Text(
+                              'Assessment questions unavailable',
+                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: colors.fgPrimary),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              'The AI generator could not generate questions at this moment.',
+                              style: TextStyle(fontSize: 13, color: colors.fgSecondary),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton.icon(
+                              onPressed: () {
+                                setState(() => _isLoading = true);
+                                _fetchQuestions();
+                              },
+                              icon: const Icon(Icons.refresh, size: 16),
+                              label: const Text('Retry Generation'),
+                            ),
+                          ],
+                        ),
+                      )
+                    : AssessmentSurveyLayout(
+                        questions: _dynamicQuestions,
+                        onCompleteTest: _handleCompleteTest,
+                      ),
           ),
         ],
       ),

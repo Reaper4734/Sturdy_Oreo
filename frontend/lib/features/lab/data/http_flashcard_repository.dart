@@ -25,6 +25,16 @@ class HttpFlashcardRepository {
       throw Exception('Failed to generate flashcards: ${response.statusCode}');
     }
   }
+
+  Future<void> reviewFlashcard(String cardId, int quality) async {
+    try {
+      await _apiClient.post('/orchestration/assessments/flashcards/$cardId/review', body: {
+        'quality': quality,
+      });
+    } catch (e) {
+      // Ephemeral cards reviewed in memory gracefully
+    }
+  }
 }
 
 final httpFlashcardRepositoryProvider = Provider((ref) => HttpFlashcardRepository());

@@ -136,7 +136,7 @@ class TodaysFocusBentoCard extends StatelessWidget {
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(4),
                             child: LinearProgressIndicator(
-                              value: sessionProgress > 0 ? sessionProgress.clamp(0.0, 1.0) : 0.1,
+                              value: sessionProgress.clamp(0.0, 1.0),
                               minHeight: 6,
                               backgroundColor: colors.borderSubtle,
                               valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFF97316)),

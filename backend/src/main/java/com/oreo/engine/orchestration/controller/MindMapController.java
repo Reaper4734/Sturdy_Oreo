@@ -28,8 +28,13 @@ public class MindMapController {
         String subject = HtmlUtils.htmlEscape(rawSubject);
         String personaContext = payload.getOrDefault("persona", "A general learner.");
         
-        MindMapSchema schema = mindMapPipeline.generateMindMap(subject);
-        PersonaProfileSchema persona = personaPipeline.generatePersona(personaContext);
+        java.util.concurrent.CompletableFuture<com.oreo.engine.orchestration.schemas.MindMapSchema> mindMapFuture =
+                java.util.concurrent.CompletableFuture.supplyAsync(() -> mindMapPipeline.generateMindMap(subject));
+        java.util.concurrent.CompletableFuture<com.oreo.engine.orchestration.schemas.PersonaProfileSchema> personaFuture =
+                java.util.concurrent.CompletableFuture.supplyAsync(() -> personaPipeline.generatePersona(personaContext));
+
+        MindMapSchema schema = mindMapFuture.join();
+        PersonaProfileSchema persona = personaFuture.join();
         
         Map<String, Object> response = new HashMap<>();
         response.put("subjectId", schema.getSubjectId());

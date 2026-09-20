@@ -26,9 +26,16 @@ public class IngestionController {
             throw new IllegalArgumentException("videoId is required for ingestion.");
         }
 
-        UUID userUuid = (userId != null && !userId.isBlank())
-                ? UUID.fromString(userId)
-                : UUID.nameUUIDFromBytes(videoId.getBytes());
+        UUID userUuid;
+        if (userId != null && !userId.isBlank() && !"anonymousUser".equalsIgnoreCase(userId)) {
+            try {
+                userUuid = UUID.fromString(userId);
+            } catch (IllegalArgumentException e) {
+                userUuid = UUID.nameUUIDFromBytes(userId.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            }
+        } else {
+            userUuid = UUID.nameUUIDFromBytes(videoId.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        }
 
         autonomousIngestionService.ingestVideo(videoId.trim(), userUuid);
 
