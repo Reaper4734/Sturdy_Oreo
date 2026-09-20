@@ -42,6 +42,8 @@ ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no -i "$DIR/$PEM_PATH" "${USER
      rm -f ~/oreo/backend-deploy.tar.gz && \
      rm -f /home/ec2-user/.docker/cli-plugins/docker-buildx && \
      cd ~/oreo/backend && \
+     docker-compose stop backend 2>/dev/null || true && \
+     docker rm -f oreo_backend 2>/dev/null || true && \
      docker-compose up -d --build backend"
 
 echo -e "\n\033[0;32m[OK] AWS EC2 Backend successfully updated & running!\033[0m"

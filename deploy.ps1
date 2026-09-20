@@ -105,14 +105,16 @@ if (-not $SkipEc2) {
                           "rm -f ~/oreo/backend-deploy.tar.gz && " +
                           "rm -f /home/ec2-user/.docker/cli-plugins/docker-buildx && " +
                           "cd ~/oreo/backend && " +
+                          "docker-compose stop backend 2>/dev/null || true && " +
+                          "docker rm -f oreo_backend 2>/dev/null || true && " +
                           "docker-compose up -d --build backend"
 
         ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no -i $ResolvedPem "${UserName}@${HostName}" $RemoteCommands
 
         Write-Host "Verifying backend health on EC2..." -ForegroundColor Gray
-        Start-Sleep -Seconds 5
-        $HealthCheck = ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no -i $ResolvedPem "${UserName}@${HostName}" "curl -s -m 5 http://localhost:8080/actuator/health || curl -s -m 5 http://localhost:8080/api/workspace/list || echo 'CONTAINER_STARTED'"
-        Write-Host "Health Check Response: $HealthCheck" -ForegroundColor Cyan
+        Start-Sleep -Seconds 8
+        $HealthCheck = ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no -i $ResolvedPem "${UserName}@${HostName}" "curl -s -m 5 http://localhost:8080/actuator/health || echo 'STARTING'"
+        Write-Host "Health Check Status: $HealthCheck" -ForegroundColor Cyan
 
         Write-Host "`n[OK] AWS EC2 Backend successfully updated & running!" -ForegroundColor Green
     } catch {
