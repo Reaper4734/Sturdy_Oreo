@@ -2,8 +2,14 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class ApiClient {
-  static const String baseUrl = 'http://localhost:8080/api';
-  static const String wsUrl = 'ws://localhost:8080/ws/orchestration';
+  static const String baseUrl = String.fromEnvironment(
+    'API_BASE_URL',
+    defaultValue: 'http://localhost:8080/api',
+  );
+  static const String wsUrl = String.fromEnvironment(
+    'WS_BASE_URL',
+    defaultValue: 'ws://localhost:8080/ws/orchestration',
+  );
   
   // Singleton pattern so token is shared across instances
   static final ApiClient _instance = ApiClient._internal();
