@@ -20,7 +20,7 @@ class HttpSettingsRepository {
       );
 
       final settings = AppThemeSettings(
-        themeMode: data['settings']?['themeMode'] ?? 'Dark',
+        themeMode: data['settings']?['themeMode'] ?? 'Light',
         language: data['settings']?['language'] ?? 'English',
       );
 

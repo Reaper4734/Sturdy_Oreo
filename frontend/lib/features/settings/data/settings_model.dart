@@ -32,7 +32,7 @@ class AppThemeSettings {
   });
 
   static AppThemeSettings defaults() => AppThemeSettings(
-        themeMode: 'Dark',
+        themeMode: 'Light',
         language: 'English',
       );
 }

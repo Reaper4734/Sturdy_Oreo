@@ -5,6 +5,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_sign_in_web/web_only.dart' as web;
+import '../../../app/theme/app_theme.dart';
 import '../providers/auth_provider.dart';
 
 class AuthScreen extends ConsumerWidget {
@@ -13,9 +14,10 @@ class AuthScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(authProvider);
+    final colors = context.colors;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF000000), // Background #000000
+      backgroundColor: colors.bgBase,
       body: Center(
         child: SingleChildScrollView(
           child: ConstrainedBox(
@@ -33,13 +35,13 @@ class AuthScreen extends ConsumerWidget {
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
                       letterSpacing: -1.0,
-                      color: Colors.white,
+                      color: colors.fgPrimary,
                     ),
                   ),
                   const SizedBox(height: 32),
 
                   // Mascot Card
-                  _buildMascotCard(),
+                  _buildMascotCard(colors),
 
                   const SizedBox(height: 32),
 
@@ -50,7 +52,7 @@ class AuthScreen extends ConsumerWidget {
                       fontSize: 36,
                       fontWeight: FontWeight.bold,
                       letterSpacing: -1.0,
-                      color: Colors.white,
+                      color: colors.fgPrimary,
                       height: 1.2,
                     ),
                     textAlign: TextAlign.center,
@@ -61,7 +63,7 @@ class AuthScreen extends ConsumerWidget {
                     style: GoogleFonts.inter(
                       fontSize: 18,
                       fontWeight: FontWeight.w400,
-                      color: Colors.white.withValues(alpha: 0.6),
+                      color: colors.fgSecondary,
                       height: 1.4,
                     ),
                     textAlign: TextAlign.center,
@@ -74,7 +76,10 @@ class AuthScreen extends ConsumerWidget {
                     Container(
                       padding: const EdgeInsets.all(12),
                       margin: const EdgeInsets.only(bottom: 16),
-                      color: Colors.red.withValues(alpha: 0.1),
+                      decoration: BoxDecoration(
+                        color: Colors.red.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
                       child: Text(
                         authState.error!,
                         style: GoogleFonts.inter(color: Colors.red),
@@ -90,7 +95,7 @@ class AuthScreen extends ConsumerWidget {
                       child: web.renderButton(),
                     )
                   else
-                    _buildGoogleButton(context, ref),
+                    _buildGoogleButton(context, ref, colors),
 
                   const SizedBox(height: 32),
 
@@ -100,7 +105,7 @@ class AuthScreen extends ConsumerWidget {
                     style: GoogleFonts.inter(
                       fontSize: 12,
                       fontWeight: FontWeight.w400,
-                      color: Colors.white.withValues(alpha: 0.4),
+                      color: colors.fgMuted,
                       height: 1.5,
                     ),
                     textAlign: TextAlign.center,
@@ -114,25 +119,25 @@ class AuthScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildMascotCard() {
+  Widget _buildMascotCard(AppColorsExtension colors) {
     return AspectRatio(
       aspectRatio: 1.6, // Rectangular card
       child: Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(32),
           border: Border.all(
-            color: Colors.white.withValues(alpha: 0.08),
+            color: colors.borderSubtle,
             width: 1,
           ),
           gradient: RadialGradient(
             colors: [
-              const Color(0xFF9C27B0).withValues(alpha: 0.15), // Soft purple glow
-              Colors.white.withValues(alpha: 0.02),
+              const Color(0xFF9C27B0).withValues(alpha: 0.12), // Soft purple glow
+              colors.bgSurface.withValues(alpha: 0.5),
             ],
             center: Alignment.center,
             radius: 0.8,
           ),
-          color: Colors.white.withValues(alpha: 0.03), // Subtle glass surface
+          color: colors.bgSurface,
           boxShadow: [
             BoxShadow(
               color: const Color(0xFF9C27B0).withValues(alpha: 0.05),
@@ -154,9 +159,9 @@ class AuthScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildGoogleButton(BuildContext context, WidgetRef ref) {
+  Widget _buildGoogleButton(BuildContext context, WidgetRef ref, AppColorsExtension colors) {
     return Material(
-      color: Colors.white,
+      color: colors.bgSurface,
       borderRadius: BorderRadius.circular(16),
       elevation: 2,
       child: InkWell(
@@ -168,6 +173,10 @@ class AuthScreen extends ConsumerWidget {
           height: 56,
           padding: const EdgeInsets.symmetric(horizontal: 24),
           alignment: Alignment.center,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: colors.borderDefault, width: 1),
+          ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -182,7 +191,7 @@ class AuthScreen extends ConsumerWidget {
                 style: GoogleFonts.inter(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
-                  color: Colors.black,
+                  color: colors.fgPrimary,
                 ),
               ),
             ],

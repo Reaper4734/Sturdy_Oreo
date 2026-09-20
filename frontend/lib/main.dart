@@ -89,9 +89,9 @@ class _OreoAppState extends ConsumerState<OreoApp> {
     }
 
     final themeMode = switch (ref.watch(themeModeProvider)) {
-      'Light' => ThemeMode.light,
+      'Dark' => ThemeMode.dark,
       'System' => ThemeMode.system,
-      _ => ThemeMode.dark,
+      _ => ThemeMode.light,
     };
 
     return MaterialApp(

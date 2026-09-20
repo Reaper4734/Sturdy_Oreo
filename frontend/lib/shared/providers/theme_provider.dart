@@ -6,7 +6,7 @@ const String _kThemePrefKey = 'oreo_app_theme_mode';
 
 /// Manages the application theme mode ('Dark', 'Light', 'System') with persistent storage.
 class ThemeModeNotifier extends StateNotifier<String> {
-  ThemeModeNotifier() : super('Dark') {
+  ThemeModeNotifier() : super('Light') {
     _loadFromPrefs();
   }
 
@@ -35,13 +35,13 @@ class ThemeModeNotifier extends StateNotifier<String> {
 
   ThemeMode get currentThemeMode {
     switch (state) {
-      case 'Light':
-        return ThemeMode.light;
+      case 'Dark':
+        return ThemeMode.dark;
       case 'System':
         return ThemeMode.system;
-      case 'Dark':
+      case 'Light':
       default:
-        return ThemeMode.dark;
+        return ThemeMode.light;
     }
   }
 }
