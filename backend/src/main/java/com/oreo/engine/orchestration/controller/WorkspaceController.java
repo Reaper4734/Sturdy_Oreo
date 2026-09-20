@@ -36,9 +36,6 @@ public class WorkspaceController {
     public ResponseEntity<List<Map<String, Object>>> getAllWorkspaces(@AuthenticationPrincipal String userId) {
         UUID uid = resolveUserId(userId);
         List<Workspace> workspaces = workspaceRepository.findByUserId(uid);
-        if (workspaces.isEmpty()) {
-            workspaces = workspaceRepository.findAll();
-        }
         List<Map<String, Object>> response = workspaces.stream()
                 .map(Workspace::getData)
                 .filter(java.util.Objects::nonNull)

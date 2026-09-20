@@ -75,9 +75,6 @@ public class DashboardController {
         int level = Math.max(1, xp / 100);
 
         List<Workspace> workspaces = workspaceRepository.findByUserId(userId);
-        if (workspaces.isEmpty()) {
-            workspaces = workspaceRepository.findAll();
-        }
 
         // Calculate real aggregate learning progress and hours from user's workspaces
         double totalProgressSum = 0.0;
