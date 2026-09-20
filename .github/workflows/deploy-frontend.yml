@@ -28,8 +28,8 @@ jobs:
         working-directory: frontend
         run: |
           flutter build web --release \
-            --dart-define=API_BASE_URL=https://reply-helicopter-anytime-investigator.trycloudflare.com/api \
-            --dart-define=WS_BASE_URL=wss://reply-helicopter-anytime-investigator.trycloudflare.com/ws/orchestration
+            --dart-define=API_BASE_URL=https://oreo-api.duckdns.org/api \
+            --dart-define=WS_BASE_URL=wss://oreo-api.duckdns.org/ws/orchestration
 
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
