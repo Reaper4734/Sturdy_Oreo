@@ -1,3 +1,4 @@
+import 'dart:ui';
 import '../../../shared/models/mastery_test_model.dart';
 
 enum ViolationType {
@@ -8,7 +9,67 @@ enum ViolationType {
   clipboardPaste,
   devtoolsOpened,
   faceOcclusion,
+  multipleFacesDetected,
+  attentionDrift,
   audioAnomaly,
+}
+
+enum FacePresenceStatus {
+  lockedSingle,       // 1 face detected, centered & locked (Nominal)
+  noFaceDetected,     // Face absent or camera occluded
+  multipleFaces,      // 2 or more individuals detected
+  attentionDrift,     // Off-axis head turn / gaze drift
+}
+
+class BiometricLandmark {
+  final double x;
+  final double y;
+  final double z;
+
+  const BiometricLandmark({required this.x, required this.y, this.z = 0.0});
+}
+
+class BiometricTelemetry {
+  final bool isCameraActive;
+  final FacePresenceStatus status;
+  final int faceCount;
+  final double confidencePercent;
+  final Rect? faceBoundingBox;
+  final Offset? leftEye;
+  final Offset? rightEye;
+  final Offset? leftIris;
+  final Offset? rightIris;
+  final Offset? noseTip;
+  final Offset? mouthCenter;
+  final double headYaw;
+  final double headPitch;
+  final double gazeOffset;
+  final double audioDb;
+  final List<double> audioWaveform;
+  final List<BiometricLandmark> landmarks;
+
+  const BiometricTelemetry({
+    required this.isCameraActive,
+    required this.status,
+    this.faceCount = 0,
+    this.confidencePercent = 0.0,
+    this.faceBoundingBox,
+    this.leftEye,
+    this.rightEye,
+    this.leftIris,
+    this.rightIris,
+    this.noseTip,
+    this.mouthCenter,
+    this.headYaw = 0.0,
+    this.headPitch = 0.0,
+    this.gazeOffset = 0.0,
+    this.audioDb = 32.0,
+    this.audioWaveform = const [],
+    this.landmarks = const [],
+  });
+
+  bool get isNominal => status == FacePresenceStatus.lockedSingle;
+  bool get isAlert => status != FacePresenceStatus.lockedSingle && isCameraActive;
 }
 
 enum ExamIntegrityTier {

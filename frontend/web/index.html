@@ -32,16 +32,210 @@
 
   <title>frontend</title>
   <link rel="manifest" href="manifest.json">
+
+  <!-- MediaPipe Face Mesh CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
+
+  <script>
+    window.OreoFaceMesh = {
+      faceMesh: null,
+      camera: null,
+      isInitialized: false,
+      isRunning: false,
+      onBiometricsUpdate: null,
+
+      init: function() {
+        if (this.isInitialized) return Promise.resolve(true);
+        var self = this;
+        return new Promise(function(resolve) {
+          try {
+            if (typeof FaceMesh === 'undefined') {
+              console.warn('[OreoFaceMesh] FaceMesh library not loaded. Using fallback.');
+              self.isInitialized = false;
+              resolve(false);
+              return;
+            }
+
+            self.faceMesh = new FaceMesh({
+              locateFile: function(file) {
+                return 'https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/' + file;
+              }
+            });
+
+            self.faceMesh.setOptions({
+              maxNumFaces: 3,
+              refineLandmarks: true, // Enables iris tracking
+              minDetectionConfidence: 0.5,
+              minTrackingConfidence: 0.5
+            });
+
+            self.faceMesh.onResults(function(results) {
+              self.processResults(results);
+            });
+
+            self.isInitialized = true;
+            console.log('[OreoFaceMesh] MediaPipe 468-point 3D FaceMesh initialized successfully.');
+            resolve(true);
+          } catch (e) {
+            console.error('[OreoFaceMesh] Init error:', e);
+            self.isInitialized = false;
+            resolve(false);
+          }
+        });
+      },
+
+      start: function(videoElement, callback) {
+        this.onBiometricsUpdate = callback;
+        var self = this;
+        this.init().then(function(ok) {
+          if (!ok || !self.faceMesh) return;
+          self.isRunning = true;
+
+          // Continuous Frame Pipeline
+          function processFrame() {
+            if (!self.isRunning || !videoElement) return;
+            if (videoElement.readyState >= 2 && !videoElement.paused && !videoElement.ended) {
+              self.faceMesh.send({ image: videoElement }).catch(function(err) {
+                // Ignore transient frame send errors
+              });
+            }
+            if (self.isRunning) {
+              requestAnimationFrame(processFrame);
+            }
+          }
+          requestAnimationFrame(processFrame);
+        });
+      },
+
+      stop: function() {
+        this.isRunning = false;
+      },
+
+      processResults: function(results) {
+        if (!this.onBiometricsUpdate) return;
+
+        if (!results || !results.multiFaceLandmarks || results.multiFaceLandmarks.length === 0) {
+          this.onBiometricsUpdate({
+            status: 'NO_FACE',
+            faceCount: 0,
+            confidence: 0.0,
+            yaw: 0.0,
+            pitch: 0.0,
+            gaze: 0.0,
+            box: null,
+            landmarks: []
+          });
+          return;
+        }
+
+        var faceCount = results.multiFaceLandmarks.length;
+        if (faceCount > 1) {
+          this.onBiometricsUpdate({
+            status: 'MULTIPLE_FACES',
+            faceCount: faceCount,
+            confidence: 0.99,
+            yaw: 0.0,
+            pitch: 0.0,
+            gaze: 0.0,
+            box: null,
+            landmarks: []
+          });
+          return;
+        }
+
+        // Single Face Detected (468 3D Landmark Points + Irises)
+        var lm = results.multiFaceLandmarks[0];
+        var minX = 1.0, maxX = 0.0, minY = 1.0, maxY = 0.0;
+        for (var i = 0; i < lm.length; i++) {
+          var p = lm[i];
+          if (p.x < minX) minX = p.x;
+          if (p.x > maxX) maxX = p.x;
+          if (p.y < minY) minY = p.y;
+          if (p.y > maxY) maxY = p.y;
+        }
+
+        // Mirror coordinates for mirrored video feed
+        var boxLeft = 1.0 - maxX;
+        var boxTop = minY;
+        var boxWidth = maxX - minX;
+        var boxHeight = maxY - minY;
+
+        // Key landmark points
+        var nose = lm[1] || lm[4];
+        var forehead = lm[10];
+        var chin = lm[152];
+        var leftEye = lm[33];
+        var rightEye = lm[263];
+        var leftIris = lm[468] || leftEye;
+        var rightIris = lm[473] || rightEye;
+        var mouth = lm[13] || lm[14];
+
+        // Head Pose Yaw & Pitch
+        var midEyeX = (leftEye.x + rightEye.x) / 2.0;
+        var eyeDist = Math.abs(rightEye.x - leftEye.x) || 0.1;
+        var yaw = ((nose.x - midEyeX) / eyeDist) * 75.0; // In degrees
+
+        var faceHeight = Math.abs(chin.y - forehead.y) || 0.2;
+        var midEyeY = (leftEye.y + rightEye.y) / 2.0;
+        var pitch = (((nose.y - midEyeY) / faceHeight) - 0.38) * 90.0; // In degrees
+
+        // Iris Gaze Vector
+        var leftInner = lm[133] || leftEye;
+        var rightInner = lm[362] || rightEye;
+        var leftEyeSpan = Math.abs(leftInner.x - leftEye.x) || 0.04;
+        var leftGaze = (leftIris.x - (leftEye.x + leftInner.x) / 2.0) / leftEyeSpan;
+        var rightEyeSpan = Math.abs(rightEye.x - rightInner.x) || 0.04;
+        var rightGaze = (rightIris.x - (rightInner.x + rightEye.x) / 2.0) / rightEyeSpan;
+        var gazeOffset = (leftGaze + rightGaze) / 2.0;
+
+        var isAttentionDrift = Math.abs(yaw) > 22.0 || Math.abs(pitch) > 20.0 || Math.abs(gazeOffset) > 0.40;
+        var status = isAttentionDrift ? 'ATTENTION_DRIFT' : 'LOCKED_SINGLE';
+
+        // Extract 32 curated landmark structural points for Flutter Web HUD mesh
+        var sampleIndices = [
+          10, 338, 297, 332, 284, 251, 389, 356, 454, 323, 361, 288, 397, 365, 379, 378,
+          152, 148, 176, 149, 150, 136, 172, 58, 132, 93, 234, 127, 162, 21, 54, 103,
+          1, 468, 473, 13, 33, 263
+        ];
+        var sampledPoints = [];
+        for (var j = 0; j < sampleIndices.length; j++) {
+          var pt = lm[sampleIndices[j]];
+          if (pt) {
+            sampledPoints.push({
+              x: 1.0 - pt.x, // Mirrored
+              y: pt.y,
+              z: pt.z || 0.0
+            });
+          }
+        }
+
+        this.onBiometricsUpdate({
+          status: status,
+          faceCount: 1,
+          confidence: 0.992,
+          yaw: yaw,
+          pitch: pitch,
+          gaze: gazeOffset,
+          box: {
+            x: boxLeft,
+            y: boxTop,
+            w: boxWidth,
+            h: boxHeight
+          },
+          leftEye: { x: 1.0 - leftEye.x, y: leftEye.y },
+          rightEye: { x: 1.0 - rightEye.x, y: rightEye.y },
+          leftIris: { x: 1.0 - leftIris.x, y: leftIris.y },
+          rightIris: { x: 1.0 - rightIris.x, y: rightIris.y },
+          nose: { x: 1.0 - nose.x, y: nose.y },
+          mouth: { x: 1.0 - mouth.x, y: mouth.y },
+          landmarks: sampledPoints
+        });
+      }
+    };
+  </script>
 </head>
 <body>
-  <!--
-    You can customize the "flutter_bootstrap.js" script.
-    This is useful to provide a custom configuration to the Flutter loader
-    or to give the user feedback during the initialization process.
-
-    For more details:
-    * https://docs.flutter.dev/platform-integration/web/initialization
-  -->
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

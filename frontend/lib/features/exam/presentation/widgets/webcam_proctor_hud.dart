@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../../../app/theme/app_theme.dart';
+import '../../models/proctored_exam_model.dart';
 import '../../services/webcam_platform.dart';
 
 class WebcamProctorHud extends StatefulWidget {
@@ -8,6 +9,7 @@ class WebcamProctorHud extends StatefulWidget {
   final int strikeCount;
   final double trustScore;
   final ValueChanged<double>? onAudioAnomaly;
+  final ValueChanged<BiometricTelemetry>? onBiometrics;
 
   const WebcamProctorHud({
     super.key,
@@ -15,6 +17,7 @@ class WebcamProctorHud extends StatefulWidget {
     required this.strikeCount,
     required this.trustScore,
     this.onAudioAnomaly,
+    this.onBiometrics,
   });
 
   @override
@@ -24,8 +27,10 @@ class WebcamProctorHud extends StatefulWidget {
 class _WebcamProctorHudState extends State<WebcamProctorHud>
     with SingleTickerProviderStateMixin {
   late AnimationController _animController;
-  bool _isCameraActive = false;
-  double _currentAudioDb = 35.0;
+  BiometricTelemetry _telemetry = const BiometricTelemetry(
+    isCameraActive: false,
+    status: FacePresenceStatus.noFaceDetected,
+  );
   int _sustainedSpeechCount = 0;
 
   @override
@@ -33,7 +38,7 @@ class _WebcamProctorHudState extends State<WebcamProctorHud>
     super.initState();
     _animController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 3200),
+      duration: const Duration(milliseconds: 2800),
     )..repeat();
   }
 
@@ -46,15 +51,21 @@ class _WebcamProctorHudState extends State<WebcamProctorHud>
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    final isAlert = widget.isViolating || widget.strikeCount >= 2;
+    final isAlert = widget.isViolating ||
+        widget.strikeCount >= 2 ||
+        _telemetry.status == FacePresenceStatus.multipleFaces ||
+        (_telemetry.status == FacePresenceStatus.noFaceDetected && _telemetry.isCameraActive);
+
+    final isWarning = widget.strikeCount == 1 ||
+        _telemetry.status == FacePresenceStatus.attentionDrift;
 
     final primaryHudColor = isAlert
         ? colors.accentRose
-        : (widget.strikeCount == 1 ? colors.accentAmber : colors.accentEmerald);
+        : (isWarning ? colors.accentAmber : colors.accentCyan);
 
     return Container(
       width: double.infinity,
-      height: 180,
+      height: 190,
       decoration: BoxDecoration(
         color: colors.bgSurface,
         borderRadius: BorderRadius.circular(14),
@@ -68,24 +79,24 @@ class _WebcamProctorHudState extends State<WebcamProctorHud>
         borderRadius: BorderRadius.circular(14),
         child: Stack(
           children: [
-            // 1. Live Browser Webcam Feed or Simulated Sensor Fallback
+            // 1. Live Browser Webcam Feed
             Positioned.fill(
               child: createWebcamView(
-                onMetrics: (active, db) {
+                onBiometrics: (telemetry) {
                   if (!mounted) return;
                   setState(() {
-                    _isCameraActive = active;
-                    _currentAudioDb = db;
-                    if (db > 68.0) {
+                    _telemetry = telemetry;
+                    if (telemetry.audioDb > 68.0) {
                       _sustainedSpeechCount++;
                       if (_sustainedSpeechCount >= 3) {
-                        widget.onAudioAnomaly?.call(db);
+                        widget.onAudioAnomaly?.call(telemetry.audioDb);
                         _sustainedSpeechCount = 0;
                       }
                     } else {
                       _sustainedSpeechCount = 0;
                     }
                   });
+                  widget.onBiometrics?.call(telemetry);
                 },
               ),
             ),
@@ -93,25 +104,25 @@ class _WebcamProctorHudState extends State<WebcamProctorHud>
             // Semi-transparent HUD tint over camera
             Positioned.fill(
               child: Container(
-                color: colors.bgElevated.withValues(alpha: _isCameraActive ? 0.20 : 0.90),
+                color: colors.bgElevated.withValues(alpha: _telemetry.isCameraActive ? 0.15 : 0.90),
               ),
             ),
 
-            // 2. Fine-grained Tech Grid Overlay
+            // 2. High-Tech Grid Overlay
             Positioned.fill(
               child: CustomPaint(
                 painter: _HudGridPainter(
-                  gridColor: colors.borderSubtle.withValues(alpha: 0.35),
+                  gridColor: colors.borderSubtle.withValues(alpha: 0.25),
                 ),
               ),
             ),
 
-            // 3. Biometric Face Detection Wireframe (Silhouette + Landmarks)
-            Center(
+            // 3. Dynamic MediaPipe 3D Face Mesh, Iris Tracking & Bounding Box
+            Positioned.fill(
               child: CustomPaint(
-                size: const Size(110, 110),
-                painter: _FaceMeshPainter(
-                  color: primaryHudColor.withValues(alpha: 0.75),
+                painter: _MediaPipeFaceMeshPainter(
+                  telemetry: _telemetry,
+                  color: primaryHudColor,
                   pulseFactor: math.sin(_animController.value * math.pi * 2),
                 ),
               ),
@@ -121,13 +132,13 @@ class _WebcamProctorHudState extends State<WebcamProctorHud>
             AnimatedBuilder(
               animation: _animController,
               builder: (context, child) {
-                final topOffset = _animController.value * 180;
+                final topOffset = _animController.value * 190;
                 return Positioned(
                   top: topOffset,
                   left: 0,
                   right: 0,
                   child: Container(
-                    height: 2.0,
+                    height: 1.5,
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: [
@@ -139,7 +150,7 @@ class _WebcamProctorHudState extends State<WebcamProctorHud>
                       boxShadow: [
                         BoxShadow(
                           color: primaryHudColor.withValues(alpha: 0.5),
-                          blurRadius: 6,
+                          blurRadius: 4,
                           spreadRadius: 1,
                         ),
                       ],
@@ -149,16 +160,16 @@ class _WebcamProctorHudState extends State<WebcamProctorHud>
               },
             ),
 
-            // 5. Corner HUD Targeting Brackets
+            // 5. Corner Targeting Brackets
             Positioned.fill(
               child: CustomPaint(
                 painter: _CornerBracketsPainter(
-                  color: primaryHudColor,
+                  color: primaryHudColor.withValues(alpha: 0.7),
                 ),
               ),
             ),
 
-            // 6. Top Status Pill
+            // 6. Top Status Bar with Head Pose Radar
             Positioned(
               top: 8,
               left: 10,
@@ -181,102 +192,161 @@ class _WebcamProctorHudState extends State<WebcamProctorHud>
                     ),
                   ),
                   const SizedBox(width: 6),
-                  Text(
-                    isAlert ? 'AI SENTINEL: VIOLATION' : 'AI SENTINEL: ACTIVE',
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 0.8,
-                      color: primaryHudColor,
-                    ),
-                  ),
-                  const Spacer(),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: colors.bgCanvas.withValues(alpha: 0.7),
-                      borderRadius: BorderRadius.circular(4),
-                      border: Border.all(color: colors.borderSubtle, width: 0.5),
-                    ),
+                  Expanded(
                     child: Text(
-                      '60 FPS',
+                      _getStatusLabel(_telemetry),
                       style: TextStyle(
-                        fontSize: 9,
-                        fontFamily: 'monospace',
-                        color: colors.fgSecondary,
+                        fontSize: 9.5,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.6,
+                        color: primaryHudColor,
                       ),
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
+                  // Head Pose Compass Radar
+                  _buildHeadPoseRadar(_telemetry, primaryHudColor, colors),
                 ],
               ),
             ),
 
-            // 7. Bottom Biometric Telemetry Bar
+            // 7. Bottom Biometric Telemetry Bar & Audio Equalizer
             Positioned(
-              bottom: 8,
+              bottom: 6,
               left: 10,
               right: 10,
               child: Row(
                 children: [
                   Icon(
-                    _isCameraActive ? Icons.videocam : Icons.videocam_outlined,
-                    size: 12,
-                    color: _isCameraActive ? colors.accentEmerald : colors.fgSecondary,
+                    _telemetry.isCameraActive ? Icons.videocam : Icons.videocam_outlined,
+                    size: 11,
+                    color: _telemetry.isCameraActive ? colors.accentEmerald : colors.fgSecondary,
                   ),
                   const SizedBox(width: 4),
                   Text(
-                    'FACIAL LOCK: ${_isCameraActive ? '99.4%' : 'ACTIVE'}',
+                    'MEDIAPIPE 468-PT 3D MESH',
                     style: TextStyle(
-                      fontSize: 9,
+                      fontSize: 8.5,
                       fontFamily: 'monospace',
                       fontWeight: FontWeight.bold,
-                      color: _isCameraActive ? colors.accentEmerald : colors.fgSecondary,
+                      color: _telemetry.isCameraActive ? colors.accentEmerald : colors.fgSecondary,
                     ),
                   ),
                   const Spacer(),
-                  Tooltip(
-                    message: 'Dynamic Acoustic Telemetry: Continuous RMS frequency metering via Web Audio API. Background speech or sound > 65 dB triggers acoustic integrity review.',
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: _currentAudioDb > 65.0
-                            ? colors.accentRose.withValues(alpha: 0.2)
-                            : colors.bgCanvas.withValues(alpha: 0.6),
-                        borderRadius: BorderRadius.circular(4),
-                        border: Border.all(
-                          color: _currentAudioDb > 65.0
-                              ? colors.accentRose
-                              : colors.borderSubtle.withValues(alpha: 0.5),
-                          width: 0.6,
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.mic,
-                            size: 11,
-                            color: _currentAudioDb > 65.0 ? colors.accentRose : colors.accentCyan,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            'AUDIO: ${_currentAudioDb.toStringAsFixed(0)} dB (${_currentAudioDb > 65.0 ? 'SPEECH DETECTED' : 'NOMINAL'})',
-                            style: TextStyle(
-                              fontSize: 9,
-                              fontFamily: 'monospace',
-                              fontWeight: FontWeight.bold,
-                              color: _currentAudioDb > 65.0 ? colors.accentRose : colors.fgSecondary,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
+                  // Live 8-Band Cyberpunk Equalizer Spectrum
+                  _buildAudioEqualizer(_telemetry, colors),
                 ],
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  String _getStatusLabel(BiometricTelemetry t) {
+    if (!t.isCameraActive) return 'SENTINEL: CAMERA OFFLINE';
+    switch (t.status) {
+      case FacePresenceStatus.lockedSingle:
+        return '3D MESH LOCKED (${t.confidencePercent.toStringAsFixed(1)}%)';
+      case FacePresenceStatus.noFaceDetected:
+        return 'ALERT: CANDIDATE ABSENT';
+      case FacePresenceStatus.multipleFaces:
+        return 'ALERT: ${t.faceCount} FACES DETECTED';
+      case FacePresenceStatus.attentionDrift:
+        return 'GAZE DRIFT: ${t.headYaw.toStringAsFixed(0)}° YAW';
+    }
+  }
+
+  Widget _buildHeadPoseRadar(BiometricTelemetry t, Color primaryColor, AppColorsExtension colors) {
+    final yaw = (t.headYaw / 45.0).clamp(-1.0, 1.0);
+    final pitch = (t.headPitch / 30.0).clamp(-1.0, 1.0);
+
+    return Tooltip(
+      message: '3D Head Pose & Gaze Vector: Yaw ${t.headYaw.toStringAsFixed(1)}°, Pitch ${t.headPitch.toStringAsFixed(1)}°',
+      child: Container(
+        width: 32,
+        height: 18,
+        decoration: BoxDecoration(
+          color: colors.bgCanvas.withValues(alpha: 0.8),
+          borderRadius: BorderRadius.circular(4),
+          border: Border.all(color: colors.borderSubtle, width: 0.6),
+        ),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            // Center reticle
+            Container(width: 2, height: 2, color: colors.fgSecondary.withValues(alpha: 0.4)),
+            // Gaze vector dot
+            Align(
+              alignment: Alignment(yaw, pitch),
+              child: Container(
+                width: 4,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: primaryColor,
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAudioEqualizer(BiometricTelemetry t, AppColorsExtension colors) {
+    final waveform = t.audioWaveform.isNotEmpty ? t.audioWaveform : List.filled(8, 0.1);
+    final isLoud = t.audioDb > 65.0;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+      decoration: BoxDecoration(
+        color: isLoud
+            ? colors.accentRose.withValues(alpha: 0.2)
+            : colors.bgCanvas.withValues(alpha: 0.7),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(
+          color: isLoud ? colors.accentRose : colors.borderSubtle,
+          width: 0.6,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.mic,
+            size: 10,
+            color: isLoud ? colors.accentRose : colors.accentCyan,
+          ),
+          const SizedBox(width: 4),
+          // 8-Band Equalizer Spectrum
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: List.generate(waveform.length, (i) {
+              final amp = (waveform[i] * 9.0).clamp(1.5, 10.0);
+              return Container(
+                margin: const EdgeInsets.symmetric(horizontal: 0.8),
+                width: 1.8,
+                height: amp,
+                decoration: BoxDecoration(
+                  color: isLoud ? colors.accentRose : colors.accentCyan,
+                  borderRadius: BorderRadius.circular(0.8),
+                ),
+              );
+            }),
+          ),
+          const SizedBox(width: 4),
+          Text(
+            '${t.audioDb.toStringAsFixed(0)} dB',
+            style: TextStyle(
+              fontSize: 8.5,
+              fontFamily: 'monospace',
+              fontWeight: FontWeight.bold,
+              color: isLoud ? colors.accentRose : colors.fgSecondary,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -293,7 +363,7 @@ class _HudGridPainter extends CustomPainter {
       ..color = gridColor
       ..strokeWidth = 0.5;
 
-    const step = 20.0;
+    const step = 22.0;
     for (double x = 0; x < size.width; x += step) {
       canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
     }
@@ -315,11 +385,11 @@ class _CornerBracketsPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
       ..color = color
-      ..strokeWidth = 2.0
+      ..strokeWidth = 1.8
       ..style = PaintingStyle.stroke;
 
-    const len = 12.0;
-    const pad = 6.0;
+    const len = 10.0;
+    const pad = 5.0;
 
     // Top-Left
     canvas.drawLine(const Offset(pad, pad + len), const Offset(pad, pad), paint);
@@ -342,50 +412,109 @@ class _CornerBracketsPainter extends CustomPainter {
   bool shouldRepaint(covariant _CornerBracketsPainter oldDelegate) => oldDelegate.color != color;
 }
 
-class _FaceMeshPainter extends CustomPainter {
+class _MediaPipeFaceMeshPainter extends CustomPainter {
+  final BiometricTelemetry telemetry;
   final Color color;
   final double pulseFactor;
 
-  _FaceMeshPainter({required this.color, required this.pulseFactor});
+  _MediaPipeFaceMeshPainter({
+    required this.telemetry,
+    required this.color,
+    required this.pulseFactor,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..strokeWidth = 1.2
+    if (!telemetry.isCameraActive) return;
+
+    final paintMesh = Paint()
+      ..color = color.withValues(alpha: 0.55)
+      ..strokeWidth = 0.8
       ..style = PaintingStyle.stroke;
 
-    final dotPaint = Paint()
-      ..color = color
+    final paintDot = Paint()
+      ..color = color.withValues(alpha: 0.85)
       ..style = PaintingStyle.fill;
 
-    final center = Offset(size.width / 2, size.height / 2);
-    final w = size.width * (0.65 + pulseFactor * 0.03);
-    final h = size.height * (0.80 + pulseFactor * 0.03);
+    final paintIris = Paint()
+      ..color = Colors.cyanAccent
+      ..style = PaintingStyle.fill;
 
-    // Face Bounding Oval
-    final rect = Rect.fromCenter(center: center, width: w, height: h);
-    canvas.drawOval(rect, paint);
+    final box = telemetry.faceBoundingBox;
 
-    // Center Crosshair
-    canvas.drawLine(Offset(center.dx - 8, center.dy), Offset(center.dx + 8, center.dy), paint);
-    canvas.drawLine(Offset(center.dx, center.dy - 8), Offset(center.dx, center.dy + 8), paint);
+    if (box != null) {
+      // 1. Dynamic Physical Bounding Box that tracks real face
+      final rectPx = Rect.fromLTWH(
+        box.left * size.width,
+        box.top * size.height,
+        box.width * size.width,
+        box.height * size.height,
+      );
 
-    // Biometric Eye Landmarks
-    final leftEye = Offset(center.dx - w * 0.22, center.dy - h * 0.12);
-    final rightEye = Offset(center.dx + w * 0.22, center.dy - h * 0.12);
-    canvas.drawCircle(leftEye, 2.5, dotPaint);
-    canvas.drawCircle(rightEye, 2.5, dotPaint);
+      final paintBox = Paint()
+        ..color = color.withValues(alpha: 0.65)
+        ..strokeWidth = 1.2
+        ..style = PaintingStyle.stroke;
 
-    // Mouth Arc
-    final mouthRect = Rect.fromCenter(
-      center: Offset(center.dx, center.dy + h * 0.22),
-      width: w * 0.35,
-      height: h * 0.12,
-    );
-    canvas.drawArc(mouthRect, 0.2, math.pi - 0.4, false, paint);
+      // Draw bounding box corners
+      const cornerLen = 8.0;
+      canvas.drawLine(rectPx.topLeft, Offset(rectPx.left + cornerLen, rectPx.top), paintBox);
+      canvas.drawLine(rectPx.topLeft, Offset(rectPx.left, rectPx.top + cornerLen), paintBox);
+
+      canvas.drawLine(rectPx.topRight, Offset(rectPx.right - cornerLen, rectPx.top), paintBox);
+      canvas.drawLine(rectPx.topRight, Offset(rectPx.right, rectPx.top + cornerLen), paintBox);
+
+      canvas.drawLine(rectPx.bottomLeft, Offset(rectPx.left + cornerLen, rectPx.bottom), paintBox);
+      canvas.drawLine(rectPx.bottomLeft, Offset(rectPx.left, rectPx.bottom - cornerLen), paintBox);
+
+      canvas.drawLine(rectPx.bottomRight, Offset(rectPx.right - cornerLen, rectPx.bottom), paintBox);
+      canvas.drawLine(rectPx.bottomRight, Offset(rectPx.right, rectPx.bottom - cornerLen), paintBox);
+
+      // 2. Real 3D MediaPipe Mesh Landmark Points
+      if (telemetry.landmarks.isNotEmpty) {
+        for (final pt in telemetry.landmarks) {
+          final px = Offset(pt.x * size.width, pt.y * size.height);
+          canvas.drawCircle(px, 1.2, paintDot);
+        }
+      }
+
+      // 3. Iris Tracking Reticles (Left & Right 3D Irises)
+      if (telemetry.leftIris != null) {
+        final irisPx = Offset(telemetry.leftIris!.dx * size.width, telemetry.leftIris!.dy * size.height);
+        canvas.drawCircle(irisPx, 2.0, paintIris);
+        canvas.drawCircle(irisPx, 4.0, paintMesh);
+      }
+
+      if (telemetry.rightIris != null) {
+        final irisPx = Offset(telemetry.rightIris!.dx * size.width, telemetry.rightIris!.dy * size.height);
+        canvas.drawCircle(irisPx, 2.0, paintIris);
+        canvas.drawCircle(irisPx, 4.0, paintMesh);
+      }
+
+      // 4. Center Crosshair on Nose
+      if (telemetry.noseTip != null) {
+        final nosePx = Offset(telemetry.noseTip!.dx * size.width, telemetry.noseTip!.dy * size.height);
+        canvas.drawLine(Offset(nosePx.dx - 4, nosePx.dy), Offset(nosePx.dx + 4, nosePx.dy), paintMesh);
+        canvas.drawLine(Offset(nosePx.dx, nosePx.dy - 4), Offset(nosePx.dx, nosePx.dy + 4), paintMesh);
+      }
+    } else {
+      // Nominal searching target crosshair when no face locked
+      final center = Offset(size.width / 2, size.height / 2);
+      final w = size.width * (0.45 + pulseFactor * 0.02);
+      final h = size.height * (0.60 + pulseFactor * 0.02);
+      final rect = Rect.fromCenter(center: center, width: w, height: h);
+
+      final paintDashed = Paint()
+        ..color = color.withValues(alpha: 0.40)
+        ..strokeWidth = 1.0
+        ..style = PaintingStyle.stroke;
+
+      canvas.drawOval(rect, paintDashed);
+      canvas.drawLine(Offset(center.dx - 6, center.dy), Offset(center.dx + 6, center.dy), paintDashed);
+      canvas.drawLine(Offset(center.dx, center.dy - 6), Offset(center.dx, center.dy + 6), paintDashed);
+    }
   }
 
   @override
-  bool shouldRepaint(covariant _FaceMeshPainter oldDelegate) => true;
+  bool shouldRepaint(covariant _MediaPipeFaceMeshPainter oldDelegate) => true;
 }

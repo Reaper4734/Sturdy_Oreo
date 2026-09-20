@@ -16,6 +16,10 @@ class ExamAntiCheatSentinel with WidgetsBindingObserver {
   int _strikeCount = 0;
   double _trustScore = 100.0;
   DateTime? _lastViolationTime;
+  DateTime? _absenceStartTime;
+  DateTime? _multipleFacesStartTime;
+  DateTime? _driftStartTime;
+  DateTime? _lastBiometricViolationTime;
 
   ExamAntiCheatSentinel({
     required this.onViolation,
@@ -79,6 +83,66 @@ class ExamAntiCheatSentinel with WidgetsBindingObserver {
       details: 'Microphone detected background speech or conversation (${db.toStringAsFixed(1)} dB). Testing environment must remain quiet.',
       penalty: 5.0,
     );
+  }
+
+  void reportBiometricTelemetry(BiometricTelemetry telemetry) {
+    if (!_isActive || !telemetry.isCameraActive) return;
+
+    final now = DateTime.now();
+
+    // 1. Absence Detection (> 3.5s sustained)
+    if (telemetry.status == FacePresenceStatus.noFaceDetected) {
+      _absenceStartTime ??= now;
+      if (now.difference(_absenceStartTime!).inMilliseconds >= 3500) {
+        if (_lastBiometricViolationTime == null || now.difference(_lastBiometricViolationTime!).inSeconds >= 5) {
+          _lastBiometricViolationTime = now;
+          _reportShortcutViolation(
+            type: ViolationType.faceOcclusion,
+            title: 'Candidate Absence Detected',
+            details: 'No candidate face detected in proctoring feed for > 3.5 seconds.',
+            penalty: 10.0,
+          );
+        }
+      }
+    } else {
+      _absenceStartTime = null;
+    }
+
+    // 2. Multiple Faces Detected (> 2.0s sustained)
+    if (telemetry.status == FacePresenceStatus.multipleFaces) {
+      _multipleFacesStartTime ??= now;
+      if (now.difference(_multipleFacesStartTime!).inMilliseconds >= 2000) {
+        if (_lastBiometricViolationTime == null || now.difference(_lastBiometricViolationTime!).inSeconds >= 5) {
+          _lastBiometricViolationTime = now;
+          _reportShortcutViolation(
+            type: ViolationType.multipleFacesDetected,
+            title: 'Multiple Individuals Detected',
+            details: 'Sentinel identified ${telemetry.faceCount} distinct individuals in the exam area.',
+            penalty: 15.0,
+          );
+        }
+      }
+    } else {
+      _multipleFacesStartTime = null;
+    }
+
+    // 3. Sustained Attention Drift / Gaze Deviation (> 5.0s sustained)
+    if (telemetry.status == FacePresenceStatus.attentionDrift) {
+      _driftStartTime ??= now;
+      if (now.difference(_driftStartTime!).inMilliseconds >= 5000) {
+        if (_lastBiometricViolationTime == null || now.difference(_lastBiometricViolationTime!).inSeconds >= 6) {
+          _lastBiometricViolationTime = now;
+          _reportShortcutViolation(
+            type: ViolationType.attentionDrift,
+            title: 'Sustained Gaze / Attention Deviation',
+            details: 'Gaze direction deviated significantly from test screen (Yaw: ${telemetry.headYaw.toStringAsFixed(0)}°, Pitch: ${telemetry.headPitch.toStringAsFixed(0)}°).',
+            penalty: 5.0,
+          );
+        }
+      }
+    } else {
+      _driftStartTime = null;
+    }
   }
 
   void stopMonitoring() {

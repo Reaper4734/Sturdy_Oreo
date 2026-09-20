@@ -361,6 +361,7 @@ class _ProctoredExamScreenState extends ConsumerState<ProctoredExamScreen> {
                           strikeCount: _session!.strikeCount,
                           trustScore: _session!.trustScore,
                           onAudioAnomaly: (db) => _sentinel?.reportAudioAnomaly(db),
+                          onBiometrics: (t) => _sentinel?.reportBiometricTelemetry(t),
                         ),
 
                         // Question Matrix Sidebar Navigator
