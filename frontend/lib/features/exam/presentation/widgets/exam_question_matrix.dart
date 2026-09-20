@@ -4,6 +4,8 @@ import '../../../../shared/models/mastery_test_model.dart';
 
 class ExamQuestionMatrix extends StatelessWidget {
   final List<QuestionItem> questions;
+  final int totalTargetQuestions;
+  final bool isGenerating;
   final int currentIndex;
   final Map<String, String> userAnswers;
   final Set<String> flaggedQuestionIds;
@@ -13,6 +15,8 @@ class ExamQuestionMatrix extends StatelessWidget {
   const ExamQuestionMatrix({
     super.key,
     required this.questions,
+    this.totalTargetQuestions = 5,
+    this.isGenerating = false,
     required this.currentIndex,
     required this.userAnswers,
     required this.flaggedQuestionIds,
@@ -23,6 +27,8 @@ class ExamQuestionMatrix extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
+    final totalCount = totalTargetQuestions > 0 ? totalTargetQuestions : questions.length;
+    final readyCount = questions.length;
     final answeredCount = userAnswers.values.where((ans) => ans.trim().isNotEmpty).length;
     final currentQ = questions.isNotEmpty && currentIndex < questions.length ? questions[currentIndex] : null;
     final isCurrentFlagged = currentQ != null && flaggedQuestionIds.contains(currentQ.id);
@@ -60,13 +66,26 @@ class ExamQuestionMatrix extends StatelessWidget {
                         borderRadius: BorderRadius.circular(10),
                         border: Border.all(color: colors.borderSubtle, width: 0.8),
                       ),
-                      child: Text(
-                        '$answeredCount / ${questions.length}',
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w600,
-                          color: colors.accentEmerald,
-                        ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (isGenerating && readyCount < totalCount) ...[
+                            SizedBox(
+                              width: 8,
+                              height: 8,
+                              child: CircularProgressIndicator(strokeWidth: 1.2, color: colors.accentCyan),
+                            ),
+                            const SizedBox(width: 5),
+                          ],
+                          Text(
+                            '$answeredCount / $totalCount',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                              color: colors.accentEmerald,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
@@ -117,7 +136,7 @@ class ExamQuestionMatrix extends StatelessWidget {
 
           // Question Matrix Grid
           Expanded(
-            child: questions.isEmpty
+            child: totalCount == 0
                 ? Center(
                     child: Text(
                       'No questions available',
@@ -132,10 +151,52 @@ class ExamQuestionMatrix extends StatelessWidget {
                       crossAxisSpacing: 8,
                       childAspectRatio: 1.0,
                     ),
-                    itemCount: questions.length,
+                    itemCount: totalCount,
                     itemBuilder: (context, index) {
-                      final q = questions[index];
+                      final isReady = index < questions.length;
                       final isCurrent = index == currentIndex;
+
+                      if (!isReady) {
+                        // Pending / Background Generating Tile
+                        return InkWell(
+                          onTap: () => onSelectQuestion(index),
+                          borderRadius: BorderRadius.circular(8),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 180),
+                            decoration: BoxDecoration(
+                              color: isCurrent ? colors.accentCyan.withValues(alpha: 0.1) : colors.bgBase,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: isCurrent ? colors.accentCyan : colors.borderSubtle.withValues(alpha: 0.5),
+                                width: isCurrent ? 1.5 : 0.8,
+                              ),
+                            ),
+                            child: Stack(
+                              alignment: Alignment.center,
+                              children: [
+                                Text(
+                                  '${index + 1}',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal,
+                                    color: isCurrent ? colors.accentCyan : colors.fgTertiary,
+                                  ),
+                                ),
+                                Positioned(
+                                  bottom: 2,
+                                  child: Icon(
+                                    Icons.auto_awesome,
+                                    size: 8,
+                                    color: isCurrent ? colors.accentCyan : colors.fgTertiary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      }
+
+                      final q = questions[index];
                       final isAnswered = (userAnswers[q.id]?.trim().isNotEmpty ?? false);
                       final isFlagged = flaggedQuestionIds.contains(q.id);
 
@@ -222,6 +283,10 @@ class ExamQuestionMatrix extends StatelessWidget {
                 _buildLegendItem(colors.accentAmber, 'Flagged for review', colors),
                 const SizedBox(height: 4),
                 _buildLegendItem(colors.fgSecondary, 'Unanswered', colors),
+                if (isGenerating) ...[
+                  const SizedBox(height: 4),
+                  _buildLegendItem(colors.fgTertiary, 'AI Synthesizing...', colors),
+                ],
               ],
             ),
           ),

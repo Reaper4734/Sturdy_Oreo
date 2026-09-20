@@ -36,6 +36,7 @@ class _ProctoredExamScreenState extends ConsumerState<ProctoredExamScreen> {
   int _currentIndex = 0;
   int _remainingSeconds = 1800; // 30 min default
   Timer? _countdownTimer;
+  Timer? _questionsPollingTimer;
   ExamAntiCheatSentinel? _sentinel;
   bool _isViolating = false;
   ExamViolation? _latestViolation;
@@ -77,6 +78,41 @@ class _ProctoredExamScreenState extends ConsumerState<ProctoredExamScreen> {
 
     _startTimer();
     _startAntiCheatSentinel();
+
+    if (_session!.isGenerating || _session!.questions.length < _session!.totalTargetQuestions) {
+      _startQuestionPolling();
+    }
+  }
+
+  void _startQuestionPolling() {
+    _questionsPollingTimer?.cancel();
+    _questionsPollingTimer = Timer.periodic(const Duration(seconds: 3), (timer) async {
+      if (!mounted || _session == null) {
+        timer.cancel();
+        return;
+      }
+      if (!_session!.isGenerating && _session!.questions.length >= _session!.totalTargetQuestions) {
+        timer.cancel();
+        return;
+      }
+
+      final repo = ref.read(httpProctoredExamRepositoryProvider);
+      final update = await repo.fetchExamQuestions(_session!.sessionId, courseTitle: _session!.courseTitle);
+      if (!mounted || update == null) return;
+
+      if (update.questions.length > _session!.questions.length || _session!.isGenerating != update.isGenerating) {
+        setState(() {
+          _session!.questions.clear();
+          _session!.questions.addAll(update.questions);
+          _session!.totalTargetQuestions = update.totalTargetQuestions;
+          _session!.isGenerating = update.isGenerating;
+        });
+      }
+
+      if (!update.isGenerating && update.questions.length >= update.totalTargetQuestions) {
+        timer.cancel();
+      }
+    });
   }
 
   void _startTimer() {
@@ -156,6 +192,7 @@ class _ProctoredExamScreenState extends ConsumerState<ProctoredExamScreen> {
   @override
   void dispose() {
     _countdownTimer?.cancel();
+    _questionsPollingTimer?.cancel();
     _sentinel?.dispose();
     for (final c in _subjectiveControllers.values) {
       c.dispose();
@@ -200,6 +237,7 @@ class _ProctoredExamScreenState extends ConsumerState<ProctoredExamScreen> {
     if (_isSubmitting || _session == null) return;
     _isSubmitting = true;
     _countdownTimer?.cancel();
+    _questionsPollingTimer?.cancel();
     _sentinel?.stopMonitoring();
 
     final repo = ref.read(httpProctoredExamRepositoryProvider);
@@ -261,6 +299,7 @@ class _ProctoredExamScreenState extends ConsumerState<ProctoredExamScreen> {
     }
 
     final questions = _session!.questions;
+    final totalTarget = _session!.totalTargetQuestions;
     final currentQ = questions.isNotEmpty && _currentIndex < questions.length
         ? questions[_currentIndex]
         : null;
@@ -301,10 +340,10 @@ class _ProctoredExamScreenState extends ConsumerState<ProctoredExamScreen> {
             Expanded(
               child: Row(
                 children: [
-                  // Left / Center: Question Viewport (Subjective or Objective)
+                  // Left / Center: Question Viewport (Subjective, Objective, or AI Synthesis Placeholder)
                   Expanded(
                     flex: 7,
-                    child: _buildQuestionViewport(currentQ, questions.length, colors),
+                    child: _buildQuestionViewport(currentQ, totalTarget, colors),
                   ),
 
                   // Right: Proctoring Telemetry HUD & Question Navigator Matrix
@@ -328,6 +367,8 @@ class _ProctoredExamScreenState extends ConsumerState<ProctoredExamScreen> {
                         Expanded(
                           child: ExamQuestionMatrix(
                             questions: questions,
+                            totalTargetQuestions: totalTarget,
+                            isGenerating: _session!.isGenerating,
                             currentIndex: _currentIndex,
                             userAnswers: _session!.userAnswers,
                             flaggedQuestionIds: _session!.flaggedQuestionIds,
@@ -355,12 +396,7 @@ class _ProctoredExamScreenState extends ConsumerState<ProctoredExamScreen> {
     AppColorsExtension colors,
   ) {
     if (question == null) {
-      return Center(
-        child: Text(
-          'No questions available in this exam session.',
-          style: TextStyle(color: colors.fgSecondary),
-        ),
-      );
+      return _buildQuestionGeneratingPlaceholder(_currentIndex, totalQuestions, colors);
     }
 
     final isSubjective = question.type == QuestionType.subjective;
@@ -511,6 +547,160 @@ class _ProctoredExamScreenState extends ConsumerState<ProctoredExamScreen> {
                     elevation: 0,
                   ),
                 ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuestionGeneratingPlaceholder(
+    int targetIndex,
+    int totalQuestions,
+    AppColorsExtension colors,
+  ) {
+    final readyCount = _session?.questions.length ?? 0;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 28),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: colors.accentCyan.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: colors.accentCyan, width: 0.8),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SizedBox(
+                      width: 10,
+                      height: 10,
+                      child: CircularProgressIndicator(strokeWidth: 1.5, color: colors.accentCyan),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      'AI SYNTHESIS IN PROGRESS',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 1.2,
+                        color: colors.accentCyan,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 10),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: colors.bgElevated,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  'QUESTION ${targetIndex + 1} OF $totalQuestions',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w500,
+                    color: colors.fgSecondary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 32),
+          Expanded(
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(32),
+              decoration: BoxDecoration(
+                color: colors.bgSurface,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: colors.borderSubtle, width: 1),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 56,
+                    height: 56,
+                    decoration: BoxDecoration(
+                      color: colors.accentCyan.withValues(alpha: 0.12),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: colors.accentCyan.withValues(alpha: 0.3), width: 1.5),
+                    ),
+                    child: Icon(Icons.auto_awesome, color: colors.accentCyan, size: 26),
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    'Generating Question #${targetIndex + 1}...',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      color: colors.fgPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '$readyCount of $totalQuestions questions prepared. AI model is synthesizing advanced scenarios without repetition.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: colors.fgSecondary,
+                      height: 1.4,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 320),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: LinearProgressIndicator(
+                        value: totalQuestions > 0 ? (readyCount / totalQuestions) : null,
+                        minHeight: 6,
+                        backgroundColor: colors.bgElevated,
+                        valueColor: AlwaysStoppedAnimation<Color>(colors.accentCyan),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 28),
+                  if (readyCount > 0)
+                    OutlinedButton.icon(
+                      onPressed: () => setState(() => _currentIndex = readyCount - 1),
+                      icon: const Icon(Icons.arrow_back, size: 14),
+                      label: Text('Jump to Available Question #$readyCount', style: const TextStyle(fontSize: 12)),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: colors.accentCyan,
+                        side: BorderSide(color: colors.accentCyan.withValues(alpha: 0.5), width: 1),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              OutlinedButton.icon(
+                onPressed: _currentIndex > 0
+                    ? () => setState(() => _currentIndex--)
+                    : null,
+                icon: const Icon(Icons.arrow_back, size: 14),
+                label: const Text('Previous', style: TextStyle(fontSize: 12)),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: colors.fgPrimary,
+                  side: BorderSide(color: colors.borderSubtle, width: 0.8),
+                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+              ),
             ],
           ),
         ],

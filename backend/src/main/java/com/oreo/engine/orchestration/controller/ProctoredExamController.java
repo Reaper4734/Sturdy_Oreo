@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 
 @RestController
@@ -77,50 +78,60 @@ public class ProctoredExamController {
         }
 
         String sessionId = UUID.randomUUID().toString();
-        List<AssessmentGenerationSchema.QuestionSchema> questions = null;
+        List<AssessmentGenerationSchema.QuestionSchema> initialQuestions = new ArrayList<>();
+
+        int batch1Target = Math.min(5, totalTargetQuestions);
+        int batch1Mcq = Math.min(3, targetMcq);
+        int batch1Sub = Math.min(batch1Target - batch1Mcq, targetSubjective);
 
         try {
             AssessmentGenerationSchema schema = assessmentAiService.generateAssessment(
                     "University Capstone Examination for course: " + courseTitle +
                     " (Domain: " + domain + ", Duration: " + durationMinutes + " min). " +
-                    "Generate a rigorous examination with exactly " + targetMcq + " MCQs (Section A) and " +
-                    targetSubjective + " Subjective Architecture & Implementation problems (Section B) totaling " +
-                    totalTargetQuestions + " questions."
+                    "Generate the initial examination batch with exactly " + batch1Mcq + " MCQs (Section A) and " +
+                    batch1Sub + " Subjective Architecture & Implementation problems (Section B) totaling " +
+                    batch1Target + " questions."
             );
-            if (schema != null && schema.getQuestions() != null && schema.getQuestions().size() >= totalTargetQuestions) {
-                questions = schema.getQuestions();
+            if (schema != null && schema.getQuestions() != null && !schema.getQuestions().isEmpty()) {
+                int qIdx = 1;
+                for (AssessmentGenerationSchema.QuestionSchema q : schema.getQuestions()) {
+                    if (initialQuestions.size() >= batch1Target) break;
+                    q.setId("q_" + qIdx++);
+                    initialQuestions.add(q);
+                }
             }
         } catch (Exception e) {
-            System.err.println("Exam question generation error: " + e.getMessage());
+            System.err.println("Exam initial question generation error: " + e.getMessage());
         }
 
-        if (questions == null || questions.size() < totalTargetQuestions) {
-            questions = createCurriculumFallbackQuestions(courseTitle, targetMcq, targetSubjective);
+        if (initialQuestions.size() < batch1Target) {
+            List<AssessmentGenerationSchema.QuestionSchema> fallbacks = createCurriculumFallbackQuestions(courseTitle, targetMcq, targetSubjective);
+            for (AssessmentGenerationSchema.QuestionSchema fb : fallbacks) {
+                if (initialQuestions.size() >= batch1Target) break;
+                boolean alreadyIn = initialQuestions.stream()
+                        .anyMatch(existing -> existing.getQuestionText().equalsIgnoreCase(fb.getQuestionText()));
+                if (!alreadyIn) {
+                    fb.setId("q_" + (initialQuestions.size() + 1));
+                    initialQuestions.add(fb);
+                }
+            }
         }
 
-        ExamSessionState session = new ExamSessionState(sessionId, workspaceId, courseTitle, domain, durationMinutes, markingScheme, questions);
+        ExamSessionState session = new ExamSessionState(sessionId, workspaceId, courseTitle, domain, durationMinutes, markingScheme, totalTargetQuestions, initialQuestions);
+
+        if (totalTargetQuestions > initialQuestions.size()) {
+            session.isGenerating = true;
+            CompletableFuture.runAsync(() -> generateRemainingBatches(session, targetMcq, targetSubjective, totalTargetQuestions));
+        }
+
         sessions.put(sessionId, session);
 
         // Sanitize questions sent to client: strip isCorrect and explanation
         List<Map<String, Object>> clientQuestions = new ArrayList<>();
-        for (AssessmentGenerationSchema.QuestionSchema q : questions) {
-            Map<String, Object> qMap = new HashMap<>();
-            qMap.put("id", q.getId());
-            qMap.put("topicTag", q.getTopicTag());
-            qMap.put("questionText", q.getQuestionText());
-            qMap.put("type", q.getType());
-
-            List<Map<String, Object>> clientOptions = new ArrayList<>();
-            if (q.getOptions() != null) {
-                for (AssessmentGenerationSchema.OptionSchema opt : q.getOptions()) {
-                    Map<String, Object> optMap = new HashMap<>();
-                    optMap.put("id", opt.getId());
-                    optMap.put("text", opt.getText());
-                    clientOptions.add(optMap);
-                }
+        synchronized (session.questions) {
+            for (AssessmentGenerationSchema.QuestionSchema q : session.questions) {
+                clientQuestions.add(sanitizeQuestion(q));
             }
-            qMap.put("options", clientOptions);
-            clientQuestions.add(qMap);
         }
 
         Map<String, Object> response = new HashMap<>();
@@ -130,10 +141,149 @@ public class ProctoredExamController {
         response.put("domain", domain);
         response.put("durationMinutes", durationMinutes);
         response.put("markingScheme", markingScheme);
+        response.put("totalTargetQuestions", totalTargetQuestions);
+        response.put("isGenerating", session.isGenerating);
         response.put("startTime", Instant.now().toString());
         response.put("questions", clientQuestions);
 
         return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/{sessionId}/questions")
+    public ResponseEntity<Map<String, Object>> getExamQuestions(@PathVariable String sessionId) {
+        ExamSessionState session = sessions.get(sessionId);
+        if (session == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        List<Map<String, Object>> clientQuestions = new ArrayList<>();
+        synchronized (session.questions) {
+            for (AssessmentGenerationSchema.QuestionSchema q : session.questions) {
+                clientQuestions.add(sanitizeQuestion(q));
+            }
+        }
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("sessionId", sessionId);
+        response.put("totalTargetQuestions", session.totalTargetQuestions);
+        response.put("isGenerating", session.isGenerating);
+        response.put("questions", clientQuestions);
+
+        return ResponseEntity.ok(response);
+    }
+
+    private Map<String, Object> sanitizeQuestion(AssessmentGenerationSchema.QuestionSchema q) {
+        Map<String, Object> qMap = new HashMap<>();
+        qMap.put("id", q.getId());
+        qMap.put("topicTag", q.getTopicTag());
+        qMap.put("questionText", q.getQuestionText());
+        qMap.put("type", q.getType());
+
+        List<Map<String, Object>> clientOptions = new ArrayList<>();
+        if (q.getOptions() != null) {
+            for (AssessmentGenerationSchema.OptionSchema opt : q.getOptions()) {
+                Map<String, Object> optMap = new HashMap<>();
+                optMap.put("id", opt.getId());
+                optMap.put("text", opt.getText());
+                clientOptions.add(optMap);
+            }
+        }
+        qMap.put("options", clientOptions);
+        return qMap;
+    }
+
+    private void generateRemainingBatches(ExamSessionState session, int targetMcq, int targetSubjective, int totalTargetQuestions) {
+        try {
+            while (session.questions.size() < totalTargetQuestions) {
+                int currentTotal = session.questions.size();
+                int currentMcq = 0;
+                int currentSubjective = 0;
+                synchronized (session.questions) {
+                    for (AssessmentGenerationSchema.QuestionSchema q : session.questions) {
+                        if ("subjective".equalsIgnoreCase(q.getType())) {
+                            currentSubjective++;
+                        } else {
+                            currentMcq++;
+                        }
+                    }
+                }
+
+                int remainingMcq = Math.max(0, targetMcq - currentMcq);
+                int remainingSubjective = Math.max(0, targetSubjective - currentSubjective);
+                int remainingTotal = totalTargetQuestions - currentTotal;
+                if (remainingTotal <= 0) break;
+
+                int batchSize = Math.min(5, remainingTotal);
+                int batchMcq = Math.min(remainingMcq, Math.min(3, batchSize));
+                int batchSubjective = Math.min(remainingSubjective, batchSize - batchMcq);
+                if (batchMcq + batchSubjective < batchSize && remainingMcq > batchMcq) {
+                    batchMcq = Math.min(remainingMcq, batchSize - batchSubjective);
+                }
+                if (batchMcq + batchSubjective == 0) {
+                    if (remainingMcq > 0) batchMcq = Math.min(remainingMcq, batchSize);
+                    else batchSubjective = Math.min(remainingSubjective, batchSize);
+                }
+
+                // Build deduplication summary of existing questions
+                StringBuilder dedupContext = new StringBuilder();
+                synchronized (session.questions) {
+                    for (AssessmentGenerationSchema.QuestionSchema q : session.questions) {
+                        String summary = q.getQuestionText().length() > 70
+                                ? q.getQuestionText().substring(0, 70) + "..."
+                                : q.getQuestionText();
+                        dedupContext.append("- [").append(q.getType()).append("] ")
+                                .append(q.getTopicTag()).append(": ").append(summary).append("\n");
+                    }
+                }
+
+                String prompt = "University Capstone Examination for course: " + session.courseTitle +
+                        " (Domain: " + session.domain + "). " +
+                        "Continuation Batch: Generate exactly " + batchMcq + " new MCQs (Section A) and " +
+                        batchSubjective + " new Subjective Architecture & Implementation problems (Section B) totaling " +
+                        (batchMcq + batchSubjective) + " questions.\n" +
+                        "CRITICAL DEDUPLICATION RULE: Do NOT duplicate, repeat, or closely paraphrase any of the following questions already in the exam:\n" +
+                        dedupContext +
+                        "\nProvide distinct advanced architectural scenarios, protocols, failure modes, and code implementations.";
+
+                boolean batchAdded = false;
+                try {
+                    AssessmentGenerationSchema schema = assessmentAiService.generateAssessment(prompt);
+                    if (schema != null && schema.getQuestions() != null && !schema.getQuestions().isEmpty()) {
+                        synchronized (session.questions) {
+                            for (AssessmentGenerationSchema.QuestionSchema q : schema.getQuestions()) {
+                                if (session.questions.size() >= totalTargetQuestions) break;
+                                q.setId("q_" + (session.questions.size() + 1));
+                                session.questions.add(q);
+                                batchAdded = true;
+                            }
+                        }
+                    }
+                } catch (Exception e) {
+                    System.err.println("Error generating background question batch: " + e.getMessage());
+                }
+
+                if (!batchAdded) {
+                    // Fallback fill from curated bank for the remaining questions
+                    List<AssessmentGenerationSchema.QuestionSchema> fallbackAll = createCurriculumFallbackQuestions(session.courseTitle, targetMcq, targetSubjective);
+                    synchronized (session.questions) {
+                        for (AssessmentGenerationSchema.QuestionSchema fbQ : fallbackAll) {
+                            if (session.questions.size() >= totalTargetQuestions) break;
+                            boolean alreadyExists = session.questions.stream()
+                                    .anyMatch(existing -> existing.getQuestionText().equalsIgnoreCase(fbQ.getQuestionText()));
+                            if (!alreadyExists) {
+                                fbQ.setId("q_" + (session.questions.size() + 1));
+                                session.questions.add(fbQ);
+                            }
+                        }
+                    }
+                    break;
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Fatal exception in generateRemainingBatches: " + e.getMessage());
+        } finally {
+            session.isGenerating = false;
+        }
     }
 
     @PostMapping("/{sessionId}/telemetry")
@@ -142,7 +292,7 @@ public class ProctoredExamController {
             @RequestBody(required = false) Map<String, Object> payload) {
         ExamSessionState session = sessions.get(sessionId);
         if (session == null) {
-            session = new ExamSessionState(sessionId, "ws-active", "Active Course", "Engineering", 15, "HYBRID_UNIVERSITY", List.of());
+            session = new ExamSessionState(sessionId, "ws-active", "Active Course", "Engineering", 15, "HYBRID_UNIVERSITY", 5, List.of());
             sessions.put(sessionId, session);
         }
 
@@ -173,7 +323,7 @@ public class ProctoredExamController {
             @RequestBody(required = false) Map<String, Object> payload) {
         ExamSessionState session = sessions.get(sessionId);
         if (session == null) {
-            session = new ExamSessionState(sessionId, "ws-active", "Capstone Course", "Engineering", 15, "HYBRID_UNIVERSITY", List.of());
+            session = new ExamSessionState(sessionId, "ws-active", "Capstone Course", "Engineering", 15, "HYBRID_UNIVERSITY", 5, List.of());
             sessions.put(sessionId, session);
         }
 
@@ -783,21 +933,26 @@ public class ProctoredExamController {
         final String domain;
         final int durationMinutes;
         final String markingScheme;
-        final List<AssessmentGenerationSchema.QuestionSchema> questions;
+        final int totalTargetQuestions;
+        volatile boolean isGenerating = false;
+        final List<AssessmentGenerationSchema.QuestionSchema> questions = Collections.synchronizedList(new ArrayList<>());
         double trustScore = 100.0;
         int strikeCount = 0;
         final List<Object> violations = new ArrayList<>();
 
         ExamSessionState(String sessionId, String workspaceId, String courseTitle, String domain,
-                         int durationMinutes, String markingScheme,
-                         List<AssessmentGenerationSchema.QuestionSchema> questions) {
+                         int durationMinutes, String markingScheme, int totalTargetQuestions,
+                         List<AssessmentGenerationSchema.QuestionSchema> initialQuestions) {
             this.sessionId = sessionId;
             this.workspaceId = workspaceId;
             this.courseTitle = courseTitle;
             this.domain = domain;
             this.durationMinutes = durationMinutes;
             this.markingScheme = markingScheme;
-            this.questions = questions;
+            this.totalTargetQuestions = totalTargetQuestions;
+            if (initialQuestions != null) {
+                this.questions.addAll(initialQuestions);
+            }
         }
     }
 }

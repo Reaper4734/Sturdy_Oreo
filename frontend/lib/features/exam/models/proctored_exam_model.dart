@@ -147,6 +147,8 @@ class ExamSessionModel {
   final Set<String> flaggedQuestionIds;
   final MarkingScheme markingScheme;
   final int passingPercent;
+  int totalTargetQuestions;
+  bool isGenerating;
   double trustScore;
   int strikeCount;
   final List<ExamViolation> violations;
@@ -161,6 +163,8 @@ class ExamSessionModel {
     this.durationMinutes = 15,
     required this.startTime,
     required this.questions,
+    int? totalTargetQuestions,
+    this.isGenerating = false,
     Map<String, String>? userAnswers,
     Set<String>? flaggedQuestionIds,
     this.markingScheme = MarkingScheme.hybridUniversity,
@@ -170,7 +174,8 @@ class ExamSessionModel {
     List<ExamViolation>? violations,
     this.isCompleted = false,
     this.isDisqualified = false,
-  })  : userAnswers = userAnswers ?? {},
+  })  : totalTargetQuestions = totalTargetQuestions ?? questions.length,
+        userAnswers = userAnswers ?? {},
         flaggedQuestionIds = flaggedQuestionIds ?? {},
         violations = violations ?? [];
 
