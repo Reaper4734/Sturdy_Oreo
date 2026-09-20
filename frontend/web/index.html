@@ -116,6 +116,7 @@
         if (!this.onBiometricsUpdate) return;
 
         if (!results || !results.multiFaceLandmarks || results.multiFaceLandmarks.length === 0) {
+          this.closedEyesStartTime = null;
           this.onBiometricsUpdate({
             status: 'NO_FACE',
             faceCount: 0,
@@ -123,6 +124,9 @@
             yaw: 0.0,
             pitch: 0.0,
             gaze: 0.0,
+            verticalGaze: 0.0,
+            ear: 0.0,
+            isBlinking: false,
             box: null,
             landmarks: []
           });
@@ -131,6 +135,7 @@
 
         var faceCount = results.multiFaceLandmarks.length;
         if (faceCount > 1) {
+          this.closedEyesStartTime = null;
           this.onBiometricsUpdate({
             status: 'MULTIPLE_FACES',
             faceCount: faceCount,
@@ -138,6 +143,9 @@
             yaw: 0.0,
             pitch: 0.0,
             gaze: 0.0,
+            verticalGaze: 0.0,
+            ear: 0.28,
+            isBlinking: false,
             box: null,
             landmarks: []
           });
@@ -165,32 +173,95 @@
         var nose = lm[1] || lm[4];
         var forehead = lm[10];
         var chin = lm[152];
-        var leftEye = lm[33];
-        var rightEye = lm[263];
-        var leftIris = lm[468] || leftEye;
-        var rightIris = lm[473] || rightEye;
+        var leftOuter = lm[33];
+        var leftInner = lm[133];
+        var leftTop = lm[159];
+        var leftBottom = lm[145];
+        var leftIris = lm[468] || leftOuter;
+
+        var rightInner = lm[362];
+        var rightOuter = lm[263];
+        var rightTop = lm[386];
+        var rightBottom = lm[374];
+        var rightIris = lm[473] || rightOuter;
         var mouth = lm[13] || lm[14];
 
-        // Head Pose Yaw & Pitch
-        var midEyeX = (leftEye.x + rightEye.x) / 2.0;
-        var eyeDist = Math.abs(rightEye.x - leftEye.x) || 0.1;
-        var yaw = ((nose.x - midEyeX) / eyeDist) * 75.0; // In degrees
+        // 1. Eye Aspect Ratio (EAR) for Blink & Closed Eye Detection
+        var leftEyeWidth = Math.hypot(leftInner.x - leftOuter.x, leftInner.y - leftOuter.y) || 0.04;
+        var leftEyeHeight = Math.hypot(leftTop.x - leftBottom.x, leftTop.y - leftBottom.y) || 0.01;
+        var leftEAR = leftEyeHeight / leftEyeWidth;
+
+        var rightEyeWidth = Math.hypot(rightOuter.x - rightInner.x, rightOuter.y - rightInner.y) || 0.04;
+        var rightEyeHeight = Math.hypot(rightTop.x - rightBottom.x, rightTop.y - rightBottom.y) || 0.01;
+        var rightEAR = rightEyeHeight / rightEyeWidth;
+
+        var avgEAR = (leftEAR + rightEAR) / 2.0;
+        var isBlinking = avgEAR < 0.165;
+
+        var nowMs = Date.now();
+        if (isBlinking) {
+          if (!this.closedEyesStartTime) {
+            this.closedEyesStartTime = nowMs;
+          }
+        } else {
+          this.closedEyesStartTime = null;
+        }
+        var closedDuration = this.closedEyesStartTime ? (nowMs - this.closedEyesStartTime) : 0;
+
+        // 2. Head Pose Yaw & Pitch Calculation
+        var midEyeX = (leftOuter.x + rightOuter.x) / 2.0;
+        var eyeDist = Math.abs(rightOuter.x - leftOuter.x) || 0.1;
+        var rawYaw = ((nose.x - midEyeX) / eyeDist) * 75.0; // In degrees
 
         var faceHeight = Math.abs(chin.y - forehead.y) || 0.2;
-        var midEyeY = (leftEye.y + rightEye.y) / 2.0;
-        var pitch = (((nose.y - midEyeY) / faceHeight) - 0.38) * 90.0; // In degrees
+        var midEyeY = (leftOuter.y + rightOuter.y) / 2.0;
+        var rawPitch = (((nose.y - midEyeY) / faceHeight) - 0.38) * 90.0; // In degrees
 
-        // Iris Gaze Vector
-        var leftInner = lm[133] || leftEye;
-        var rightInner = lm[362] || rightEye;
-        var leftEyeSpan = Math.abs(leftInner.x - leftEye.x) || 0.04;
-        var leftGaze = (leftIris.x - (leftEye.x + leftInner.x) / 2.0) / leftEyeSpan;
-        var rightEyeSpan = Math.abs(rightEye.x - rightInner.x) || 0.04;
-        var rightGaze = (rightIris.x - (rightInner.x + rightEye.x) / 2.0) / rightEyeSpan;
-        var gazeOffset = (leftGaze + rightGaze) / 2.0;
+        // 3. Iris Gaze Deviation (Eyes Away)
+        var leftGazeH = ((leftIris.x - leftOuter.x) / (leftInner.x - leftOuter.x + 0.0001) - 0.5) * 2.0;
+        var rightGazeH = ((rightIris.x - rightInner.x) / (rightOuter.x - rightInner.x + 0.0001) - 0.5) * 2.0;
+        var rawGazeH = (leftGazeH + rightGazeH) / 2.0;
 
-        var isAttentionDrift = Math.abs(yaw) > 22.0 || Math.abs(pitch) > 20.0 || Math.abs(gazeOffset) > 0.40;
-        var status = isAttentionDrift ? 'ATTENTION_DRIFT' : 'LOCKED_SINGLE';
+        var leftGazeV = ((leftIris.y - leftTop.y) / (leftBottom.y - leftTop.y + 0.0001) - 0.5) * 2.0;
+        var rightGazeV = ((rightIris.y - rightTop.y) / (rightBottom.y - rightTop.y + 0.0001) - 0.5) * 2.0;
+        var rawGazeV = (leftGazeV + rightGazeV) / 2.0;
+
+        // EMA Temporal Smoothing to prevent single-frame false alerts
+        if (this.smoothedYaw === undefined) {
+          this.smoothedYaw = rawYaw;
+          this.smoothedPitch = rawPitch;
+          this.smoothedGazeH = rawGazeH;
+          this.smoothedGazeV = rawGazeV;
+        } else {
+          this.smoothedYaw = this.smoothedYaw * 0.65 + rawYaw * 0.35;
+          this.smoothedPitch = this.smoothedPitch * 0.65 + rawPitch * 0.35;
+          this.smoothedGazeH = this.smoothedGazeH * 0.65 + rawGazeH * 0.35;
+          this.smoothedGazeV = this.smoothedGazeV * 0.65 + rawGazeV * 0.35;
+        }
+
+        var yaw = this.smoothedYaw;
+        var pitch = this.smoothedPitch;
+        var gazeH = this.smoothedGazeH;
+        var gazeV = this.smoothedGazeV;
+
+        var isHeadAway = Math.abs(yaw) > 22.0 || Math.abs(pitch) > 20.0;
+        var isEyesAway = Math.abs(gazeH) > 0.38 || Math.abs(gazeV) > 0.45;
+
+        // 4. Biometric Status Mapping
+        var status = 'LOCKED_SINGLE';
+        if (isBlinking) {
+          if (closedDuration > 2500) {
+            status = 'EYES_CLOSED_SUSTAINED';
+          } else {
+            status = 'BLINKING'; // Normal natural blink (Nominal)
+          }
+        } else if (isHeadAway) {
+          status = 'HEAD_TURNED_AWAY'; // Face turned away
+        } else if (isEyesAway) {
+          status = 'EYES_LOOKING_AWAY'; // Eyes deviated from screen
+        } else {
+          status = 'LOCKED_SINGLE'; // Centered & locked
+        }
 
         // Extract 32 curated landmark structural points for Flutter Web HUD mesh
         var sampleIndices = [
@@ -216,15 +287,18 @@
           confidence: 0.992,
           yaw: yaw,
           pitch: pitch,
-          gaze: gazeOffset,
+          gaze: gazeH,
+          verticalGaze: gazeV,
+          ear: avgEAR,
+          isBlinking: isBlinking,
           box: {
             x: boxLeft,
             y: boxTop,
             w: boxWidth,
             h: boxHeight
           },
-          leftEye: { x: 1.0 - leftEye.x, y: leftEye.y },
-          rightEye: { x: 1.0 - rightEye.x, y: rightEye.y },
+          leftEye: { x: 1.0 - leftOuter.x, y: leftOuter.y },
+          rightEye: { x: 1.0 - rightOuter.x, y: rightOuter.y },
           leftIris: { x: 1.0 - leftIris.x, y: leftIris.y },
           rightIris: { x: 1.0 - rightIris.x, y: rightIris.y },
           nose: { x: 1.0 - nose.x, y: nose.y },

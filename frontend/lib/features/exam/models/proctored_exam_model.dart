@@ -15,10 +15,13 @@ enum ViolationType {
 }
 
 enum FacePresenceStatus {
-  lockedSingle,       // 1 face detected, centered & locked (Nominal)
+  lockedSingle,       // 1 face detected, centered & focused on screen (Nominal)
+  blinking,           // Natural eye blink detected (Allowed, non-violating)
+  eyesLookingAway,    // Iris gaze deviated sideways / away from screen
+  headTurnedAway,     // Head pose off-axis (yaw / pitch)
+  eyesClosedSustained,// Eyes closed for sustained duration (>2.5s)
   noFaceDetected,     // Face absent or camera occluded
   multipleFaces,      // 2 or more individuals detected
-  attentionDrift,     // Off-axis head turn / gaze drift
 }
 
 class BiometricLandmark {
@@ -44,6 +47,9 @@ class BiometricTelemetry {
   final double headYaw;
   final double headPitch;
   final double gazeOffset;
+  final double verticalGazeOffset;
+  final double eyeAspectRatio;
+  final bool isBlinking;
   final double audioDb;
   final List<double> audioWaveform;
   final List<BiometricLandmark> landmarks;
@@ -63,13 +69,22 @@ class BiometricTelemetry {
     this.headYaw = 0.0,
     this.headPitch = 0.0,
     this.gazeOffset = 0.0,
+    this.verticalGazeOffset = 0.0,
+    this.eyeAspectRatio = 0.28,
+    this.isBlinking = false,
     this.audioDb = 32.0,
     this.audioWaveform = const [],
     this.landmarks = const [],
   });
 
-  bool get isNominal => status == FacePresenceStatus.lockedSingle;
-  bool get isAlert => status != FacePresenceStatus.lockedSingle && isCameraActive;
+  bool get isNominal => status == FacePresenceStatus.lockedSingle || status == FacePresenceStatus.blinking;
+  bool get isAlert => isCameraActive && (
+    status == FacePresenceStatus.noFaceDetected ||
+    status == FacePresenceStatus.multipleFaces ||
+    status == FacePresenceStatus.eyesLookingAway ||
+    status == FacePresenceStatus.headTurnedAway ||
+    status == FacePresenceStatus.eyesClosedSustained
+  );
 }
 
 enum ExamIntegrityTier {

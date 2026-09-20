@@ -90,6 +90,14 @@ class ExamAntiCheatSentinel with WidgetsBindingObserver {
 
     final now = DateTime.now();
 
+    // Natural blinking or nominal focus resets all drift and closed eye timers
+    if (telemetry.status == FacePresenceStatus.blinking || telemetry.status == FacePresenceStatus.lockedSingle) {
+      _absenceStartTime = null;
+      _multipleFacesStartTime = null;
+      _driftStartTime = null;
+      return;
+    }
+
     // 1. Absence Detection (> 3.5s sustained)
     if (telemetry.status == FacePresenceStatus.noFaceDetected) {
       _absenceStartTime ??= now;
@@ -126,21 +134,57 @@ class ExamAntiCheatSentinel with WidgetsBindingObserver {
       _multipleFacesStartTime = null;
     }
 
-    // 3. Sustained Attention Drift / Gaze Deviation (> 5.0s sustained)
-    if (telemetry.status == FacePresenceStatus.attentionDrift) {
+    // 3. Eyes Looking Away / Off-Screen Iris Gaze (> 4.0s sustained)
+    if (telemetry.status == FacePresenceStatus.eyesLookingAway) {
       _driftStartTime ??= now;
-      if (now.difference(_driftStartTime!).inMilliseconds >= 5000) {
+      if (now.difference(_driftStartTime!).inMilliseconds >= 4000) {
         if (_lastBiometricViolationTime == null || now.difference(_lastBiometricViolationTime!).inSeconds >= 6) {
           _lastBiometricViolationTime = now;
           _reportShortcutViolation(
             type: ViolationType.attentionDrift,
-            title: 'Sustained Gaze / Attention Deviation',
-            details: 'Gaze direction deviated significantly from test screen (Yaw: ${telemetry.headYaw.toStringAsFixed(0)}°, Pitch: ${telemetry.headPitch.toStringAsFixed(0)}°).',
+            title: 'Iris Gaze Deviation (Eyes Looking Away)',
+            details: 'Candidate gaze deviated sideways away from the test viewport (${(telemetry.gazeOffset * 100).abs().toStringAsFixed(0)}% horizontal offset).',
             penalty: 5.0,
           );
         }
       }
-    } else {
+    }
+
+    // 4. Head Turned Away / Off-Axis Head Pose (> 4.0s sustained)
+    if (telemetry.status == FacePresenceStatus.headTurnedAway) {
+      _driftStartTime ??= now;
+      if (now.difference(_driftStartTime!).inMilliseconds >= 4000) {
+        if (_lastBiometricViolationTime == null || now.difference(_lastBiometricViolationTime!).inSeconds >= 6) {
+          _lastBiometricViolationTime = now;
+          _reportShortcutViolation(
+            type: ViolationType.attentionDrift,
+            title: 'Head Pose Deviation (Face Turned Away)',
+            details: 'Head orientation turned off-screen (Yaw: ${telemetry.headYaw.toStringAsFixed(0)}°, Pitch: ${telemetry.headPitch.toStringAsFixed(0)}°).',
+            penalty: 5.0,
+          );
+        }
+      }
+    }
+
+    // 5. Sustained Eyes Closed (> 3.0s sustained)
+    if (telemetry.status == FacePresenceStatus.eyesClosedSustained) {
+      _driftStartTime ??= now;
+      if (now.difference(_driftStartTime!).inMilliseconds >= 3000) {
+        if (_lastBiometricViolationTime == null || now.difference(_lastBiometricViolationTime!).inSeconds >= 6) {
+          _lastBiometricViolationTime = now;
+          _reportShortcutViolation(
+            type: ViolationType.faceOcclusion,
+            title: 'Prolonged Eye Closure',
+            details: 'Eyes closed continuously for > 3.0 seconds (EAR: ${telemetry.eyeAspectRatio.toStringAsFixed(2)}).',
+            penalty: 5.0,
+          );
+        }
+      }
+    }
+
+    if (telemetry.status != FacePresenceStatus.eyesLookingAway &&
+        telemetry.status != FacePresenceStatus.headTurnedAway &&
+        telemetry.status != FacePresenceStatus.eyesClosedSustained) {
       _driftStartTime = null;
     }
   }

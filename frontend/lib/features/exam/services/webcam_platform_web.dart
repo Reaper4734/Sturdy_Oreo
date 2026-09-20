@@ -120,8 +120,14 @@ Widget createWebcamView({
                   FacePresenceStatus status;
                   if (statusStr == 'MULTIPLE_FACES') {
                     status = FacePresenceStatus.multipleFaces;
-                  } else if (statusStr == 'ATTENTION_DRIFT') {
-                    status = FacePresenceStatus.attentionDrift;
+                  } else if (statusStr == 'BLINKING') {
+                    status = FacePresenceStatus.blinking;
+                  } else if (statusStr == 'EYES_LOOKING_AWAY') {
+                    status = FacePresenceStatus.eyesLookingAway;
+                  } else if (statusStr == 'HEAD_TURNED_AWAY') {
+                    status = FacePresenceStatus.headTurnedAway;
+                  } else if (statusStr == 'EYES_CLOSED_SUSTAINED') {
+                    status = FacePresenceStatus.eyesClosedSustained;
                   } else if (statusStr == 'LOCKED_SINGLE') {
                     status = FacePresenceStatus.lockedSingle;
                   } else {
@@ -133,6 +139,9 @@ Widget createWebcamView({
                   final double yaw = (data['yaw'] as num?)?.toDouble() ?? 0.0;
                   final double pitch = (data['pitch'] as num?)?.toDouble() ?? 0.0;
                   final double gaze = (data['gaze'] as num?)?.toDouble() ?? 0.0;
+                  final double verticalGaze = (data['verticalGaze'] as num?)?.toDouble() ?? 0.0;
+                  final double ear = (data['ear'] as num?)?.toDouble() ?? 0.28;
+                  final bool isBlinking = data['isBlinking'] as bool? ?? false;
 
                   ui.Rect? box;
                   if (data['box'] != null) {
@@ -185,6 +194,9 @@ Widget createWebcamView({
                     headYaw: yaw,
                     headPitch: pitch,
                     gazeOffset: gaze,
+                    verticalGazeOffset: verticalGaze,
+                    eyeAspectRatio: ear,
+                    isBlinking: isBlinking,
                     audioDb: currentAudioDb,
                     audioWaveform: currentWaveform,
                     landmarks: landmarksList,
@@ -254,7 +266,7 @@ Widget createWebcamView({
                   );
 
                   final yaw = ((mirroredCx - 0.5) * 60.0).clamp(-45.0, 45.0);
-                  final status = yaw.abs() > 24.0 ? FacePresenceStatus.attentionDrift : FacePresenceStatus.lockedSingle;
+                  final status = yaw.abs() > 24.0 ? FacePresenceStatus.headTurnedAway : FacePresenceStatus.lockedSingle;
 
                   onBiometrics(BiometricTelemetry(
                     isCameraActive: true,

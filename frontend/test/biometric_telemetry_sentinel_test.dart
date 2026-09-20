@@ -5,8 +5,9 @@ import 'package:frontend/features/exam/services/exam_anti_cheat_sentinel.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
   group('BiometricTelemetry Model Tests', () {
-    test('Correctly determines nominal and alert status', () {
+    test('Correctly determines nominal and alert status including blinks', () {
       const nominal = BiometricTelemetry(
         isCameraActive: true,
         status: FacePresenceStatus.lockedSingle,
@@ -15,6 +16,44 @@ void main() {
       );
       expect(nominal.isNominal, isTrue);
       expect(nominal.isAlert, isFalse);
+
+      const blink = BiometricTelemetry(
+        isCameraActive: true,
+        status: FacePresenceStatus.blinking,
+        faceCount: 1,
+        isBlinking: true,
+        eyeAspectRatio: 0.12,
+      );
+      // Natural blink is NOMINAL and not an alert
+      expect(blink.isNominal, isTrue);
+      expect(blink.isAlert, isFalse);
+
+      const eyesAway = BiometricTelemetry(
+        isCameraActive: true,
+        status: FacePresenceStatus.eyesLookingAway,
+        faceCount: 1,
+        gazeOffset: 0.65,
+      );
+      expect(eyesAway.isNominal, isFalse);
+      expect(eyesAway.isAlert, isTrue);
+
+      const faceAway = BiometricTelemetry(
+        isCameraActive: true,
+        status: FacePresenceStatus.headTurnedAway,
+        faceCount: 1,
+        headYaw: 35.0,
+      );
+      expect(faceAway.isNominal, isFalse);
+      expect(faceAway.isAlert, isTrue);
+
+      const eyesClosed = BiometricTelemetry(
+        isCameraActive: true,
+        status: FacePresenceStatus.eyesClosedSustained,
+        faceCount: 1,
+        eyeAspectRatio: 0.08,
+      );
+      expect(eyesClosed.isNominal, isFalse);
+      expect(eyesClosed.isAlert, isTrue);
 
       const absence = BiometricTelemetry(
         isCameraActive: true,
@@ -31,18 +70,9 @@ void main() {
       );
       expect(multiple.isNominal, isFalse);
       expect(multiple.isAlert, isTrue);
-
-      const drift = BiometricTelemetry(
-        isCameraActive: true,
-        status: FacePresenceStatus.attentionDrift,
-        faceCount: 1,
-        headYaw: 30.0,
-      );
-      expect(drift.isNominal, isFalse);
-      expect(drift.isAlert, isTrue);
     });
 
-    test('Holds 3D landmarks and iris coordinates accurately', () {
+    test('Holds 3D landmarks, EAR, and iris coordinates accurately', () {
       const telemetry = BiometricTelemetry(
         isCameraActive: true,
         status: FacePresenceStatus.lockedSingle,
@@ -52,6 +82,9 @@ void main() {
         headYaw: 2.5,
         headPitch: -1.2,
         gazeOffset: 0.05,
+        verticalGazeOffset: -0.02,
+        eyeAspectRatio: 0.29,
+        isBlinking: false,
         landmarks: [
           BiometricLandmark(x: 0.5, y: 0.5, z: -0.1),
           BiometricLandmark(x: 0.3, y: 0.4, z: 0.0),
@@ -62,6 +95,8 @@ void main() {
       expect(telemetry.leftIris?.dx, equals(0.35));
       expect(telemetry.rightIris?.dx, equals(0.65));
       expect(telemetry.headYaw, equals(2.5));
+      expect(telemetry.eyeAspectRatio, equals(0.29));
+      expect(telemetry.isBlinking, isFalse);
     });
   });
 
@@ -89,6 +124,30 @@ void main() {
         status: FacePresenceStatus.noFaceDetected,
       ));
       expect(violations.isEmpty, isTrue);
+
+      sentinel.stopMonitoring();
+    });
+
+    test('Natural eye blinking does not trigger violation and resets drift timers', () {
+      final violations = <ExamViolation>[];
+      final sentinel = ExamAntiCheatSentinel(
+        onViolation: (v) => violations.add(v),
+        onStrike: (_, __) {},
+        onDisqualified: () {},
+      );
+
+      sentinel.startMonitoring();
+
+      sentinel.reportBiometricTelemetry(const BiometricTelemetry(
+        isCameraActive: true,
+        status: FacePresenceStatus.blinking,
+        faceCount: 1,
+        isBlinking: true,
+        eyeAspectRatio: 0.11,
+      ));
+
+      expect(violations.isEmpty, isTrue);
+      expect(sentinel.trustScore, equals(100.0));
 
       sentinel.stopMonitoring();
     });

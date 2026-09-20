@@ -54,10 +54,12 @@ class _WebcamProctorHudState extends State<WebcamProctorHud>
     final isAlert = widget.isViolating ||
         widget.strikeCount >= 2 ||
         _telemetry.status == FacePresenceStatus.multipleFaces ||
+        _telemetry.status == FacePresenceStatus.eyesClosedSustained ||
         (_telemetry.status == FacePresenceStatus.noFaceDetected && _telemetry.isCameraActive);
 
     final isWarning = widget.strikeCount == 1 ||
-        _telemetry.status == FacePresenceStatus.attentionDrift;
+        _telemetry.status == FacePresenceStatus.eyesLookingAway ||
+        _telemetry.status == FacePresenceStatus.headTurnedAway;
 
     final primaryHudColor = isAlert
         ? colors.accentRose
@@ -169,7 +171,7 @@ class _WebcamProctorHudState extends State<WebcamProctorHud>
               ),
             ),
 
-            // 6. Top Status Bar with Head Pose Radar
+            // 6. Top Status Bar with Head Pose & Gaze Radar
             Positioned(
               top: 8,
               left: 10,
@@ -204,7 +206,7 @@ class _WebcamProctorHudState extends State<WebcamProctorHud>
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  // Head Pose Compass Radar
+                  // Head Pose & Eye Gaze Compass Radar
                   _buildHeadPoseRadar(_telemetry, primaryHudColor, colors),
                 ],
               ),
@@ -249,24 +251,31 @@ class _WebcamProctorHudState extends State<WebcamProctorHud>
     switch (t.status) {
       case FacePresenceStatus.lockedSingle:
         return '3D MESH LOCKED (${t.confidencePercent.toStringAsFixed(1)}%)';
+      case FacePresenceStatus.blinking:
+        return 'BLINK [NOMINAL] (EAR ${t.eyeAspectRatio.toStringAsFixed(2)})';
+      case FacePresenceStatus.eyesLookingAway:
+        return 'EYES AWAY [${(t.gazeOffset * 100).abs().toStringAsFixed(0)}% GAZE DRIFT]';
+      case FacePresenceStatus.headTurnedAway:
+        return 'FACE AWAY [${t.headYaw.toStringAsFixed(0)}° YAW / ${t.headPitch.toStringAsFixed(0)}° PITCH]';
+      case FacePresenceStatus.eyesClosedSustained:
+        return 'ALERT: EYES CLOSED > 2.5s';
       case FacePresenceStatus.noFaceDetected:
         return 'ALERT: CANDIDATE ABSENT';
       case FacePresenceStatus.multipleFaces:
         return 'ALERT: ${t.faceCount} FACES DETECTED';
-      case FacePresenceStatus.attentionDrift:
-        return 'GAZE DRIFT: ${t.headYaw.toStringAsFixed(0)}° YAW';
     }
   }
 
   Widget _buildHeadPoseRadar(BiometricTelemetry t, Color primaryColor, AppColorsExtension colors) {
     final yaw = (t.headYaw / 45.0).clamp(-1.0, 1.0);
     final pitch = (t.headPitch / 30.0).clamp(-1.0, 1.0);
+    final gazeH = t.gazeOffset.clamp(-1.0, 1.0);
 
     return Tooltip(
-      message: '3D Head Pose & Gaze Vector: Yaw ${t.headYaw.toStringAsFixed(1)}°, Pitch ${t.headPitch.toStringAsFixed(1)}°',
+      message: 'Head Pose: Yaw ${t.headYaw.toStringAsFixed(1)}°, Pitch ${t.headPitch.toStringAsFixed(1)}° | Iris Gaze: ${(t.gazeOffset * 100).toStringAsFixed(0)}% | EAR: ${t.eyeAspectRatio.toStringAsFixed(2)}',
       child: Container(
-        width: 32,
-        height: 18,
+        width: 36,
+        height: 20,
         decoration: BoxDecoration(
           color: colors.bgCanvas.withValues(alpha: 0.8),
           borderRadius: BorderRadius.circular(4),
@@ -277,7 +286,7 @@ class _WebcamProctorHudState extends State<WebcamProctorHud>
           children: [
             // Center reticle
             Container(width: 2, height: 2, color: colors.fgSecondary.withValues(alpha: 0.4)),
-            // Gaze vector dot
+            // Head orientation dot
             Align(
               alignment: Alignment(yaw, pitch),
               child: Container(
@@ -289,6 +298,19 @@ class _WebcamProctorHudState extends State<WebcamProctorHud>
                 ),
               ),
             ),
+            // Iris Gaze Vector indicator (smaller cyan ring)
+            if (t.isNominal || t.status == FacePresenceStatus.eyesLookingAway)
+              Align(
+                alignment: Alignment(gazeH, pitch * 0.5),
+                child: Container(
+                  width: 2.5,
+                  height: 2.5,
+                  decoration: BoxDecoration(
+                    color: Colors.cyanAccent.withValues(alpha: 0.9),
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ),
           ],
         ),
       ),
@@ -478,17 +500,35 @@ class _MediaPipeFaceMeshPainter extends CustomPainter {
         }
       }
 
-      // 3. Iris Tracking Reticles (Left & Right 3D Irises)
-      if (telemetry.leftIris != null) {
-        final irisPx = Offset(telemetry.leftIris!.dx * size.width, telemetry.leftIris!.dy * size.height);
-        canvas.drawCircle(irisPx, 2.0, paintIris);
-        canvas.drawCircle(irisPx, 4.0, paintMesh);
-      }
+      // 3. Iris Tracking Reticles & Gaze Vectors
+      if (telemetry.isBlinking) {
+        // Subtle closed eyelid bar
+        if (telemetry.leftEye != null) {
+          final lPx = Offset(telemetry.leftEye!.dx * size.width, telemetry.leftEye!.dy * size.height);
+          canvas.drawLine(Offset(lPx.dx - 6, lPx.dy), Offset(lPx.dx + 6, lPx.dy), paintMesh);
+        }
+        if (telemetry.rightEye != null) {
+          final rPx = Offset(telemetry.rightEye!.dx * size.width, telemetry.rightEye!.dy * size.height);
+          canvas.drawLine(Offset(rPx.dx - 6, rPx.dy), Offset(rPx.dx + 6, rPx.dy), paintMesh);
+        }
+      } else {
+        if (telemetry.leftIris != null) {
+          final irisPx = Offset(telemetry.leftIris!.dx * size.width, telemetry.leftIris!.dy * size.height);
+          canvas.drawCircle(irisPx, 2.2, paintIris);
+          canvas.drawCircle(irisPx, 4.5, paintMesh);
+          // Gaze vector ray
+          final gazeVec = Offset(telemetry.gazeOffset * 8.0, telemetry.verticalGazeOffset * 6.0);
+          canvas.drawLine(irisPx, irisPx + gazeVec, paintMesh);
+        }
 
-      if (telemetry.rightIris != null) {
-        final irisPx = Offset(telemetry.rightIris!.dx * size.width, telemetry.rightIris!.dy * size.height);
-        canvas.drawCircle(irisPx, 2.0, paintIris);
-        canvas.drawCircle(irisPx, 4.0, paintMesh);
+        if (telemetry.rightIris != null) {
+          final irisPx = Offset(telemetry.rightIris!.dx * size.width, telemetry.rightIris!.dy * size.height);
+          canvas.drawCircle(irisPx, 2.2, paintIris);
+          canvas.drawCircle(irisPx, 4.5, paintMesh);
+          // Gaze vector ray
+          final gazeVec = Offset(telemetry.gazeOffset * 8.0, telemetry.verticalGazeOffset * 6.0);
+          canvas.drawLine(irisPx, irisPx + gazeVec, paintMesh);
+        }
       }
 
       // 4. Center Crosshair on Nose
