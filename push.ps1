@@ -1,10 +1,11 @@
 param (
-    [string]$Message = "Auto-commit updates"
+    [string]$Message = "Auto-commit updates",
+    [switch]$DeployEc2
 )
-$ErrorActionPreference = 'Stop'
-Push-Location $PSScriptRoot
-Write-Host "Pushing to git with message: '$Message'..."
-git add .
-git commit -m $Message
-git push
-Pop-Location
+
+if ($DeployEc2) {
+    & "$PSScriptRoot\deploy.ps1" -Message $Message
+} else {
+    & "$PSScriptRoot\deploy.ps1" -Message $Message -SkipEc2
+}
+
