@@ -62,18 +62,28 @@ class _WorkspaceGenerationInterstitialState extends State<WorkspaceGenerationInt
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
+    final isLight = Theme.of(context).brightness == Brightness.light;
+
     return Container(
-      color: AppColors.bgCanvas,
+      color: colors.bgCanvas,
       child: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 480),
           child: Container(
+            margin: const EdgeInsets.symmetric(horizontal: 20),
             padding: const EdgeInsets.all(32),
             decoration: BoxDecoration(
-              color: AppColors.bgSurface,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppColors.borderSubtle),
-              boxShadow: const [BoxShadow(color: Colors.black38, blurRadius: 20, offset: Offset(0, 10))],
+              color: colors.bgSurface,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: colors.borderSubtle),
+              boxShadow: [
+                BoxShadow(
+                  color: isLight ? Colors.black.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.4),
+                  blurRadius: 24,
+                  offset: const Offset(0, 10),
+                ),
+              ],
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -81,30 +91,35 @@ class _WorkspaceGenerationInterstitialState extends State<WorkspaceGenerationInt
               children: [
                 Row(
                   children: [
-                    const SizedBox(
-                      width: 20,
-                      height: 20,
+                    SizedBox(
+                      width: 22,
+                      height: 22,
                       child: CircularProgressIndicator(
                         strokeWidth: 2.5,
-                        valueColor: AlwaysStoppedAnimation<Color>(AppColors.accentPrimary),
+                        valueColor: AlwaysStoppedAnimation<Color>(colors.accentEmerald),
                       ),
                     ),
                     const SizedBox(width: 16),
                     Expanded(
                       child: Text(
                         'Generating Learning Space...',
-                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.fgPrimary),
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: colors.fgPrimary,
+                          letterSpacing: -0.2,
+                        ),
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 8),
                 Text(
                   'Tailoring "${widget.topicName}" to your exact experience level and goals.',
-                  style: const TextStyle(fontSize: 13, color: AppColors.fgSecondary),
+                  style: TextStyle(fontSize: 13, color: colors.fgSecondary, height: 1.4),
                 ),
                 const SizedBox(height: 24),
-                const Divider(height: 1, color: AppColors.borderSubtle),
+                Divider(height: 1, color: colors.borderSubtle),
                 const SizedBox(height: 20),
                 ...List.generate(_steps.length, (index) {
                   final isDone = index < _currentStep;
@@ -120,19 +135,24 @@ class _WorkspaceGenerationInterstitialState extends State<WorkspaceGenerationInt
                           height: 22,
                           decoration: BoxDecoration(
                             color: isDone
-                                ? AppColors.accentEmerald
-                                : (isCurrent ? AppColors.accentPrimary.withValues(alpha: 0.2) : AppColors.bgElevated),
+                                ? colors.accentEmerald
+                                : (isCurrent ? colors.accentEmerald.withValues(alpha: 0.15) : colors.bgElevated),
                             shape: BoxShape.circle,
-                            border: isCurrent ? Border.all(color: AppColors.accentPrimary, width: 2) : null,
+                            border: isCurrent
+                                ? Border.all(color: colors.accentEmerald, width: 2)
+                                : (isDone ? null : Border.all(color: colors.borderSubtle)),
                           ),
                           child: Center(
                             child: isDone
-                                ? const Icon(Icons.check_rounded, size: 14, color: Colors.black)
+                                ? const Icon(Icons.check_rounded, size: 14, color: Colors.white)
                                 : (isCurrent
                                     ? Container(
                                         width: 8,
                                         height: 8,
-                                        decoration: const BoxDecoration(color: AppColors.accentPrimary, shape: BoxShape.circle),
+                                        decoration: BoxDecoration(
+                                          color: colors.accentEmerald,
+                                          shape: BoxShape.circle,
+                                        ),
                                       )
                                     : const SizedBox.shrink()),
                           ),
@@ -142,10 +162,10 @@ class _WorkspaceGenerationInterstitialState extends State<WorkspaceGenerationInt
                           _steps[index],
                           style: TextStyle(
                             fontSize: 13,
-                            fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal,
+                            fontWeight: isCurrent ? FontWeight.w600 : FontWeight.normal,
                             color: isDone
-                                ? AppColors.fgPrimary
-                                : (isCurrent ? AppColors.accentPrimary : AppColors.fgSecondary.withValues(alpha: 0.6)),
+                                ? colors.fgPrimary
+                                : (isCurrent ? colors.accentEmerald : colors.fgSecondary.withValues(alpha: 0.7)),
                           ),
                         ),
                       ],

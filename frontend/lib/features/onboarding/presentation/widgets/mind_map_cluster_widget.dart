@@ -80,12 +80,14 @@ class _MindMapClusterWidgetState extends State<MindMapClusterWidget> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
+
     return KeyboardListener(
       focusNode: _keyboardFocusNode,
       autofocus: true,
       onKeyEvent: _handleKeyEvent,
       child: Container(
-        color: AppColors.bgCanvas,
+        color: colors.bgCanvas,
         child: InteractiveViewer(
           transformationController: _transformationController,
           minScale: 0.4,
@@ -99,8 +101,8 @@ class _MindMapClusterWidgetState extends State<MindMapClusterWidget> {
                 child: Padding(
                   padding: const EdgeInsets.all(100.0),
                   child: CustomPaint(
-                    painter: MindMapOutwardLinesPainter(rootNode: widget.cluster.rootNode),
-                    child: _buildNodeTreeWidget(widget.cluster.rootNode, const Offset(450, 400)),
+                    painter: MindMapOutwardLinesPainter(rootNode: widget.cluster.rootNode, lineColor: colors.borderSubtle),
+                    child: _buildNodeTreeWidget(context, widget.cluster.rootNode, const Offset(450, 400)),
                   ),
                 ),
               ),
@@ -112,7 +114,7 @@ class _MindMapClusterWidgetState extends State<MindMapClusterWidget> {
   }
 
   // Recursive Node Tree Render Widget
-  Widget _buildNodeTreeWidget(ConceptNode node, Offset centerOffset) {
+  Widget _buildNodeTreeWidget(BuildContext context, ConceptNode node, Offset centerOffset) {
     return SizedBox(
       width: 900,
       height: 800,
@@ -123,18 +125,18 @@ class _MindMapClusterWidgetState extends State<MindMapClusterWidget> {
           Positioned(
             left: centerOffset.dx - node.dynamicRadius,
             top: centerOffset.dy - node.dynamicRadius,
-            child: _buildNodeBubble(node),
+            child: _buildNodeBubble(context, node),
           ),
 
           // Render Child Nodes Radially (Depth 1)
-          if (node.isExpanded && node.children.isNotEmpty) ..._buildChildNodesRadially(node, centerOffset),
+          if (node.isExpanded && node.children.isNotEmpty) ..._buildChildNodesRadially(context, node, centerOffset),
         ],
       ),
     );
   }
 
   // Depth 1 Primary Children (Distributed 360 Degrees around Root)
-  List<Widget> _buildChildNodesRadially(ConceptNode parent, Offset parentCenter) {
+  List<Widget> _buildChildNodesRadially(BuildContext context, ConceptNode parent, Offset parentCenter) {
     final List<Widget> widgets = [];
     final int childCount = parent.children.length;
     const double radius = 210.0; // Increased radius to avoid overlap
@@ -149,20 +151,20 @@ class _MindMapClusterWidgetState extends State<MindMapClusterWidget> {
         Positioned(
           left: childX - child.dynamicRadius,
           top: childY - child.dynamicRadius,
-          child: _buildNodeBubble(child),
+          child: _buildNodeBubble(context, child),
         ),
       );
 
       // Depth 2 Sub-children (Radiating OUTWARDS in a fan arc centered on angle)
       if (child.isExpanded && child.children.isNotEmpty) {
-        widgets.addAll(_buildGrandChildrenOutward(child, Offset(childX, childY), angle));
+        widgets.addAll(_buildGrandChildrenOutward(context, child, Offset(childX, childY), angle));
       }
     }
     return widgets;
   }
 
   // Depth 2 Sub-children (Radiates OUTWARDS away from Central Root to prevent overlap)
-  List<Widget> _buildGrandChildrenOutward(ConceptNode parent, Offset parentCenter, double baseAngle) {
+  List<Widget> _buildGrandChildrenOutward(BuildContext context, ConceptNode parent, Offset parentCenter, double baseAngle) {
     final List<Widget> widgets = [];
     final int childCount = parent.children.length;
     const double subRadius = 110.0;
@@ -181,7 +183,7 @@ class _MindMapClusterWidgetState extends State<MindMapClusterWidget> {
         Positioned(
           left: childX - child.dynamicRadius,
           top: childY - child.dynamicRadius,
-          child: _buildNodeBubble(child),
+          child: _buildNodeBubble(context, child),
         ),
       );
     }
@@ -189,9 +191,11 @@ class _MindMapClusterWidgetState extends State<MindMapClusterWidget> {
   }
 
   // Overflow-Free Node Bubble Component
-  Widget _buildNodeBubble(ConceptNode node) {
+  Widget _buildNodeBubble(BuildContext context, ConceptNode node) {
+    final colors = context.colors;
     final double r = node.dynamicRadius;
     final bool isRoot = node.depthLevel == 0;
+    final isLight = Theme.of(context).brightness == Brightness.light;
 
     return InkWell(
       onTap: () => _toggleNode(node),
@@ -204,19 +208,21 @@ class _MindMapClusterWidgetState extends State<MindMapClusterWidget> {
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           color: isRoot
-              ? AppColors.accentPrimary
+              ? colors.accentPrimary
               : (node.isTerminal
-                  ? AppColors.accentEmerald.withValues(alpha: 0.2)
-                  : (node.isExpanded ? AppColors.bgElevated : AppColors.bgSurface)),
+                  ? colors.accentEmerald.withValues(alpha: 0.15)
+                  : (node.isExpanded ? colors.bgElevated : colors.bgSurface)),
           border: Border.all(
             color: isRoot
-                ? AppColors.accentPrimary
-                : (node.isTerminal ? AppColors.accentEmerald : (node.isExpanded ? AppColors.borderActive : AppColors.borderSubtle)),
+                ? colors.accentPrimary
+                : (node.isTerminal ? colors.accentEmerald : (node.isExpanded ? colors.borderActive : colors.borderSubtle)),
             width: isRoot ? 3 : 1.5,
           ),
           boxShadow: [
             BoxShadow(
-              color: isRoot ? AppColors.accentPrimary.withValues(alpha: 0.25) : Colors.black.withValues(alpha: 0.3),
+              color: isRoot
+                  ? colors.accentPrimary.withValues(alpha: 0.25)
+                  : (isLight ? Colors.black.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.3)),
               blurRadius: isRoot ? 16 : 8,
               offset: const Offset(0, 4),
             ),
@@ -228,7 +234,7 @@ class _MindMapClusterWidgetState extends State<MindMapClusterWidget> {
             mainAxisSize: MainAxisSize.min, // Prevents RenderFlex overflow
             children: [
               if (node.isTerminal)
-                const Icon(Icons.play_circle_fill_rounded, size: 12, color: AppColors.accentEmerald),
+                Icon(Icons.play_circle_fill_rounded, size: 12, color: colors.accentEmerald),
               Flexible(
                 child: Text(
                   node.label,
@@ -238,7 +244,7 @@ class _MindMapClusterWidgetState extends State<MindMapClusterWidget> {
                   style: TextStyle(
                     fontSize: isRoot ? 12 : (node.depthLevel == 1 ? 10 : 8.5),
                     fontWeight: isRoot ? FontWeight.bold : FontWeight.w600,
-                    color: isRoot ? Colors.black : AppColors.fgPrimary,
+                    color: isRoot ? colors.fgInverse : colors.fgPrimary,
                     height: 1.1,
                   ),
                 ),
@@ -254,13 +260,14 @@ class _MindMapClusterWidgetState extends State<MindMapClusterWidget> {
 // Outward Lines Painter for Radial Node Tree
 class MindMapOutwardLinesPainter extends CustomPainter {
   final ConceptNode rootNode;
+  final Color lineColor;
 
-  MindMapOutwardLinesPainter({required this.rootNode});
+  MindMapOutwardLinesPainter({required this.rootNode, required this.lineColor});
 
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = AppColors.borderSubtle
+      ..color = lineColor
       ..strokeWidth = 1.5
       ..style = PaintingStyle.stroke;
 

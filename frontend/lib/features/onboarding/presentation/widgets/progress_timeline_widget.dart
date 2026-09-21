@@ -14,26 +14,28 @@ class ProgressTimelineWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
+
     return Container(
-      color: AppColors.bgCanvas,
+      color: colors.bgCanvas,
       padding: const EdgeInsets.all(24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            children: const [
-              Icon(Icons.timeline_rounded, color: AppColors.accentEmerald, size: 22),
-              SizedBox(width: 8),
+            children: [
+              Icon(Icons.timeline_rounded, color: colors.accentEmerald, size: 22),
+              const SizedBox(width: 8),
               Text(
                 'Mastery Progress Map (Timeline View)',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.fgPrimary),
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: colors.fgPrimary),
               ),
             ],
           ),
           const SizedBox(height: 6),
-          const Text(
+          Text(
             'Top-to-bottom milestone roadmap tracking your active focus, completed modules, and upcoming capstones.',
-            style: TextStyle(fontSize: 13, color: AppColors.fgSecondary),
+            style: TextStyle(fontSize: 13, color: colors.fgSecondary),
           ),
           const SizedBox(height: 24),
 
@@ -60,7 +62,7 @@ class ProgressTimelineWidget extends StatelessWidget {
                             Container(
                               width: 2,
                               height: 16,
-                              color: isFirst ? Colors.transparent : AppColors.borderSubtle,
+                              color: isFirst ? Colors.transparent : colors.borderSubtle,
                             ),
                             Container(
                               width: 24,
@@ -68,12 +70,12 @@ class ProgressTimelineWidget extends StatelessWidget {
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
                                 color: isCompleted
-                                    ? AppColors.accentEmerald
-                                    : (isActive ? AppColors.accentPrimary : AppColors.bgSurface),
+                                    ? colors.accentEmerald
+                                    : (isActive ? colors.accentEmerald : colors.bgSurface),
                                 border: Border.all(
                                   color: isCompleted
-                                      ? AppColors.accentEmerald
-                                      : (isActive ? AppColors.accentPrimary : AppColors.borderSubtle),
+                                      ? colors.accentEmerald
+                                      : (isActive ? colors.accentEmerald : colors.borderSubtle),
                                   width: 2,
                                 ),
                               ),
@@ -82,13 +84,13 @@ class ProgressTimelineWidget extends StatelessWidget {
                                     ? Icons.check_rounded
                                     : (isActive ? Icons.play_arrow_rounded : Icons.lock_outline_rounded),
                                 size: 12,
-                                color: isCompleted || isActive ? Colors.black : AppColors.fgSecondary,
+                                color: isCompleted || isActive ? Colors.white : colors.fgSecondary,
                               ),
                             ),
                             Expanded(
                               child: Container(
                                 width: 2,
-                                color: isLast ? Colors.transparent : AppColors.borderSubtle,
+                                color: isLast ? Colors.transparent : colors.borderSubtle,
                               ),
                             ),
                           ],
@@ -102,16 +104,16 @@ class ProgressTimelineWidget extends StatelessWidget {
                           margin: const EdgeInsets.only(bottom: 16),
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: AppColors.bgSurface,
+                            color: colors.bgSurface,
                             borderRadius: BorderRadius.circular(14),
                             border: Border.all(
-                              color: isActive ? AppColors.borderActive : AppColors.borderSubtle,
+                              color: isActive ? colors.accentEmerald : colors.borderSubtle,
                               width: isActive ? 1.5 : 1.0,
                             ),
                             boxShadow: isActive
                                 ? [
                                     BoxShadow(
-                                      color: AppColors.accentPrimary.withValues(alpha: 0.1),
+                                      color: colors.accentEmerald.withValues(alpha: 0.1),
                                       blurRadius: 12,
                                       offset: const Offset(0, 4),
                                     ),
@@ -126,13 +128,13 @@ class ProgressTimelineWidget extends StatelessWidget {
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                     decoration: BoxDecoration(
-                                      color: AppColors.bgElevated,
+                                      color: colors.bgElevated,
                                       borderRadius: BorderRadius.circular(6),
-                                      border: Border.all(color: AppColors.borderSubtle),
+                                      border: Border.all(color: colors.borderSubtle),
                                     ),
                                     child: Text(
                                       node.dayRange,
-                                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.fgAccent),
+                                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: colors.fgAccent),
                                     ),
                                   ),
                                   const Spacer(),
@@ -140,8 +142,8 @@ class ProgressTimelineWidget extends StatelessWidget {
                                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                     decoration: BoxDecoration(
                                       color: isCompleted
-                                          ? AppColors.accentEmerald.withValues(alpha: 0.15)
-                                          : (isActive ? AppColors.accentPrimary.withValues(alpha: 0.15) : AppColors.bgElevated),
+                                          ? colors.accentEmerald.withValues(alpha: 0.15)
+                                          : (isActive ? colors.accentEmerald.withValues(alpha: 0.15) : colors.bgElevated),
                                       borderRadius: BorderRadius.circular(10),
                                     ),
                                     child: Text(
@@ -150,8 +152,8 @@ class ProgressTimelineWidget extends StatelessWidget {
                                         fontSize: 10,
                                         fontWeight: FontWeight.bold,
                                         color: isCompleted
-                                            ? AppColors.accentEmerald
-                                            : (isActive ? AppColors.accentPrimary : AppColors.fgSecondary),
+                                            ? colors.accentEmerald
+                                            : (isActive ? colors.accentEmerald : colors.fgSecondary),
                                       ),
                                     ),
                                   ),
@@ -160,12 +162,12 @@ class ProgressTimelineWidget extends StatelessWidget {
                               const SizedBox(height: 10),
                               Text(
                                 node.title,
-                                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.fgPrimary),
+                                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: colors.fgPrimary),
                               ),
                               const SizedBox(height: 4),
                               Text(
                                 node.description,
-                                style: const TextStyle(fontSize: 13, color: AppColors.fgSecondary),
+                                style: TextStyle(fontSize: 13, color: colors.fgSecondary),
                               ),
                               const SizedBox(height: 12),
                               Wrap(
@@ -175,11 +177,11 @@ class ProgressTimelineWidget extends StatelessWidget {
                                   return Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                     decoration: BoxDecoration(
-                                      color: AppColors.bgCanvas,
+                                      color: colors.bgCanvas,
                                       borderRadius: BorderRadius.circular(6),
-                                      border: Border.all(color: AppColors.borderSubtle),
+                                      border: Border.all(color: colors.borderSubtle),
                                     ),
-                                    child: Text('# $t', style: const TextStyle(fontSize: 11, color: AppColors.fgSecondary)),
+                                    child: Text('# $t', style: TextStyle(fontSize: 11, color: colors.fgSecondary)),
                                   );
                                 }).toList(),
                               ),
@@ -188,11 +190,11 @@ class ProgressTimelineWidget extends StatelessWidget {
                                 alignment: Alignment.centerRight,
                                 child: OutlinedButton.icon(
                                   style: OutlinedButton.styleFrom(
-                                    side: const BorderSide(color: AppColors.borderSubtle),
+                                    side: BorderSide(color: colors.borderSubtle),
                                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                                   ),
-                                  icon: const Icon(Icons.play_arrow_rounded, size: 14, color: AppColors.fgPrimary),
-                                  label: const Text('Open Learning Lab', style: TextStyle(fontSize: 11, color: AppColors.fgPrimary)),
+                                  icon: Icon(Icons.play_arrow_rounded, size: 14, color: colors.fgPrimary),
+                                  label: Text('Open Learning Lab', style: TextStyle(fontSize: 11, color: colors.fgPrimary)),
                                   onPressed: () => onSelectModule(node.title),
                                 ),
                               ),
