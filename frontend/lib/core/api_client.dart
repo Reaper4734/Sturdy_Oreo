@@ -4,11 +4,11 @@ import 'package:http/http.dart' as http;
 class ApiClient {
   static const String baseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://localhost:8080/api',
+    defaultValue: 'https://oreo-api.duckdns.org/api',
   );
   static const String wsUrl = String.fromEnvironment(
     'WS_BASE_URL',
-    defaultValue: 'ws://localhost:8080/ws/orchestration',
+    defaultValue: 'wss://oreo-api.duckdns.org/ws/orchestration',
   );
   
   // Singleton pattern so token is shared across instances
