@@ -667,7 +667,7 @@ class _MicroInterviewScreenState extends ConsumerState<MicroInterviewScreen> {
                               spacing: 8,
                               runSpacing: 10,
                               children: effectiveOptions.map((opt) {
-                                final isNavCTA = opt.contains('➔') || opt.toLowerCase().contains('generate curriculum');
+                                final isNavCTA = opt.contains('➔') || opt.toLowerCase().contains('generate curriculum') || opt.toLowerCase().contains('build the plan');
 
                                 if (widget.isWorkspaceMode) {
                                   final activeWs = ref.watch(activeWorkspaceProvider);
@@ -684,15 +684,15 @@ class _MicroInterviewScreenState extends ConsumerState<MicroInterviewScreen> {
                                       : opt;
 
                                   return ActionChip(
-                                    backgroundColor: isNavCTA ? colors.accentEmerald.withValues(alpha: 0.15) : colors.bgSurface,
-                                    side: BorderSide(
-                                      color: isNavCTA ? colors.accentEmerald : colors.borderSubtle,
-                                    ),
+                                    avatar: isNavCTA ? Icon(Icons.auto_awesome_rounded, size: 14, color: colors.fgInverse) : null,
+                                    backgroundColor: isNavCTA ? colors.accentPrimary : colors.bgSurface,
+                                    side: isNavCTA ? BorderSide.none : BorderSide(color: colors.borderSubtle),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
                                     label: Text(
                                       label,
                                       style: TextStyle(
-                                        color: isNavCTA ? colors.accentEmerald : colors.fgPrimary,
-                                        fontWeight: isNavCTA ? FontWeight.bold : FontWeight.normal,
+                                        color: isNavCTA ? colors.fgInverse : colors.fgPrimary,
+                                        fontWeight: isNavCTA ? FontWeight.w600 : FontWeight.normal,
                                         fontSize: 13,
                                       ),
                                     ),
@@ -710,53 +710,33 @@ class _MicroInterviewScreenState extends ConsumerState<MicroInterviewScreen> {
                                   );
                                 }
 
-                                // Onboarding Interview Mode: Always render prominent CTA if isNavCTA
+                                // Onboarding Interview Mode
                                 if (isNavCTA) {
-                                  return Material(
-                                    color: Colors.transparent,
-                                    child: InkWell(
-                                      onTap: () {
-                                        setState(() {
-                                          _isGeneratingWorkspace = true;
-                                        });
-                                      },
-                                      borderRadius: BorderRadius.circular(14),
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                                        decoration: BoxDecoration(
-                                          color: colors.accentEmerald,
-                                          borderRadius: BorderRadius.circular(14),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: colors.accentEmerald.withValues(alpha: 0.35),
-                                              blurRadius: 10,
-                                              offset: const Offset(0, 3),
-                                            ),
-                                          ],
-                                        ),
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            const Icon(Icons.auto_awesome_rounded, color: Colors.black, size: 18),
-                                            const SizedBox(width: 8),
-                                            Text(
-                                              opt,
-                                              style: const TextStyle(
-                                                color: Colors.black,
-                                                fontWeight: FontWeight.bold,
-                                                fontSize: 14,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
+                                  return ActionChip(
+                                    avatar: Icon(Icons.auto_awesome_rounded, size: 14, color: colors.fgInverse),
+                                    backgroundColor: colors.accentPrimary,
+                                    side: BorderSide.none,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                                    label: Text(
+                                      opt,
+                                      style: TextStyle(
+                                        color: colors.fgInverse,
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 13,
                                       ),
                                     ),
+                                    onPressed: () {
+                                      setState(() {
+                                        _isGeneratingWorkspace = true;
+                                      });
+                                    },
                                   );
                                 }
 
                                 return ActionChip(
                                   backgroundColor: colors.bgSurface,
                                   side: BorderSide(color: colors.borderSubtle),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
                                   label: Text(
                                     opt,
                                     style: TextStyle(
