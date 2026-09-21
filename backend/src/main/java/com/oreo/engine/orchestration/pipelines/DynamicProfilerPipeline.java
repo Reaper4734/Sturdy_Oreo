@@ -42,6 +42,29 @@ public class DynamicProfilerPipeline {
 
     public ProfilerOutputSchema run(String history, String userInput) {
         // 2. Call LLM Pipeline with structured output mapping
-        return profilerAiService.chat(history, userInput);
+        ProfilerOutputSchema output = profilerAiService.chat(history, userInput);
+        if (output == null) {
+            output = new ProfilerOutputSchema();
+            output.setReplyToUser("I am ready to generate your custom curriculum.");
+        }
+        if (output.getOptions() == null) {
+            output.setOptions(new java.util.ArrayList<>());
+        }
+
+        // Auto-inject Generate Curriculum CTA if confidence score is high or text mentions generation/path
+        boolean isReady = (output.getInternalState() != null && output.getInternalState().getConfidenceScore() >= 80)
+                || (output.getReplyToUser() != null && (
+                    output.getReplyToUser().toLowerCase().contains("generate") && (
+                        output.getReplyToUser().toLowerCase().contains("curriculum") || 
+                        output.getReplyToUser().toLowerCase().contains("learning path") ||
+                        output.getReplyToUser().toLowerCase().contains("custom")
+                    )
+                ));
+        boolean hasNavCTA = output.getOptions().stream().anyMatch(opt -> opt.contains("➔") || opt.toLowerCase().contains("generate curriculum"));
+        if (isReady && !hasNavCTA) {
+            output.getOptions().add("Generate Curriculum ➔");
+        }
+
+        return output;
     }
 }

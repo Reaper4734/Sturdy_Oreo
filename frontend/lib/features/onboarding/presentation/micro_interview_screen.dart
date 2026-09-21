@@ -388,9 +388,24 @@ class _MicroInterviewScreenState extends ConsumerState<MicroInterviewScreen> {
              final lastAiMsg = _messages.reversed.firstWhere((m) => m.sender == 'AI', orElse: () => _messages.last);
              final metadata = lastAiMsg.metadata ?? {};
              final persona = metadata['current_inferred_persona'] as Map<String, dynamic>? ?? {};
-             final subject = persona['subject'] ?? 'General Knowledge';
-             final domain = persona['domain'] ?? 'Unknown';
-             final personaStr = "Domain: $domain, Subject: $subject, Score: ${metadata['confidence_score']}";
+             
+             // Extract subject with intelligent fallback from conversation text if persona subject is missing
+             String subject = (persona['subject'] as String?)?.trim() ?? '';
+             if (subject.isEmpty || subject.toLowerCase() == 'general knowledge') {
+                for (final m in _messages.reversed) {
+                  final text = m.text;
+                  final match = RegExp(r'personalized\s+([A-Za-z0-9\s\+#]+?)\s+learning', caseSensitive: false).firstMatch(text);
+                  if (match != null && (match.group(1)?.trim().isNotEmpty ?? false)) {
+                     subject = match.group(1)!.trim();
+                     break;
+                  }
+                }
+                if (subject.isEmpty) {
+                   subject = persona['subject'] ?? 'Personalized Course';
+                }
+             }
+             final domain = persona['domain'] ?? 'Technology';
+             final personaStr = "Domain: $domain, Subject: $subject, Score: ${metadata['confidence_score'] ?? 90}";
              
              newWs = await repo.createWorkspaceFromCourse(subject, persona: personaStr);
              // Preserve the complete onboarding chat history inside the newly created workspace
@@ -628,56 +643,134 @@ class _MicroInterviewScreenState extends ConsumerState<MicroInterviewScreen> {
                           ],
                         ),
 
-                        // Interactive Option Chips
-                        if (msg.options != null)
-                          Padding(
+                        // Interactive Option Chips & Generate Curriculum CTA
+                        () {
+                          final effectiveOptions = List<String>.from(msg.options ?? []);
+                          if (!widget.isWorkspaceMode && isAI) {
+                            final textLower = msg.text.toLowerCase();
+                            final mentionsCurriculum = textLower.contains('generate') && 
+                                (textLower.contains('curriculum') || textLower.contains('learning path') || textLower.contains('path') || textLower.contains('plan'));
+                            final hasConfidence = (msg.metadata?['confidence_score'] is num && (msg.metadata!['confidence_score'] as num) >= 80);
+
+                            if (mentionsCurriculum || hasConfidence) {
+                              if (!effectiveOptions.any((o) => o.contains('➔') || o.toLowerCase().contains('generate curriculum'))) {
+                                effectiveOptions.add('Generate Curriculum ➔');
+                              }
+                            }
+                          }
+
+                          if (effectiveOptions.isEmpty) return const SizedBox.shrink();
+
+                          return Padding(
                             padding: const EdgeInsets.only(top: 16),
                             child: Wrap(
                               spacing: 8,
-                              runSpacing: 8,
-                              children: msg.options!.map((opt) {
+                              runSpacing: 10,
+                              children: effectiveOptions.map((opt) {
                                 final isNavCTA = opt.contains('➔') || opt.toLowerCase().contains('generate curriculum');
-                                final activeWs = ref.watch(activeWorkspaceProvider);
-                                final isConfirmed = activeWs?.isCourseConfirmed == true;
-                                final hasCurriculum = activeWs != null && activeWs.roadmap.isNotEmpty;
 
-                                // If confirmed, hide the generate curriculum button completely
-                                if (isNavCTA && isConfirmed) {
-                                  return const SizedBox.shrink();
+                                if (widget.isWorkspaceMode) {
+                                  final activeWs = ref.watch(activeWorkspaceProvider);
+                                  final isConfirmed = activeWs?.isCourseConfirmed == true;
+                                  final hasCurriculum = activeWs != null && activeWs.roadmap.isNotEmpty;
+
+                                  // If confirmed in workspace mode, hide generate CTA
+                                  if (isNavCTA && isConfirmed) {
+                                    return const SizedBox.shrink();
+                                  }
+
+                                  final label = (isNavCTA && hasCurriculum)
+                                      ? '✨ Ask to update/edit curriculum'
+                                      : opt;
+
+                                  return ActionChip(
+                                    backgroundColor: isNavCTA ? colors.accentEmerald.withValues(alpha: 0.15) : colors.bgSurface,
+                                    side: BorderSide(
+                                      color: isNavCTA ? colors.accentEmerald : colors.borderSubtle,
+                                    ),
+                                    label: Text(
+                                      label,
+                                      style: TextStyle(
+                                        color: isNavCTA ? colors.accentEmerald : colors.fgPrimary,
+                                        fontWeight: isNavCTA ? FontWeight.bold : FontWeight.normal,
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                    onPressed: () {
+                                      if (isNavCTA && !hasCurriculum) {
+                                        setState(() {
+                                          _isGeneratingWorkspace = true;
+                                        });
+                                      } else if (isNavCTA && hasCurriculum) {
+                                        _handleUserMessage('Please help me update and refine the curriculum modules.');
+                                      } else {
+                                        _handleUserMessage(opt);
+                                      }
+                                    },
+                                  );
                                 }
 
-                                final label = (isNavCTA && hasCurriculum)
-                                    ? '✨ Ask to update/edit curriculum'
-                                    : opt;
+                                // Onboarding Interview Mode: Always render prominent CTA if isNavCTA
+                                if (isNavCTA) {
+                                  return Material(
+                                    color: Colors.transparent,
+                                    child: InkWell(
+                                      onTap: () {
+                                        setState(() {
+                                          _isGeneratingWorkspace = true;
+                                        });
+                                      },
+                                      borderRadius: BorderRadius.circular(14),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                                        decoration: BoxDecoration(
+                                          color: colors.accentEmerald,
+                                          borderRadius: BorderRadius.circular(14),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: colors.accentEmerald.withValues(alpha: 0.35),
+                                              blurRadius: 10,
+                                              offset: const Offset(0, 3),
+                                            ),
+                                          ],
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            const Icon(Icons.auto_awesome_rounded, color: Colors.black, size: 18),
+                                            const SizedBox(width: 8),
+                                            Text(
+                                              opt,
+                                              style: const TextStyle(
+                                                color: Colors.black,
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 14,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                }
 
                                 return ActionChip(
-                                  backgroundColor: isNavCTA ? colors.accentEmerald.withValues(alpha: 0.15) : colors.bgSurface,
-                                  side: BorderSide(
-                                    color: isNavCTA ? colors.accentEmerald : colors.borderSubtle,
-                                  ),
+                                  backgroundColor: colors.bgSurface,
+                                  side: BorderSide(color: colors.borderSubtle),
                                   label: Text(
-                                    label,
+                                    opt,
                                     style: TextStyle(
-                                      color: isNavCTA ? colors.accentEmerald : colors.fgPrimary,
-                                      fontWeight: isNavCTA ? FontWeight.bold : FontWeight.normal,
+                                      color: colors.fgPrimary,
+                                      fontWeight: FontWeight.w500,
                                       fontSize: 13,
                                     ),
                                   ),
-                                  onPressed: () {
-                                    if (isNavCTA && !hasCurriculum) {
-                                      setState(() {
-                                        _isGeneratingWorkspace = true;
-                                      });
-                                    } else if (isNavCTA && hasCurriculum) {
-                                      _handleUserMessage('Please help me update and refine the curriculum modules.');
-                                    } else {
-                                      _handleUserMessage(opt);
-                                    }
-                                  },
+                                  onPressed: () => _handleUserMessage(opt),
                                 );
                               }).toList(),
                             ),
-                          ),
+                          );
+                        }(),
                       ],
                     ),
                   ).animate().fadeIn(duration: 200.ms),
@@ -783,9 +876,9 @@ class _MicroInterviewScreenState extends ConsumerState<MicroInterviewScreen> {
                     decoration: InputDecoration(
                       filled: false,
                       fillColor: Colors.transparent,
-                      hintText: ref.watch(activeWorkspaceProvider)?.activeLearningContext != null
+                      hintText: widget.isWorkspaceMode && ref.watch(activeWorkspaceProvider)?.activeLearningContext != null
                           ? 'Ask about ${ref.watch(activeWorkspaceProvider)!.activeLearningContext}...'
-                          : 'Ask anything',
+                          : 'Ask anything or type your learning goal...',
                       hintStyle: TextStyle(color: colors.fgSecondary, fontSize: 14),
                       border: InputBorder.none,
                       focusedBorder: InputBorder.none,
